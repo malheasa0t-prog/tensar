@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechZone | لوحة التحكم</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236c5ce7'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='50' font-family='Arial' font-weight='bold'>TZ</text></svg>">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/utilities.css">
+    <link rel="stylesheet" href="css/admin/layout.css">
+    <link rel="stylesheet" href="css/admin/components.css">
+    <link rel="stylesheet" href="css/admin/responsive.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body data-theme="dark">
+    <div class="admin-login-overlay" id="adminLoginOverlay">
+        <div class="admin-login-card">
+            <div class="login-logo">
+                <i class="fas fa-microchip"></i>
+                <span>Tech<span class="accent">Zone</span></span>
+            </div>
+            <h2>لوحة التحكم</h2>
+            <p>سجّل الدخول للوصول إلى لوحة الإدارة</p>
+            <form id="adminLoginForm">
+                <div class="admin-form-group">
+                    <label>البريد الإلكتروني</label>
+                    <div class="admin-input-wrap">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="adminEmail" placeholder="admin@example.com" required>
+                    </div>
+                </div>
+                <div class="admin-form-group">
+                    <label>كلمة المرور</label>
+                    <div class="admin-input-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="adminPassword" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div id="loginError" class="login-error" style="display:none;"></div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-layout" id="adminLayout" style="display:none;">
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <i class="fas fa-microchip"></i>
+                    <span>Tech<span class="accent">Zone</span></span>
+                </a>
+                <button class="sidebar-close" id="sidebarClose"><i class="fas fa-times"></i></button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-link active" data-section="dashboard">
+                    <i class="fas fa-chart-pie"></i><span>لوحة المعلومات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="analytics">
+                    <i class="fas fa-chart-line"></i><span>التحليلات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="orders">
+                    <i class="fas fa-shopping-bag"></i><span>الطلبات</span>
+                    <span class="sidebar-badge" id="ordersBadge">0</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="products">
+                    <i class="fas fa-box"></i><span>المنتجات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="accessories">
+                    <i class="fas fa-headphones"></i><span>الإكسسوارات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="main-categories">
+                    <i class="fas fa-folder-tree"></i><span>الفئات الرئيسية</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="subcategories">
+                    <i class="fas fa-folder-open"></i><span>الفئات الفرعية</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="categories">
+                    <i class="fas fa-tags"></i><span>مركز الفئات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="services" style="padding-right: 40px; font-size: 0.9rem;">
+                    <i class="fas fa-bolt" style="font-size: 0.8rem;"></i><span>↳ خدمات الصيانة</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="customers">
+                    <i class="fas fa-users"></i><span>العملاء</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="deposits">
+                    <i class="fas fa-money-check-alt"></i><span>طلبات الإيداع</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="refunds">
+                    <i class="fas fa-rotate-left"></i><span>طلبات الاسترجاع</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="coupons">
+                    <i class="fas fa-percent"></i><span>الكوبونات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="notifications">
+                    <i class="fas fa-bell"></i><span>إشعارات المستخدمين</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="messages">
+                    <i class="fas fa-envelope"></i><span>رسائل التواصل</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="settings">
+                    <i class="fas fa-cog"></i><span>الإعدادات</span>
+                </a>
+                <a href="#" class="sidebar-link" data-section="logs">
+                    <i class="fas fa-history"></i><span>سجل العمليات</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="admin-user-info">
+                    <div class="admin-avatar"><i class="fas fa-user-shield"></i></div>
+                    <div>
+                        <strong id="adminName">المدير</strong>
+                        <small id="adminRole">مدير عام</small>
+                    </div>
+                </div>
+                <button class="btn-logout" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+                </button>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <header class="admin-header">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 id="pageTitle">لوحة المعلومات</h1>
+                <div class="header-actions">
+                    <a href="/" class="btn btn-outline btn-sm" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> عرض الموقع
+                    </a>
+                </div>
+            </header>
+            <div class="admin-content" id="adminContent"></div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="admin-config.js?v=1"></script>
+    <script src="data-engine.js?v=2"></script>
+    <script src="js/admin/core.js?v=2"></script>
+    <script src="js/admin/dashboard.js?v=2"></script>
+    <script src="js/admin/analytics.js?v=1"></script>
+    <script src="js/admin/orders.js?v=2"></script>
+    <script src="js/admin/products.js?v=2"></script>
+    <script src="js/admin/accessories.js?v=1"></script>
+    <script src="js/admin/categories.js?v=2"></script>
+    <script src="js/admin/services.js?v=2"></script>
+    <script src="js/admin/messages.js?v=2"></script>
+    <script src="js/admin/customers.js?v=2"></script>
+    <script src="js/admin/coupons.js?v=2"></script>
+    <script src="js/admin/refunds.js?v=1"></script>
+    <script src="js/admin/notifications.js?v=1"></script>
+    <script src="js/admin/settings.js?v=2"></script>
+    <script src="js/admin/logs.js?v=2"></script>
+    <script src="js/admin/deposits.js?v=2"></script>
+</body>
+
+</html>

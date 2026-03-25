@@ -1,0 +1,68 @@
+import { supabase } from '@/lib/supabaseClient';
+import { normalizeSiteSettings } from '@/lib/contactChannels';
+import { loadSiteSettingsClient } from '@/lib/siteSettingsClient';
+
+const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
+
+/**
+ * Returns the fallback checkout option sets used before dynamic settings load.
+ *
+ * @returns {{ paymentMethods: Array<{ value: string, label: string }>, deliveryMethods: Array<{ value: string, label: string }> }}
+ */
+export function getDefaultCheckoutOptions() {
+  return {
+    paymentMethods: DEFAULT_SITE_SETTINGS.paymentMethods,
+    deliveryMethods: DEFAULT_SITE_SETTINGS.deliveryMethods,
+  };
+}
+
+/**
+ * Loads payment and delivery options from site settings with a safe fallback.
+ *
+ * @returns {Promise<{ paymentMethods: Array<{ value: string, label: string }>, deliveryMethods: Array<{ value: string, label: string }> }>}
+ */
+export async function fetchCheckoutOptions() {
+  try {
+    const siteSettings = await loadSiteSettingsClient();
+
+    return {
+      paymentMethods: siteSettings.paymentMethods,
+      deliveryMethods: siteSettings.deliveryMethods,
+    };
+  } catch {
+    return getDefaultCheckoutOptions();
+  }
+}
+
+/**
+ * Submits the checkout request to the API, forwarding the auth token when available.
+ *
+ * @param {{
+ *   items: Array<{ id: string, qty: number }>,
+ *   form: Record<string, string>,
+ * }} params
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function submitCheckoutOrder({ items, form }) {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+
+  const response = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      items: items.map((item) => ({ id: item.id, qty: Number(item.qty) || 1 })),
+      ...form,
+    }),
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json?.success) {
+    throw new Error(json?.error || 'تعذر إتمام الطلب حالياً');
+  }
+
+  return json?.data || {};
+}

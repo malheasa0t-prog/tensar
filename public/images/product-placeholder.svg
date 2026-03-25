@@ -1,0 +1,40 @@
+<svg width="800" height="520" viewBox="0 0 800 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="84" y1="56" x2="720" y2="468" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.55" stop-color="#13243B"/>
+      <stop offset="1" stop-color="#0A1325"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="400" y1="88" x2="400" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1A2E48"/>
+      <stop offset="1" stop-color="#102033"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="170" y1="126" x2="616" y2="370" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399" stop-opacity="0.24"/>
+      <stop offset="0.55" stop-color="#22D3EE" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#F59E0B" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="520" rx="36" fill="#09111F"/>
+  <rect x="32" y="28" width="736" height="464" rx="28" fill="url(#bg)"/>
+  <circle cx="144" cy="106" r="124" fill="#10B981" fill-opacity="0.08"/>
+  <circle cx="684" cy="422" r="154" fill="#06B6D4" fill-opacity="0.08"/>
+
+  <rect x="96" y="84" width="608" height="352" rx="28" fill="url(#frame)" stroke="rgba(255,255,255,0.12)"/>
+  <rect x="124" y="112" width="552" height="296" rx="22" fill="rgba(255,255,255,0.04)"/>
+  <rect x="124" y="112" width="552" height="296" rx="22" fill="url(#shine)"/>
+
+  <rect x="152" y="144" width="192" height="136" rx="20" fill="rgba(255,255,255,0.09)"/>
+  <rect x="368" y="144" width="116" height="136" rx="20" fill="rgba(255,255,255,0.08)"/>
+  <rect x="508" y="144" width="140" height="136" rx="20" fill="rgba(255,255,255,0.08)"/>
+
+  <rect x="152" y="304" width="496" height="18" rx="9" fill="rgba(255,255,255,0.14)"/>
+  <rect x="152" y="336" width="372" height="14" rx="7" fill="rgba(255,255,255,0.1)"/>
+  <rect x="152" y="366" width="284" height="14" rx="7" fill="rgba(255,255,255,0.08)"/>
+
+  <rect x="152" y="82" width="124" height="34" rx="17" fill="rgba(15,23,42,0.82)" stroke="rgba(255,255,255,0.08)"/>
+  <text x="214" y="103" text-anchor="middle" fill="#D8E5F3" font-family="Arial, sans-serif" font-size="15" font-weight="700">TECHZONE</text>
+
+  <text x="400" y="478" text-anchor="middle" fill="#D8E5F3" font-family="Arial, sans-serif" font-size="24" font-weight="700">Product Image Placeholder</text>
+</svg>

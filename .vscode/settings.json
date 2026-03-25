@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^\\$f = Get-Item \"C:\\\\Users\\\\m\\\\Desktop\\\\LAST WEP\\\\pcai-landing\\\\assets\\\\js\\\\platform\\.js\"; \"\\$\\(\\$f\\.Length\\) bytes\"; \\(Get-Content \\$f\\.FullName \\| Measure-Object -Line\\)\\.Lines$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

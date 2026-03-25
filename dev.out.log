@@ -1,0 +1,28 @@
+
+> techzone-next@1.0.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.144:3000
+
+✓ Starting...
+✓ Ready in 636ms
+ HEAD / 500 in 417ms (compile: 239ms, render: 178ms)
+ HEAD / 500 in 279ms (compile: 112ms, render: 167ms)
+ HEAD / 200 in 258ms (compile: 81ms, render: 178ms)
+ GET / 200 in 172ms (compile: 10ms, render: 162ms)
+○ Compiling /auth/login ...
+ GET /auth/login 200 in 3.2s (compile: 3.2s, render: 51ms)
+ GET /auth/login 200 in 65ms (compile: 4ms, render: 61ms)
+ GET /auth/login 200 in 46ms (compile: 4ms, render: 43ms)
+ GET /auth/login 200 in 89ms (compile: 22ms, render: 68ms)
+ GET /auth/login 200 in 51ms (compile: 5ms, render: 46ms)
+ GET /auth/register 200 in 668ms (compile: 648ms, render: 20ms)
+  Reload env: .env.local
+  Reload env: .env.local
+ GET /auth/login 200 in 370ms (compile: 285ms, render: 85ms)
+ GET /auth/login 200 in 708ms (compile: 667ms, render: 41ms)
+ GET /auth/login 200 in 20ms (compile: 2ms, render: 17ms)
+✓ Compiled in 711ms
+✓ Compiled in 18ms
