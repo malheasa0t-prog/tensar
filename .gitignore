@@ -43,3 +43,11 @@ audit-shots/
 .vscode
 .edge-headless
 .sixth
+
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
