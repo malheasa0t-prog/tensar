@@ -12,6 +12,8 @@
     const GLOBAL_POLL_INTERVAL_MS = 25;
     const SUPABASE_GLOBAL_KEY = 'supabase';
     const CHART_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+    const ADMIN_BOOTSTRAP_ERROR_TITLE = 'تعذر تشغيل لوحة الإدارة';
+    const ADMIN_BOOTSTRAP_ERROR_DESCRIPTION = 'إعدادات تشغيل لوحة الإدارة غير مكتملة على بيئة الإنتاج حاليًا.';
     const BASE_SCRIPT_PATHS = [
         'js/admin/core.helpers.js',
         'js/admin/core.ui.js',
@@ -91,11 +93,17 @@
             headers: { accept: 'application/json' }
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to load admin runtime config (${response.status}).`);
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            void error;
         }
 
-        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload?.error || `Failed to load admin runtime config (${response.status}).`);
+        }
+
         if (!payload?.success) {
             throw new Error(payload?.error || 'Admin runtime config is unavailable.');
         }
@@ -247,6 +255,71 @@
     }
 
     /**
+     * Converts runtime bootstrap failures into concise Arabic copy for operators.
+     *
+     * @param {unknown} error
+     * @returns {string}
+     */
+    function getBootstrapErrorMessage(error) {
+        const rawMessage = String(error?.message || '').trim();
+
+        if (!rawMessage) {
+            return 'تعذر تحميل ملفات لوحة الإدارة. أعد المحاولة بعد تحديث الصفحة.';
+        }
+
+        if (rawMessage.includes('NEXT_PUBLIC_SUPABASE_')) {
+            return 'مفاتيح Supabase العامة غير مضبوطة على بيئة Cloudflare. اضبط NEXT_PUBLIC_SUPABASE_URL و NEXT_PUBLIC_SUPABASE_ANON_KEY أو NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ثم أعد النشر.';
+        }
+
+        return rawMessage;
+    }
+
+    /**
+     * Reveals a visible failure state instead of leaving the admin shell hidden.
+     *
+     * @param {unknown} error
+     * @returns {void}
+     */
+    function showBootstrapErrorState(error) {
+        const loginOverlay = document.getElementById('adminLoginOverlay');
+        const loginForm = document.getElementById('adminLoginForm');
+        const loginError = document.getElementById('loginError');
+        const adminLayout = document.getElementById('adminLayout');
+        const title = loginOverlay?.querySelector('h2');
+        const description = loginOverlay?.querySelector('p');
+        const errorMessage = getBootstrapErrorMessage(error);
+
+        if (adminLayout) {
+            adminLayout.style.display = 'none';
+        }
+
+        if (title) {
+            title.textContent = ADMIN_BOOTSTRAP_ERROR_TITLE;
+        }
+
+        if (description) {
+            description.textContent = ADMIN_BOOTSTRAP_ERROR_DESCRIPTION;
+        }
+
+        if (loginForm) {
+            loginForm.querySelectorAll('input, button').forEach((element) => {
+                element.disabled = true;
+            });
+            loginForm.style.opacity = '0.6';
+        }
+
+        if (loginError) {
+            loginError.textContent = errorMessage;
+            loginError.style.display = 'block';
+        }
+
+        if (loginOverlay) {
+            loginOverlay.style.display = 'flex';
+            loginOverlay.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    /**
      * Boots the legacy admin runtime after the base dependencies are ready.
      *
      * @returns {Promise<void>}
@@ -277,6 +350,7 @@
             void loadSectionModules(getCurrentSectionFromUrl());
         } catch (error) {
             console.error('Failed to bootstrap legacy admin assets.', error);
+            showBootstrapErrorState(error);
         }
     }
 
