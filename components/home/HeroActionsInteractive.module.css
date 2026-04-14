@@ -1,0 +1,26 @@
+.actions {
+  margin-top: 0.1rem;
+}
+
+.magneticButton {
+  --magnetic-x: 0px;
+  --magnetic-y: 0px;
+  transform: translate3d(var(--magnetic-x), var(--magnetic-y), 0);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+  will-change: transform;
+}
+
+.buttonInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magneticButton {
+    transform: none !important;
+    transition: none !important;
+  }
+}

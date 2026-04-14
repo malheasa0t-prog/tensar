@@ -1,0 +1,167 @@
+.shell,
+.emptyState {
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  background: rgba(131, 56, 236, 0.16);
+}
+
+.header h2,
+.emptyState h2 {
+  margin: 0.35rem 0 0.2rem;
+  color: #ffffff;
+}
+
+.header p,
+.emptyState p {
+  margin: 0;
+  color: #b7c0df;
+  line-height: 1.85;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.productCard,
+.tableShell,
+.emptyState {
+  padding: 1rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(177, 92, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(15, 13, 36, 0.96), rgba(7, 11, 28, 0.98)),
+    radial-gradient(circle at top, rgba(131, 56, 236, 0.1), transparent 48%);
+}
+
+.productHead,
+.productActions,
+.table,
+.emptyIcon {
+  display: flex;
+}
+
+.productHead,
+.productActions {
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.productHead strong {
+  color: #ffffff;
+  display: block;
+}
+
+.productHead span,
+.valueCell,
+.labelCell {
+  color: #c7d0f4;
+}
+
+.productHead span {
+  font-size: 0.82rem;
+}
+
+.removeButton,
+.clearButton,
+.secondaryButton,
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.9rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: 0.95rem;
+}
+
+.removeButton,
+.clearButton,
+.secondaryButton {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.primaryButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d28d9, #8338ec 55%, #ff4fd8);
+}
+
+.productActions {
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.tableShell {
+  overflow-x: auto;
+}
+
+.table {
+  min-width: 680px;
+  gap: 0.75rem;
+}
+
+.tableLabels,
+.tableColumn {
+  min-width: 200px;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.labelCell,
+.valueCell {
+  min-height: 4rem;
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 0.95rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.labelCell {
+  color: #f8f4ff;
+  font-weight: 800;
+}
+
+.emptyState {
+  place-items: center;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 4rem;
+  height: 4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.2rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(131, 56, 236, 0.42), rgba(0, 217, 255, 0.18));
+}
+
+@media (max-width: 768px) {
+  .productActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

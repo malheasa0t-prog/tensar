@@ -1,0 +1,143 @@
+.cardInteractive {
+  position: relative;
+  overflow: hidden;
+  --pointer-x: 50%;
+  --pointer-y: 55%;
+}
+
+.cardInteractive::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    220px circle at var(--pointer-x) var(--pointer-y),
+    rgba(131, 56, 236, 0.16),
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+
+.cardInteractive:hover::after,
+.cardInteractive:focus-within::after {
+  opacity: 1;
+}
+
+.mediaShell {
+  position: relative;
+  padding: 0.95rem 0.95rem 0;
+}
+
+.discountRibbon {
+  position: absolute;
+  top: 1rem;
+  left: 0.55rem;
+  z-index: 3;
+  padding: 0.4rem 0.95rem 0.4rem 0.75rem;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.compareButton {
+  position: absolute;
+  top: 4.2rem;
+  right: 0.95rem;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dbe3ff;
+  background: rgba(10, 14, 39, 0.76);
+}
+
+.compareButtonActive {
+  color: #ffffff;
+  background: rgba(0, 217, 255, 0.16);
+  border-color: rgba(0, 217, 255, 0.3);
+}
+
+.metaRow,
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.brandBadge,
+.ratingSummary {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  color: #dbe3ff;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-strong);
+}
+
+.ratingSummary small {
+  color: #8e98be;
+}
+
+.brandBadge {
+  padding: 0.3rem 0.68rem;
+  border-radius: 999px;
+  color: #8fe7ff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid rgba(0, 217, 255, 0.18);
+  background: rgba(0, 217, 255, 0.08);
+}
+
+.ratingStars {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.ratingStar {
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.ratingStarActive {
+  color: #fbbf24;
+}
+
+.urgency {
+  color: #ffb3b3;
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-display);
+}
+
+.cardStagger {
+  transform-origin: top right;
+}
+
+@media (min-width: 860px) {
+  .cardListInteractive .mediaShell {
+    flex: 0 0 300px;
+    padding: 1rem 0 1rem 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .mediaShell {
+    padding: 0.85rem 0.85rem 0;
+  }
+
+  .discountRibbon {
+    left: 0.45rem;
+    font-size: 0.75rem;
+  }
+
+  .compareButton {
+    width: 46px;
+    height: 46px;
+  }
+}

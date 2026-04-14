@@ -1,0 +1,85 @@
+﻿
+.status-badge.cancelled,
+.status-badge.failed,
+.status-badge.refunded {
+    background: rgba(231, 76, 60, 0.16);
+    color: #ff9f8f;
+}
+
+.order-route-card,
+.order-route-head,
+.order-item-summary,
+.order-nav-tabs {
+    display: flex;
+    gap: 12px;
+}
+
+.order-route-card {
+    align-items: center;
+    justify-content: space-between;
+}
+
+.order-route-head {
+    align-items: center;
+}
+
+.order-route-head p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.order-route-icon {
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: rgba(var(--primary-rgb), 0.14);
+    color: var(--primary-light);
+}
+
+.order-tabs-bar {
+    justify-content: space-between;
+}
+
+.order-nav-tabs {
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.order-item-summary {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.order-item-summary small {
+    color: var(--text-muted);
+}
+
+.order-action-btn {
+    width: auto;
+    height: auto;
+    min-height: 38px;
+    padding: 0 12px;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .order-route-card,
+    .order-tabs-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .order-nav-tabs {
+        width: 100%;
+    }
+
+    .order-nav-tabs .btn,
+    .order-route-card .btn {
+        width: 100%;
+    }
+}
+

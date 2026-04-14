@@ -1,0 +1,78 @@
+.button {
+  position: fixed;
+  inset-block-end: 1.5rem;
+  inset-inline-start: 1.5rem;
+  z-index: 110;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d28d9, #8338ec 48%, #00d9ff);
+  box-shadow: 0 0 20px rgba(131, 56, 236, 0.34);
+  opacity: 0;
+  transform: scale(0.72) translateY(16px);
+  pointer-events: none;
+  transition:
+    opacity 220ms ease,
+    transform 360ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 220ms ease;
+}
+
+.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+.button:hover {
+  box-shadow: 0 0 28px rgba(131, 56, 236, 0.4), 0 16px 32px rgba(0, 0, 0, 0.22);
+}
+
+.button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.88);
+  outline-offset: 4px;
+}
+
+.ring {
+  position: absolute;
+  inset: -4px;
+  transform: rotate(-90deg);
+}
+
+.ringTrack,
+.ringProgress {
+  fill: none;
+  stroke-width: 3;
+}
+
+.ringTrack {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.ringProgress {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 120ms linear;
+}
+
+.icon {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .button {
+    inset-block-end: 1rem;
+    inset-inline-start: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .ringProgress {
+    transition: none;
+  }
+}

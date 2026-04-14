@@ -1,0 +1,309 @@
+.admin-header {
+    display: grid;
+    grid-template-columns: auto minmax(320px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.admin-header-leading,
+.admin-page-heading,
+.admin-header-profile,
+.admin-header-menu-item,
+.admin-command-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-header-leading {
+    min-width: 0;
+}
+
+.admin-page-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.admin-page-heading h1 {
+    margin: 0;
+    flex: initial;
+}
+
+.admin-header-breadcrumbs,
+.admin-header-profile-meta,
+.admin-command-item span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-header-breadcrumbs {
+    flex-wrap: wrap;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+}
+
+.admin-breadcrumb {
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.admin-breadcrumb.is-current {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.admin-header-actions,
+.admin-header-profile-meta,
+.admin-header-menu,
+.admin-table-pagination,
+.admin-table-pagination-controls,
+.admin-table-pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-header-actions {
+    justify-content: flex-end;
+}
+
+.admin-icon-button {
+    min-width: 42px;
+    min-height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.admin-header-dropdown {
+    position: relative;
+}
+
+.admin-header-alert-badge:not([hidden]) {
+    position: absolute;
+    top: -6px;
+    inset-inline-start: -6px;
+    min-width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.admin-header-menu:not([hidden]) {
+    position: absolute;
+    top: calc(100% + 10px);
+    inset-inline-end: 0;
+    min-width: 280px;
+    padding: 10px;
+    display: grid;
+    gap: 8px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 15, 27, 0.98);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    z-index: 40;
+}
+
+.admin-header-menu-item {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    text-align: right;
+    cursor: pointer;
+}
+
+.admin-header-menu-item:hover,
+.admin-command-item:hover,
+.admin-command-item.is-active {
+    border-color: rgba(var(--primary-rgb), 0.28);
+    background: rgba(var(--primary-rgb), 0.1);
+}
+
+.admin-header-menu-icon,
+.admin-command-item-icon {
+    width: 38px;
+    height: 38px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 12px;
+}
+
+.admin-header-menu-icon--danger {
+    background: rgba(214, 48, 49, 0.16);
+}
+
+.admin-header-menu-icon--info {
+    background: rgba(108, 92, 231, 0.16);
+}
+
+.admin-header-menu-icon--success {
+    background: rgba(0, 184, 148, 0.16);
+}
+
+.admin-header-menu-icon--warning {
+    background: rgba(253, 203, 110, 0.16);
+}
+
+.admin-header-profile {
+    min-height: 42px;
+    padding: 6px 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.admin-header-profile-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.admin-header-profile-meta small,
+.admin-command-item small {
+    color: var(--text-secondary);
+}
+
+.admin-command-palette:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    padding: 24px;
+    display: grid;
+    place-items: start center;
+    background: rgba(2, 7, 18, 0.66);
+    backdrop-filter: blur(10px);
+    z-index: 1200;
+}
+
+.admin-command-card {
+    width: min(720px, 100%);
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    margin-top: 6vh;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 15, 27, 0.98);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+}
+
+.admin-command-input {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary);
+    font: inherit;
+    padding: 14px 16px;
+}
+
+.admin-command-list {
+    display: grid;
+    gap: 8px;
+}
+
+.admin-command-item {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    text-align: right;
+    cursor: pointer;
+}
+
+.admin-command-item span {
+    display: grid;
+    gap: 4px;
+    text-align: right;
+}
+
+.admin-command-empty {
+    padding: 18px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.admin-layout.sidebar-collapsed .admin-sidebar {
+    width: 72px;
+}
+
+.admin-layout.sidebar-collapsed #sidebarCollapseToggle i {
+    transform: rotate(180deg);
+}
+
+.admin-layout.sidebar-collapsed .admin-main {
+    margin-inline-end: 72px;
+}
+
+.admin-layout.sidebar-collapsed .sidebar-header .logo span,
+.admin-layout.sidebar-collapsed .sidebar-group-label > span,
+.admin-layout.sidebar-collapsed .sidebar-link > span:not(.sidebar-badge),
+.admin-layout.sidebar-collapsed .sidebar-group-chevron,
+.admin-layout.sidebar-collapsed .admin-user-info > div,
+.admin-layout.sidebar-collapsed .btn-logout span {
+    display: none;
+}
+
+.admin-layout.sidebar-collapsed .sidebar-group-links {
+    padding-inline-start: 0;
+}
+
+.admin-layout.sidebar-collapsed .sidebar-group-toggle,
+.admin-layout.sidebar-collapsed .sidebar-link,
+.admin-layout.sidebar-collapsed .btn-logout {
+    justify-content: center;
+}
+
+.admin-layout.sidebar-collapsed .sidebar-link,
+.admin-layout.sidebar-collapsed .btn-logout {
+    padding-inline: 12px;
+}
+
+@media (max-width: 980px) {
+    .admin-header {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-header-leading {
+        width: 100%;
+    }
+
+    .admin-header-profile-meta {
+        display: none;
+    }
+
+    .admin-command-palette {
+        padding: 12px;
+    }
+
+    .admin-command-card {
+        margin-top: 3vh;
+    }
+}

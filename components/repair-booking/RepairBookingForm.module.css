@@ -1,0 +1,203 @@
+.card {
+  display: grid;
+  gap: 1.15rem;
+  padding: clamp(1.15rem, 2.8vw, 1.75rem);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(18, 23, 52, 0.98), rgba(8, 12, 31, 0.98)),
+    radial-gradient(circle at top left, rgba(0, 217, 255, 0.08), transparent 32%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 56px rgba(3, 6, 18, 0.42);
+}
+
+.header,
+.headerCopy,
+.form,
+.section,
+.fieldsGrid,
+.field,
+.feedbackStack,
+.submitBar {
+  display: grid;
+}
+
+.header {
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.headerCopy {
+  gap: 0.3rem;
+}
+
+.formTitle,
+.sectionTitle {
+  margin: 0;
+  color: #f8fbff;
+}
+
+.formTitle {
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  line-height: 1.2;
+}
+
+.formSubtitle,
+.fieldHint,
+.prefillBadge {
+  color: #c9d5f1;
+  line-height: 1.7;
+}
+
+.formSubtitle {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.prefillBadge {
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(0, 217, 255, 0.1);
+  border: 1px solid rgba(0, 217, 255, 0.18);
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.form {
+  gap: 0.95rem;
+}
+
+.section {
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sectionTitle {
+  font-size: 0.98rem;
+}
+
+.fieldsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.field {
+  gap: 0.45rem;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.fieldLabel {
+  color: #eef3ff;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.input {
+  min-height: 52px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(180deg, rgba(10, 15, 38, 0.94), rgba(8, 12, 30, 0.94)) !important;
+  color: #f8fbff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.input::placeholder {
+  color: rgba(201, 213, 241, 0.55);
+}
+
+.input:focus {
+  border-color: rgba(0, 217, 255, 0.3) !important;
+  box-shadow:
+    0 0 0 3px rgba(0, 217, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.selectInput {
+  cursor: pointer;
+}
+
+.textareaInput {
+  min-height: 132px;
+  padding-top: 0.9rem;
+  resize: vertical;
+}
+
+.fieldHint {
+  font-size: 0.83rem;
+}
+
+.fieldMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metaLabel {
+  color: #87e4ff;
+  font-size: 0.83rem;
+  font-weight: 700;
+}
+
+.metaValue {
+  color: #f8fbff;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.feedbackStack {
+  gap: 0.75rem;
+}
+
+.feedbackStack :global(.form-message) {
+  margin: 0;
+}
+
+.submitBar {
+  gap: 0.75rem;
+}
+
+.submitButton {
+  min-height: 54px;
+}
+
+@media (max-width: 900px) {
+  .fieldsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+    border-radius: 22px;
+  }
+
+  .section {
+    padding: 0.9rem;
+    border-radius: 18px;
+  }
+}

@@ -1,0 +1,197 @@
+.screen {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - var(--nav-h, 72px));
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.compact {
+  min-height: 62vh;
+}
+
+.card {
+  position: relative;
+  width: min(36rem, 100%);
+  padding: clamp(1.5rem, 4vw, 2.4rem);
+  border-radius: 30px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background:
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 15, 30, 0.98));
+  box-shadow: 0 28px 80px rgba(2, 8, 23, 0.34);
+  text-align: center;
+  overflow: hidden;
+}
+
+.eyebrow {
+  display: inline-flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+  padding: 0.38rem 0.82rem;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.12);
+  color: #67e8f9;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 8rem;
+  height: 8rem;
+  margin: 0 auto 1.1rem;
+}
+
+.orb,
+.orbAlt,
+.ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.orb {
+  width: 5rem;
+  height: 5rem;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.92), rgba(34, 211, 238, 0.12) 70%);
+  animation: floatOrb 2.1s ease-in-out infinite;
+}
+
+.orbAlt {
+  width: 2.2rem;
+  height: 2.2rem;
+  inset-inline-start: 1rem;
+  top: 1.2rem;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.84), rgba(168, 85, 247, 0.12) 74%);
+  animation: floatOrb 2.1s ease-in-out infinite reverse;
+}
+
+.ring {
+  inset: 0.3rem;
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  animation: pulseRing 1.8s ease-in-out infinite;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.description {
+  margin: 0.9rem auto 0;
+  max-width: 30rem;
+  color: rgba(226, 232, 240, 0.78);
+  line-height: 1.95;
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  margin-top: 1.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.progressBar {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #22d3ee, #38bdf8, #a855f7);
+  transform: translateX(100%);
+  animation: loadingProgress 1.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.2rem;
+}
+
+.metaPill,
+.metaPillWide {
+  display: inline-flex;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.18), rgba(148, 163, 184, 0.34), rgba(148, 163, 184, 0.18));
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.metaPill {
+  width: 3.2rem;
+}
+
+.metaPillWide {
+  width: 6.8rem;
+}
+
+@keyframes floatOrb {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-8px) scale(1.05);
+  }
+}
+
+@keyframes pulseRing {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.42;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes loadingProgress {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(-10%);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 50%;
+  }
+
+  to {
+    background-position: -200% 50%;
+  }
+}
+
+@media (max-width: 720px) {
+  .screen {
+    min-height: calc(100vh - 64px);
+  }
+
+  .card {
+    border-radius: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb,
+  .orbAlt,
+  .ring,
+  .progressBar,
+  .metaPill,
+  .metaPillWide {
+    animation: none !important;
+  }
+}

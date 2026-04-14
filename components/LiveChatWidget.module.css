@@ -1,0 +1,317 @@
+.shell {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 120;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.toggleButton {
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--tz-emerald), var(--tz-cyan));
+  color: var(--color-white);
+  box-shadow: 0 24px 55px rgba(6, 182, 212, 0.24);
+  display: grid;
+  place-items: center;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.toggleButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 30px 60px rgba(6, 182, 212, 0.3);
+  filter: saturate(1.08);
+}
+
+.toggleNote {
+  position: absolute;
+  left: 76px;
+  bottom: 14px;
+  min-width: 150px;
+  padding: 0.7rem 0.95rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(10, 17, 34, 0.94);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.shell:hover .toggleNote {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.panel {
+  width: min(390px, calc(100vw - 1.5rem));
+  min-height: 520px;
+  max-height: min(620px, calc(100vh - 7rem));
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(15, 25, 50, 0.97), rgba(5, 10, 20, 0.97));
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.42);
+  overflow: hidden;
+}
+
+.panelHeader,
+.panelFooter {
+  padding: 1rem 1.1rem;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.panelHeader h3,
+.panelHeader p,
+.panelStatus h4,
+.panelStatus p,
+.messageMeta p,
+.emptyState p,
+.signinPrompt p {
+  margin: 0;
+}
+
+.panelTitle {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.panelTitle h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1rem;
+}
+
+.panelTitle p,
+.panelStatus p,
+.messageMeta p,
+.emptyState p,
+.signinPrompt p,
+.notice {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.75;
+}
+
+.closeButton {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  display: grid;
+  place-items: center;
+}
+
+.panelStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.panelStatus h4 {
+  font-size: 0.92rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--tz-emerald);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.thread {
+  padding: 1rem;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.messageRow {
+  display: flex;
+}
+
+.messageCustomer {
+  justify-content: flex-end;
+}
+
+.messageAdmin {
+  justify-content: flex-start;
+}
+
+.messageBubble {
+  max-width: 84%;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.11);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.messageCustomer .messageBubble {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 182, 212, 0.16));
+  border-color: rgba(16, 185, 129, 0.22);
+}
+
+.messageMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.messageMeta strong {
+  font-size: 0.82rem;
+}
+
+.messageBody {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.85;
+}
+
+.emptyState,
+.signinPrompt {
+  min-height: 220px;
+  padding: 1rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.8rem;
+}
+
+.emptyState h4,
+.signinPrompt h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panelFooter {
+  display: grid;
+  gap: 0.85rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.composer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  padding: 0.9rem 1rem;
+  font: inherit;
+  line-height: 1.8;
+}
+
+.composer textarea:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
+.composerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.composerHint {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  max-width: 15rem;
+}
+
+.composerButton,
+.signinButton {
+  min-height: 46px;
+  padding: 0 1.15rem;
+  border: none;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font: inherit;
+  font-weight: 800;
+}
+
+.composerButton {
+  background: linear-gradient(135deg, var(--tz-emerald), var(--tz-cyan));
+  color: var(--color-white);
+}
+
+.signinButton {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.composerButton:disabled,
+.composer textarea:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.notice {
+  padding: 0.8rem 0.95rem;
+  border-radius: 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+@media (max-width: 768px) {
+  .shell {
+    left: 0.85rem;
+    bottom: 0.85rem;
+  }
+
+  .panel {
+    width: calc(100vw - 1.7rem);
+    max-height: calc(100vh - 6rem);
+  }
+
+  .toggleNote {
+    display: none;
+  }
+}

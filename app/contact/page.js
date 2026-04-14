@@ -1,3 +1,4 @@
+import "../techfix-pages.css";
 import Link from "next/link";
 import AppIcon from "@/components/AppIcon";
 import {
@@ -12,7 +13,7 @@ export const revalidate = 60;
 export async function generateMetadata() {
   return getPageMetadata({
     title: "تواصل معنا",
-    description: "جميع وسائل التواصل والروابط المباشرة في صفحة واحدة.",
+    description: "طرق التواصل المباشرة مع المتجر في صفحة بسيطة وواضحة.",
   });
 }
 
@@ -20,133 +21,122 @@ export default async function ContactPage() {
   const siteSettings = await getSiteSettings();
   const { company } = siteSettings;
   const contactMethods = getContactMethods(siteSettings);
+  const workingHours = siteSettings.content?.workingHours || [];
   const socialLinks = getSocialLinks(siteSettings);
 
   return (
     <>
-      <section className="section contact-page-hero">
+      <section className="section">
         <div className="container">
-          <div className="contact-page-shell surface-panel">
-            <div className="contact-page-grid">
-              <div className="contact-page-copy">
+          <div className="techfix-contact-grid">
+            <div>
+              <div className="section-header">
                 <span className="section-badge">
-                  <AppIcon name="headphones" size={14} />
-                  تواصل معنا
+                  <AppIcon name="phone" size={14} />
+                  وسائل التواصل
                 </span>
-
-                <h1>
-                  كل وسائل التواصل مع <span className="gradient-text">{company.name}</span> في صفحة واحدة
-                </h1>
-
-                <p>
-                  {company.slogan ||
-                    "نوفر لك وسائل تواصل واضحة وسريعة حتى تصل إلى فريق المتجر بسهولة من أي مكان."}
-                </p>
-
-                <div className="contact-page-badges">
-                  <span className="contact-page-badge">
-                    <AppIcon name="phone" size={14} />
-                    اتصال مباشر
-                  </span>
-                  <span className="contact-page-badge">
-                    <AppIcon name="message" size={14} />
-                    قنوات اجتماعية محدثة
-                  </span>
-                  <span className="contact-page-badge">
-                    <AppIcon name="mail" size={14} />
-                    رد سريع من الفريق
-                  </span>
-                </div>
-
-                <div className="contact-page-actions">
-                  <Link href="/products" className="btn btn-solid btn-lg">
-                    <AppIcon name="shopping-bag" size={18} />
-                    تصفح المنتجات
-                  </Link>
-
-                  <Link href="/services" className="btn btn-outline btn-lg">
-                    <AppIcon name="wrench" size={18} />
-                    خدمات الصيانة
-                  </Link>
-                </div>
+                <h2>طرق مباشرة للوصول إلينا</h2>
+                <p>الهاتف، البريد، واتساب، أو زيارة الفرع عند الحاجة.</p>
               </div>
 
-              <div className="contact-page-panel">
-                <div className="contact-page-panel-head">
-                  <h2>معلومات التواصل المباشر</h2>
-                  <p>يمكنك الوصول إلينا عبر الهاتف أو البريد أو الواتساب أو العنوان.</p>
-                </div>
-
-                <div className="contact-methods-grid">
-                  {contactMethods.map((item) => (
+              <div className="contact-social-grid">
+                {contactMethods.length > 0 ? (
+                  contactMethods.map((item) => (
                     <a
                       key={item.key}
                       href={item.href}
-                      className="contact-method-card"
+                      className="contact-detail-card"
                       target={item.external ? "_blank" : undefined}
                       rel={item.external ? "noopener noreferrer" : undefined}
                     >
-                      <span className="contact-method-card-icon">
+                      <span className="contact-detail-icon">
                         <AppIcon name={item.icon} size={18} />
                       </span>
-                      <div className="contact-method-card-copy">
-                        <strong>{item.label}</strong>
-                        <span>{item.value}</span>
+
+                      <div>
+                        <h3>{item.label}</h3>
+                        <p>{item.value}</p>
                       </div>
                     </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container">
-          <div className="contact-social-panel surface-panel">
-            <div className="section-head" style={{ marginBottom: "1rem" }}>
-              <div>
-                <span className="section-badge">
-                  <AppIcon name="message" size={14} />
-                  تابعنا
-                </span>
-                <h2>قنوات التواصل الاجتماعية</h2>
-                <p>تظهر هذه القنوات الآن من الإعدادات مباشرة، ويمكن تحديثها دون تعديل في الواجهة.</p>
+                  ))
+                ) : (
+                  <div className="techfix-empty">
+                    <AppIcon name="message" size={28} />
+                    <h3>لا توجد وسائل تواصل مضافة حالياً</h3>
+                  </div>
+                )}
               </div>
             </div>
 
-            {socialLinks.length > 0 ? (
-              <div className="contact-social-grid">
-                {socialLinks.map((item) => (
-                  <a
-                    key={item.key}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="contact-social-card"
-                  >
-                    <span className="contact-social-icon">
-                      <AppIcon name={item.icon} size={20} />
-                    </span>
-                    <div>
-                      <h3>{item.label}</h3>
-                      <p>{item.description}</p>
-                    </div>
-                  </a>
+            <aside className="contact-hours-card">
+              <span className="section-badge">
+                <AppIcon name="clock" size={14} />
+                ساعات العمل
+              </span>
+              <ul className="techfix-list">
+                {workingHours.map((item) => (
+                  <li key={item.day}>
+                    <strong>{item.day}</strong>: {item.hours}
+                  </li>
                 ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <div className="empty-state-icon">
-                  <AppIcon name="message" size={28} />
+              </ul>
+
+              <div className="contact-page-note">
+                <span className="contact-detail-icon">
+                  <AppIcon name="map-pin" size={18} />
+                </span>
+                <div>
+                  <h3>عنوان الفرع</h3>
+                  <p>{company?.address || "سيتم تزويدك بالموقع الدقيق عند التواصل المباشر مع فريقنا."}</p>
                 </div>
-                لا توجد قنوات اجتماعية مضافة حاليًا.
               </div>
-            )}
+
+              <div className="contact-page-actions">
+                <Link href="/services" className="btn btn-primary">
+                  احجز صيانة
+                </Link>
+                <Link href="/products" className="btn btn-secondary">
+                  تصفح المنتجات
+                </Link>
+              </div>
+            </aside>
           </div>
         </div>
       </section>
+
+      {socialLinks.length > 0 ? (
+        <section className="section alt">
+          <div className="container">
+            <div className="section-header">
+              <span className="section-badge">
+                <AppIcon name="message" size={14} />
+                تابعنا
+              </span>
+              <h2>قنواتنا الاجتماعية الرسمية</h2>
+            </div>
+
+            <div className="contact-social-grid">
+              {socialLinks.map((item) => (
+                <a
+                  key={item.key}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="contact-social-card"
+                >
+                  <span className="contact-social-icon">
+                    <AppIcon name={item.icon} size={18} />
+                  </span>
+                  <div>
+                    <h3>{item.label}</h3>
+                    <p>{item.description}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

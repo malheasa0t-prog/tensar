@@ -1,10 +1,15 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AppIcon from "@/components/AppIcon";
 import InternalPageHero from "@/components/InternalPageHero";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { isOptimizableImageSrc } from "@/lib/imageUtils";
+import { buildServiceStructuredData } from "@/lib/seo";
+import { getPageMetadata } from "@/lib/siteMetadata";
 import { supabase } from "@/lib/supabaseClient";
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 function slugifyArabic(text) {
   return (text || "")
@@ -17,25 +22,66 @@ function slugifyArabic(text) {
     .replace(/^-|-$/g, "");
 }
 
-export default async function ServiceDetailsPage({ params }) {
-  const { slug } = await params;
-
-  const { data: allServices, error: serviceError } = await supabase
+/**
+ * Resolves one active repair service by its id or generated slug.
+ *
+ * @param {string} slug
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+async function findActiveServiceBySlug(slug) {
+  const { data, error } = await supabase
     .from("repair_services")
     .select("*")
     .eq("status", "active");
 
-  const service = (allServices || []).find(
-    (item) => item.id === slug || slugifyArabic(item.name) === slug
-  );
+  if (error) {
+    return null;
+  }
 
-  if (serviceError || !service) {
+  return (data || []).find((item) => item.id === slug || slugifyArabic(item.name) === slug) || null;
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const service = await findActiveServiceBySlug(slug);
+
+  if (!service) {
+    return getPageMetadata({
+      title: "خدمة غير متاحة",
+      description: "الخدمة المطلوبة غير متاحة حالياً.",
+      pathname: `/services/${slug}`,
+    });
+  }
+
+  return getPageMetadata({
+    title: service.name,
+    description: service.description || "تفاصيل خدمة الصيانة والسعر ومدة التنفيذ.",
+    pathname: `/services/${slug}`,
+    images: service.image,
+  });
+}
+
+export default async function ServiceDetailsPage({ params }) {
+  const { slug } = await params;
+  const service = await findActiveServiceBySlug(slug);
+
+  if (!service) {
     notFound();
   }
 
+  const structuredData = buildServiceStructuredData({
+    service,
+    pathname: `/services/${slug}`,
+  });
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <InternalPageHero
+        currentPath={`/services/${slug}`}
         items={[
           { href: "/", label: "الرئيسية" },
           { href: "/services", label: "خدمات الصيانة" },
@@ -49,7 +95,7 @@ export default async function ServiceDetailsPage({ params }) {
           "خدمة صيانة احترافية مع واجهة أوضح للحجز، معرفة السعر، وفهم مدة التنفيذ قبل اتخاذ القرار."
         }
         stats={[
-          { label: "السعر الابتدائي", value: `${Number(service.price || 0).toFixed(2)} د.أ`, tone: "success" },
+          { label: "السعر الابتدائي", value: formatCurrency(service.price), tone: "success" },
           { label: "المدة", value: service.duration || "حسب الحالة" },
           { label: "الحجز", value: "متاح الآن", tone: "accent" },
         ]}
@@ -86,7 +132,15 @@ export default async function ServiceDetailsPage({ params }) {
             <div className="surface-card detail-media-card">
               <div className="detail-media-frame">
                 {service.image ? (
-                  <img src={service.image} alt={service.name} />
+                  <Image
+                    src={service.image}
+                    alt={service.name}
+                    fill
+                    loading="lazy"
+                    quality={80}
+                    sizes="(max-width: 900px) 100vw, 540px"
+                    unoptimized={!isOptimizableImageSrc(service.image)}
+                  />
                 ) : (
                   <div className="detail-media-placeholder">
                     <AppIcon name={service.icon || "wrench"} size={46} />
@@ -117,7 +171,7 @@ export default async function ServiceDetailsPage({ params }) {
 
               <div className="detail-price-row">
                 <div className="detail-price">
-                  {Number(service.price || 0).toFixed(2)} <span>د.أ</span>
+                  {formatCurrency(service.price)}
                 </div>
               </div>
 

@@ -26,7 +26,7 @@ cp .env.example .env.local
 - `PROVIDER_API_BASE_URL` (اختياري)
 - `PROVIDER_API_KEY` (اختياري)
 - `PROVIDER_API_TIMEOUT_MS` (اختياري)
-- `CRON_SECRET` (اختياري لكن موصى به لحماية `/api/orders/sync`)
+- `CRON_SECRET` (مطلوب لتشغيل `/api/orders/sync` بشكل آمن)
 
 3. إعداد لوحة الإدارة القديمة (Static Admin):
 
@@ -155,7 +155,9 @@ npm run dev
 	- أو `user_token` داخل الـ body للتوافق مع الكود القديم.
 	- يستخدم دالة قاعدة البيانات `create_service_order_tx` لضمان خصم الرصيد وإنشاء الطلب بمعاملة واحدة.
 - `GET/POST /api/orders/sync`:
-	- إذا تم تعريف `CRON_SECRET` يجب إرسال الهيدر `x-cron-secret` بنفس القيمة.
+	- يجب تعريف `CRON_SECRET` في البيئة.
+	- يجب إرسال الهيدر `x-cron-secret` بنفس القيمة.
+	- إذا لم يكن السر مضبوطًا فالمسار يرجع `503` بدل السماح بالمزامنة العامة.
 
 ## حماية الإنتاج
 

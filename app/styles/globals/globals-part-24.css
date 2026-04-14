@@ -1,0 +1,110 @@
+
+/* Typography Refresh */
+.hero h1,
+.page-hero h1,
+.internal-hero-copy h1 {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-display);
+  line-height: var(--line-height-display);
+  letter-spacing: var(--letter-spacing-tight);
+  text-wrap: balance;
+}
+
+.section-header h2,
+.section-shell-copy h2,
+.state-panel-copy h2 {
+  font-size: var(--font-size-title-2);
+  font-weight: var(--font-weight-display);
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-tight);
+  text-wrap: balance;
+}
+
+.section-shell-copy h3,
+.hero-main-card h3,
+.hero-category-card-copy h3,
+.service-card h3,
+.category-hub-copy h2,
+.contact-social-card h3,
+.repair-side-note h3,
+.repair-form-header h3 {
+  font-size: var(--font-size-title-4);
+  font-weight: var(--font-weight-display);
+  line-height: 1.28;
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.hero-copy,
+.page-hero p,
+.section-header p,
+.section-shell-copy p,
+.internal-hero-copy p,
+.state-panel-copy p,
+.hero-summary-item span,
+.trust-item span,
+.contact-social-card p,
+.service-card p {
+  font-size: var(--font-size-lead);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-copy);
+}
+
+.section-badge,
+.section-count-badge,
+.state-panel-eyebrow,
+.detail-kicker {
+  font-size: var(--font-size-body-sm);
+}
+
+/* Scroll Reveal */
+.scroll-reveal {
+  --reveal-delay: 0ms;
+  --reveal-distance-x: 0px;
+  --reveal-distance-y: 28px;
+  --reveal-scale: 0.985;
+  display: block;
+  width: 100%;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translate3d(var(--reveal-distance-x), var(--reveal-distance-y), 0) scale(var(--reveal-scale));
+  transform-origin: center;
+  transition:
+    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay),
+    transform 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay),
+    filter 680ms ease var(--reveal-delay);
+  will-change: opacity, transform, filter;
+}
+
+.scroll-reveal--slide-in-right {
+  --reveal-distance-x: 42px;
+  --reveal-distance-y: 0px;
+}
+
+.scroll-reveal--zoom-in {
+  --reveal-distance-y: 18px;
+  --reveal-scale: 0.94;
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.scroll-reveal > .contact-social-card,
+.scroll-reveal > .category-hub-card,
+.scroll-reveal > .surface-card,
+.scroll-reveal > .surface-panel,
+.scroll-reveal > .state-panel,
+.scroll-reveal > .techfix-cta-panel {
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

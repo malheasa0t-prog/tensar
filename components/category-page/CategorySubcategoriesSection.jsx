@@ -1,6 +1,11 @@
-import Link from 'next/link';
-import AppIcon from '@/components/AppIcon';
-import { getCategoryHref } from '@/lib/categoryPageModel';
+import Image from "next/image";
+import Link from "next/link";
+import AppIcon from "@/components/AppIcon";
+import ScrollReveal from "@/components/ScrollReveal";
+import { isOptimizableImageSrc } from "@/lib/imageUtils";
+import { getStaggeredRevealDelay } from "@/lib/scrollRevealModel";
+import { getCategoryHref } from "@/lib/categoryPageModel";
+import styles from "./CategorySubcategoriesSection.module.css";
 
 /**
  * Lists subcategories for a main category.
@@ -20,57 +25,69 @@ export default function CategorySubcategoriesSection({
   }
 
   return (
-    <div className="surface-panel section-shell">
-      <div className="section-shell-head">
-        <div className="section-shell-copy">
-          <h2>الأقسام الفرعية</h2>
-          <p>اختر القسم الفرعي المناسب لتصفح المنتجات الخاصة به داخل صفحة أوضح وأكثر تركيزًا.</p>
+    <ScrollReveal variant="fade-up">
+      <div className="surface-panel section-shell">
+        <div className="section-shell-head">
+          <div className="section-shell-copy">
+            <h2>الأقسام الفرعية</h2>
+            <p>اختر القسم الفرعي المناسب لتصفح المنتجات الخاصة به داخل صفحة أوضح وأكثر تركيزًا.</p>
+          </div>
+
+          <span className="section-count-badge">
+            <AppIcon name="folder" size={14} />
+            {subCategories.length} فئة
+          </span>
         </div>
 
-        <span className="section-count-badge">
-          <AppIcon name="folder" size={14} />
-          {subCategories.length} فئة
-        </span>
-      </div>
-
-      <div className="balanced-card-grid">
-        {subCategories.map((subCategory) => (
-          <Link
-            key={subCategory.id}
-            href={getCategoryHref(subCategory)}
-            className="surface-card category-section-card"
-            style={{ display: 'grid', gap: '0.9rem', textAlign: 'center' }}
-          >
-            <div
-              className="detail-media-placeholder"
-              style={{ width: '78px', height: '78px', borderRadius: '24px', marginInline: 'auto' }}
+        <div className="balanced-card-grid">
+          {subCategories.map((subCategory, index) => (
+            <ScrollReveal
+              key={subCategory.id}
+              variant="slide-in-right"
+              delayMs={getStaggeredRevealDelay(index, 85)}
             >
-              {subCategory.image ? (
-                <img
-                  src={subCategory.image}
-                  alt={subCategory.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '24px' }}
-                />
-              ) : (
-                <AppIcon name={subCategory.icon || subCategory.name || 'folder'} size={28} />
-              )}
-            </div>
+              <Link
+                href={getCategoryHref(subCategory)}
+                className={`surface-card category-section-card ${styles.card}`}
+              >
+                <div
+                  className={styles.mediaFrame}
+                >
+                  {subCategory.image ? (
+                    <Image
+                      src={subCategory.image}
+                      alt={subCategory.name}
+                      fill
+                      loading="lazy"
+                      quality={80}
+                      sizes="(max-width: 700px) min(100vw - 3rem, 320px), 280px"
+                      unoptimized={!isOptimizableImageSrc(subCategory.image)}
+                      className={styles.mediaImage}
+                    />
+                  ) : (
+                    <div className={styles.iconFallback}>
+                      <AppIcon name={subCategory.icon || subCategory.name || "folder"} size={52} />
+                    </div>
+                  )}
+                </div>
 
-            <div style={{ display: 'grid', gap: '0.35rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{subCategory.name}</h3>
-              <p style={{ fontSize: '0.88rem' }}>
-                {subCategory.description ||
-                  'ادخل إلى هذا القسم لاستعراض المنتجات الخاصة به داخل بطاقات واضحة ومباشرة.'}
-              </p>
-            </div>
+                <div className={styles.copy}>
+                  <h3 className={styles.title}>{subCategory.name}</h3>
+                  <p className={styles.description}>
+                    {subCategory.description ||
+                      "ادخل إلى هذا القسم لاستعراض المنتجات الخاصة به داخل بطاقات واضحة ومباشرة."}
+                  </p>
+                </div>
 
-            <span className="section-count-badge" style={{ justifySelf: 'center' }}>
-              <AppIcon name="boxes" size={14} />
-              {subCategoryProductsCount[subCategory.id] || 0} منتج
-            </span>
-          </Link>
-        ))}
+                <span className={`section-count-badge ${styles.countBadge}`}>
+                  <AppIcon name="boxes" size={14} />
+                  {subCategoryProductsCount[subCategory.id] || 0} عنصر
+                </span>
+              </Link>
+            </ScrollReveal>
+          ))}
+        </div>
       </div>
-    </div>
+    </ScrollReveal>
   );
 }

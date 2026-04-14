@@ -1,0 +1,279 @@
+﻿/* Settings sections */
+.table-wrap {
+    overflow-x: auto;
+}
+
+#adminContent {
+    display: grid;
+    gap: 20px;
+}
+
+#adminContent>.admin-panel,
+#adminContent>.filter-bar,
+#adminContent>#accessoriesList,
+#adminContent>.status-box {
+    animation: adminFadeUp 0.35s ease both;
+}
+
+@keyframes adminFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.admin-panel {
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+        var(--bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    box-shadow: 0 18px 48px rgba(3, 8, 28, 0.28);
+    overflow: hidden;
+}
+
+.admin-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 16px;
+    left: 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--primary-rgb), 0.8), transparent);
+}
+
+.admin-panel:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 60px rgba(3, 8, 28, 0.36);
+}
+
+.panel-header {
+    padding: 20px 22px;
+    background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.08), transparent);
+}
+
+.panel-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.08rem;
+    letter-spacing: -0.01em;
+}
+
+.panel-header h2 i {
+    color: var(--primary-light);
+}
+
+.panel-body {
+    padding: 20px;
+}
+
+.panel-body.padded {
+    padding: 24px;
+}
+
+.btn {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+    background: var(--gradient-primary);
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(var(--primary-rgb), 0.24);
+}
+
+.btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.22) 50%, transparent 80%);
+    transform: translateX(120%);
+    transition: transform 0.6s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 36px rgba(var(--primary-rgb), 0.28);
+}
+
+.btn:hover::after {
+    transform: translateX(-120%);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+}
+
+.btn-outline {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+.btn-outline:hover {
+    background: rgba(var(--primary-rgb), 0.12);
+    border-color: rgba(var(--primary-rgb), 0.44);
+    color: #fff;
+    box-shadow: 0 14px 30px rgba(var(--primary-rgb), 0.16);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, rgba(var(--secondary-rgb), 0.95), rgba(var(--primary-rgb), 0.9));
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+}
+
+.btn-sm {
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+}
+
+.btn-lg {
+    min-height: 50px;
+    padding: 0 22px;
+    border-radius: 16px;
+}
+
+.action-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    box-shadow: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.16);
+}
+
+.actions-cell {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-field,
+.filter-bar input,
+.filter-bar select,
+.admin-panel input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.admin-panel select,
+.admin-panel textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 13px 15px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.92rem;
+    outline: none;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+.admin-panel textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.admin-field::placeholder,
+.filter-bar input::placeholder,
+.admin-panel input::placeholder,
+.admin-panel textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.admin-field:hover,
+.filter-bar input:hover,
+.filter-bar select:hover,
+.admin-panel input:hover,
+.admin-panel select:hover,
+.admin-panel textarea:hover {
+    border-color: rgba(var(--primary-rgb), 0.26);
+}
+
+.admin-field:focus,
+.filter-bar input:focus,
+.filter-bar select:focus,
+.admin-panel input:focus,
+.admin-panel select:focus,
+.admin-panel textarea:focus {
+    border-color: rgba(var(--primary-rgb), 0.8);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.16);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-panel select option,
+.filter-bar select option,
+select option {
+    background-color: #121838;
+    color: #ffffff;
+}
+
+.admin-input-wrap {
+    min-height: 50px;
+    padding: 0 16px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+}
+
+.admin-input-wrap i {
+    color: var(--primary-light);
+}
+
+.admin-input-wrap input {
+    min-height: auto;
+    padding: 14px 0;
+}
+

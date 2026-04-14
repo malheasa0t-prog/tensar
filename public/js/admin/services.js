@@ -2,6 +2,78 @@
 (function () {
     'use strict';
     const A = window.AdminApp;
+    const bulkActions = window.AdminBulkActions;
+
+    function getServiceBulkToolbarMarkup() {
+        return bulkActions ? bulkActions.getToolbarMarkup({
+            scopeKey: 'services',
+            itemLabel: 'خدمات',
+            actions: { status: true, delete: true, export: true }
+        }) : '';
+    }
+
+    async function updateBulkServiceStatus(ids, status) {
+        const services = (TZ.db.repairServices || []).filter((service) => ids.includes(service.id));
+        await Promise.all(services.map((service) => {
+            service.status = status;
+            return Promise.resolve(TZ.commitDb('service_bulk_status', TZ.getSession()?.userId, `${service.name}: ${status}`, {
+                type: 'repair_service',
+                data: service
+            }));
+        }));
+        renderServices();
+        A.showToast(`تم تحديث حالة ${services.length} خدمات.`);
+    }
+
+    async function deleteBulkServices(ids) {
+        const services = (TZ.db.repairServices || []).filter((service) => ids.includes(service.id));
+        TZ.db.repairServices = (TZ.db.repairServices || []).filter((service) => !ids.includes(service.id));
+        await Promise.all(services.map((service) => Promise.resolve(TZ.commitDb('service_delete', TZ.getSession()?.userId, service.name, {
+            type: 'repair_service_delete',
+            data: { id: service.id }
+        }))));
+        renderServices();
+        A.showToast(`تم حذف ${services.length} خدمات.`);
+    }
+
+    function buildServiceExportRows(ids) {
+        return (TZ.db.repairServices || []).filter((service) => ids.includes(service.id)).map((service) => ({
+            name: service.name || '',
+            category: service.category || 'خدمات الصيانة',
+            price: service.price || 0,
+            duration: service.duration || '',
+            status: service.status || 'active'
+        }));
+    }
+
+    function mountServiceBulkActions() {
+        if (!bulkActions) return;
+        bulkActions.mount({
+            scopeKey: 'services',
+            tableSelector: '#servicesTable',
+            status: {
+                title: 'تغيير حالة الخدمات المحددة',
+                options: [{ value: 'active', label: 'ظاهر' }, { value: 'hidden', label: 'مخفي' }],
+                run: updateBulkServiceStatus
+            },
+            delete: {
+                title: 'حذف الخدمات المحددة',
+                message: 'سيتم حذف خدمات الصيانة المحددة. هل تريد المتابعة؟',
+                run: deleteBulkServices
+            },
+            export: {
+                filename: 'services-export.csv',
+                columns: [
+                    { key: 'name', label: 'الخدمة' },
+                    { key: 'category', label: 'القسم' },
+                    { key: 'price', label: 'السعر' },
+                    { key: 'duration', label: 'المدة' },
+                    { key: 'status', label: 'الحالة' }
+                ],
+                buildRows: buildServiceExportRows
+            }
+        });
+    }
 
     function renderServices() {
         const services = (TZ.db.repairServices || []).slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -15,10 +87,12 @@
             <div class="admin-panel">
                 <div class="panel-header"><h2><i class="fas fa-tools"></i> خدمات الصيانة (${services.length})</h2></div>
                 <div class="panel-body">
+                    ${getServiceBulkToolbarMarkup()}
                     <div class="table-wrap">
-                    <table class="data-table">
+                    <table class="data-table" id="servicesTable" data-paginated="true" data-item-label="خدمة" data-page-size-options="10,25,50">
                         <thead>
                             <tr>
+                                ${bulkActions ? bulkActions.getHeaderCheckboxMarkup('services') : ''}
                                 <th>الخدمة</th>
                                 <th>القسم</th>
                                 <th>السعر</th>
@@ -30,6 +104,7 @@
                         <tbody id="servicesTableBody">
                             ${services.map(s => `
                                 <tr data-service-id="${s.id}">
+                                    ${bulkActions ? bulkActions.getRowCheckboxMarkup('services', s.id) : ''}
                                     <td>
                                         <strong>${TZ.escapeHtml(s.name || '')}</strong>
                                         ${s.description ? `<br><small style="color:var(--text-muted)">${TZ.escapeHtml((s.description || '').substring(0, 70))}</small>` : ''}
@@ -87,7 +162,7 @@
                                 <label>صورة الخدمة</label>
                                 <div class="image-upload-area" id="srvImageUploadArea" style="cursor:pointer;">
                                     <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>اضغط لرفع صورة (حد أقصى 1MB)</p>
+                                    <p>اضغط لرفع صورة (حد أقصى ${A.getAdminImageUploadLimitText()})</p>
                                     <input type="file" id="srvImageInput" accept="image/*" style="display:none;">
                                 </div>
                                 <div id="srvImagePreview" style="margin-top:10px;"></div>
@@ -103,6 +178,7 @@
         `;
 
         bindServiceEvents();
+        mountServiceBulkActions();
     }
 
     function bindServiceEvents() {
@@ -201,8 +277,8 @@
         imageInput.addEventListener('change', function () {
             const file = this.files[0];
             if (!file) return;
-            if (file.size > 1048576) {
-                A.showToast('حجم الصورة يتجاوز 1MB');
+            if (A.isAdminImageUploadTooLarge(file)) {
+                A.showAdminImageUploadLimitToast();
                 return;
             }
             const reader = new FileReader();

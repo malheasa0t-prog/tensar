@@ -2,8 +2,10 @@ import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import AppIcon from "@/components/AppIcon";
 import InternalPageHero from "@/components/InternalPageHero";
+import ScrollReveal from "@/components/ScrollReveal";
 import StatusPanel from "@/components/StatusPanel";
 import { getPageMetadata } from "@/lib/siteMetadata";
+import { selectSubscriptionProducts } from "@/lib/subscriptionsModel";
 import { supabase } from "@/lib/supabaseClient";
 
 export async function generateMetadata() {
@@ -21,7 +23,9 @@ export default async function SubscriptionsPage() {
     .select("*")
     .eq("status", "active");
 
-  const { data: categoriesData, error: categoriesError } = await supabase.from("categories").select("*");
+  const { data: categoriesData, error: categoriesError } = await supabase
+    .from("categories")
+    .select("*");
 
   if (productsError || categoriesError) {
     return (
@@ -49,30 +53,36 @@ export default async function SubscriptionsPage() {
     );
   }
 
+  const categories = categoriesData || [];
   const categoryMap = {};
-  categoriesData.forEach((category) => {
+  categories.forEach((category) => {
     categoryMap[category.id] = category.name;
   });
 
-  const products = productsData.map((product) => ({
+  const digitalProducts = selectSubscriptionProducts({
+    products: productsData || [],
+    categories,
+  }).map((product) => ({
     id: product.id,
     name: product.name,
     category: categoryMap[product.category_id] || "أخرى",
     categoryId: product.category_id,
     price: product.price,
     discountPrice: product.discount_price,
+    quantity: product.quantity,
     description: product.description,
     badge: product.sold > 50 ? "الأكثر طلبًا" : null,
+    rating: product.rating,
+    reviewCount: product.review_count || product.reviews_count || product.sold || null,
     images: product.images || [],
     icon: "wallet",
     link: `/products/${product.id}`,
   }));
 
-  const digitalProducts = products.filter((product) => product.category === "شحن واشتراكات");
-
   return (
     <>
       <InternalPageHero
+        currentPath="/subscriptions"
         items={[
           { href: "/", label: "الرئيسية" },
           { label: "شحن واشتراكات" },
@@ -120,7 +130,8 @@ export default async function SubscriptionsPage() {
       <section className="section" style={{ paddingTop: 0, paddingBottom: "4rem" }}>
         <div className="container">
           {digitalProducts.length > 0 ? (
-            <div className="surface-panel section-shell">
+            <ScrollReveal variant="fade-up">
+              <div className="surface-panel section-shell">
               <div className="section-shell-head">
                 <div className="section-shell-copy">
                   <h2>الخدمات الرقمية المتاحة الآن</h2>
@@ -134,11 +145,12 @@ export default async function SubscriptionsPage() {
               </div>
 
               <div className="balanced-card-grid">
-                {digitalProducts.map((item) => (
-                  <ProductCard key={item.id} product={item} />
+                {digitalProducts.map((item, index) => (
+                  <ProductCard key={item.id} product={item} revealIndex={index} />
                 ))}
               </div>
-            </div>
+              </div>
+            </ScrollReveal>
           ) : (
             <StatusPanel
               icon="wallet"

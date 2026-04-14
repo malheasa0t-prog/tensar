@@ -3,6 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import {
+  mapRegisterAuthError,
+  normalizeRegisterProfileData,
+  validateRegisterForm,
+} from '@/lib/registerModel';
 import AppIcon from '@/components/AppIcon';
 
 export default function RegisterPage() {
@@ -16,28 +21,20 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  function mapAuthError(err) {
-    const message = err?.message || '';
-    if (message === 'User already registered') return 'هذا البريد مسجل بالفعل';
-    if (message.includes('Failed to fetch')) {
-      return 'تعذر الاتصال بخدمة المصادقة. تأكد من إعدادات Supabase ثم أعد المحاولة.';
-    }
-    return message || 'حدث خطأ غير متوقع أثناء إنشاء الحساب';
-  }
-
   async function handleRegister(event) {
     event.preventDefault();
     setLoading(true);
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('كلمتا المرور غير متطابقتين');
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    const validationError = validateRegisterForm({
+      fullName,
+      phone,
+      country,
+      password,
+      confirmPassword,
+    });
+    if (validationError) {
+      setError(validationError);
       setLoading(false);
       return;
     }
@@ -47,22 +44,18 @@ export default function RegisterPage() {
         email,
         password,
         options: {
-          data: {
-            full_name: fullName?.trim() || null,
-            phone: phone?.trim() || null,
-            country: country?.trim() || null,
-          },
+          data: normalizeRegisterProfileData({ fullName, phone, country }),
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
       if (authError) {
-        setError(mapAuthError(authError));
+        setError(mapRegisterAuthError(authError));
         setLoading(false);
         return;
       }
     } catch (err) {
-      setError(mapAuthError(err));
+      setError(mapRegisterAuthError(err));
       setLoading(false);
       return;
     }
@@ -109,10 +102,14 @@ export default function RegisterPage() {
             <input
               id="full_name"
               type="text"
+              required
+              minLength={2}
+              maxLength={80}
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
               placeholder="الاسم الكامل"
               className="form-input"
+              autoComplete="name"
             />
           </div>
 
@@ -122,11 +119,16 @@ export default function RegisterPage() {
               <input
                 id="register_phone"
                 type="tel"
+                required
+                minLength={8}
+                maxLength={18}
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 placeholder="07XXXXXXXX"
                 className="form-input"
                 dir="ltr"
+                inputMode="tel"
+                autoComplete="tel"
               />
             </div>
 
@@ -135,10 +137,12 @@ export default function RegisterPage() {
               <input
                 id="register_country"
                 type="text"
+                maxLength={56}
                 value={country}
                 onChange={(event) => setCountry(event.target.value)}
                 placeholder="الأردن"
                 className="form-input"
+                autoComplete="country-name"
               />
             </div>
           </div>
@@ -154,6 +158,7 @@ export default function RegisterPage() {
               placeholder="example@email.com"
               className="form-input"
               dir="ltr"
+              autoComplete="email"
             />
           </div>
 
@@ -164,11 +169,13 @@ export default function RegisterPage() {
                 id="register_password"
                 type="password"
                 required
+                minLength={6}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="6 أحرف على الأقل"
                 className="form-input"
                 dir="ltr"
+                autoComplete="new-password"
               />
             </div>
 
@@ -178,11 +185,13 @@ export default function RegisterPage() {
                 id="confirm_password"
                 type="password"
                 required
+                minLength={6}
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="أعد كتابة كلمة المرور"
                 className="form-input"
                 dir="ltr"
+                autoComplete="new-password"
               />
             </div>
           </div>

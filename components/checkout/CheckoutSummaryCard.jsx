@@ -1,16 +1,17 @@
-import Link from 'next/link';
-import AppIcon from '@/components/AppIcon';
+import Link from "next/link";
+import AppIcon from "@/components/AppIcon";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 /**
  * Displays the current cart summary beside the checkout form.
  *
- * @param {{ items: Array<Record<string, unknown>>, cartTotal: number }} props
+ * @param {{ items: Array<Record<string, unknown>>, cartTotal: number, shippingFee: number, checkoutTotal: number }} props
  * @returns {JSX.Element}
  */
-export default function CheckoutSummaryCard({ items, cartTotal }) {
+export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, checkoutTotal }) {
   return (
     <aside className="surface-card checkout-summary-card">
-      <h2 style={{ fontSize: '1.05rem', marginBottom: '0.9rem' }}>ملخص السلة</h2>
+      <h2 style={{ fontSize: "1.05rem", marginBottom: "0.9rem" }}>ملخص السلة</h2>
 
       {items.length === 0 ? (
         <div className="empty-state" style={{ paddingInline: 0 }}>
@@ -29,34 +30,47 @@ export default function CheckoutSummaryCard({ items, cartTotal }) {
               <div
                 key={item.id}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  fontSize: '0.92rem',
-                  padding: '0.85rem 0',
-                  borderBottom: '1px solid var(--border)',
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                  fontSize: "0.92rem",
+                  padding: "0.85rem 0",
+                  borderBottom: "1px solid var(--border)",
                 }}
               >
                 <span>
                   {item.name} × {item.qty}
                 </span>
-                <strong>{(Number(item.price || 0) * item.qty).toFixed(2)} د.أ</strong>
+                <strong>{formatCurrency(Number(item.price || 0) * item.qty)}</strong>
               </div>
             ))}
           </div>
 
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: "1rem",
+              color: "var(--text-muted)",
+              fontSize: "0.92rem",
+            }}
+          >
+            <span>رسوم التوصيل</span>
+            <span>{formatCurrency(shippingFee)}</span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
               fontWeight: 800,
-              marginTop: '1rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid var(--border)',
+              marginTop: "0.85rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid var(--border)",
             }}
           >
             <span>الإجمالي</span>
-            <span>{Number(cartTotal || 0).toFixed(2)} د.أ</span>
+            <span>{formatCurrency(checkoutTotal)}</span>
           </div>
         </>
       )}

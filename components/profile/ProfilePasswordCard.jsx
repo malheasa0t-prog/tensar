@@ -1,7 +1,12 @@
 import ProfileAlert from '@/components/profile/ProfileAlert';
 import { isProfileSuccessMessage } from '@/lib/profileModel';
 import {
+  cardTitleStyle,
+  fieldGroupStyle,
+  fieldLabelStyle,
+  formStyle,
   inputStyle,
+  secondaryActionStyle,
   sectionBodyStyle,
   sectionCardStyle,
   sectionHeaderStyle,
@@ -11,7 +16,7 @@ import {
  * Password update form card.
  *
  * @param {{
- *   passwordForm: { new_password: string, confirm_password: string },
+ *   passwordForm: { current_password: string, new_password: string, confirm_password: string },
  *   passwordLoading: boolean,
  *   passwordMessage: string,
  *   onSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>,
@@ -31,35 +36,45 @@ export default function ProfilePasswordCard({
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
-        <h3 style={{ fontSize: '1.1rem' }}>🔐 تغيير كلمة المرور</h3>
+        <h3 style={cardTitleStyle}>تغيير كلمة المرور</h3>
       </div>
 
       <div style={sectionBodyStyle}>
         <ProfileAlert message={passwordMessage} tone={tone} />
 
-        <form onSubmit={onSubmit}>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              كلمة المرور الجديدة
-            </label>
+        <form onSubmit={onSubmit} style={formStyle}>
+          <div style={fieldGroupStyle}>
+            <label style={fieldLabelStyle}>كلمة المرور الحالية</label>
+            <input
+              type="password"
+              name="current_password"
+              value={passwordForm.current_password}
+              onChange={onFieldChange}
+              autoComplete="current-password"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={fieldGroupStyle}>
+            <label style={fieldLabelStyle}>كلمة المرور الجديدة</label>
             <input
               type="password"
               name="new_password"
               value={passwordForm.new_password}
               onChange={onFieldChange}
+              autoComplete="new-password"
               style={inputStyle}
             />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              تأكيد كلمة المرور
-            </label>
+          <div style={fieldGroupStyle}>
+            <label style={fieldLabelStyle}>تأكيد كلمة المرور الجديدة</label>
             <input
               type="password"
               name="confirm_password"
               value={passwordForm.confirm_password}
               onChange={onFieldChange}
+              autoComplete="new-password"
               style={inputStyle}
             />
           </div>
@@ -68,9 +83,9 @@ export default function ProfilePasswordCard({
             type="submit"
             disabled={passwordLoading}
             className="btn btn-outline"
-            style={{ padding: '12px 22px', borderRadius: '12px', fontWeight: '700' }}
+            style={secondaryActionStyle}
           >
-            {passwordLoading ? '⏳ جاري التغيير...' : 'تحديث كلمة المرور'}
+            {passwordLoading ? 'جاري التغيير...' : 'تحديث كلمة المرور'}
           </button>
         </form>
       </div>

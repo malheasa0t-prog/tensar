@@ -1,0 +1,68 @@
+.admin-bulk-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(var(--primary-rgb), 0.22);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.admin-bulk-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.admin-bulk-actions-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.bulk-check-cell {
+    width: 44px;
+    text-align: center;
+}
+
+.admin-bulk-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.data-table tr.is-selected {
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.admin-bulk-status-modal {
+    width: min(420px, 100%);
+    text-align: right;
+}
+
+.admin-bulk-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+    .admin-bulk-toolbar {
+        align-items: stretch;
+    }
+
+    .admin-bulk-actions-list {
+        width: 100%;
+    }
+
+    .admin-bulk-actions-list .btn {
+        flex: 1 1 160px;
+    }
+}

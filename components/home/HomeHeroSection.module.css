@@ -1,0 +1,114 @@
+.heroRoot {
+  position: relative;
+}
+
+/* ── Inline Horizontal Row (Title | Description | Buttons) ── */
+.heroInlineRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(1rem, 2.5vw, 2rem);
+  width: 100%;
+  direction: rtl;
+}
+
+.heroInlineTitle {
+  flex-shrink: 0;
+}
+
+.heroTitle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  margin: 0;
+  font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: var(--letter-spacing-tight);
+  color: #f8f4ff;
+  white-space: nowrap;
+}
+
+.heroInlineDesc {
+  flex: 1 1 auto;
+  margin: 0 !important;
+  max-width: 32rem;
+  font-size: 0.85rem !important;
+  line-height: 1.65 !important;
+  color: rgba(230, 236, 255, 0.85);
+  text-align: start;
+}
+
+.heroInlineActions {
+  flex-shrink: 0;
+}
+
+.typewriterLine {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  overflow: visible;
+  white-space: nowrap;
+  padding-top: 0.15em;
+  padding-inline-end: 0.55rem;
+  border-inline-end: 3px solid rgba(192, 132, 252, 0.92);
+  clip-path: inset(-0.35em 0 -0.1em 100%);
+  animation:
+    hero-typewriter 2.45s steps(24, end) 0.25s forwards,
+    hero-caret-blink 0.8s step-end infinite;
+}
+
+@keyframes hero-typewriter {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(-0.35em 0 -0.1em 0);
+  }
+}
+
+@keyframes hero-caret-blink {
+  50% {
+    border-inline-end-color: transparent;
+  }
+}
+
+/* ──────────────────────────────────────────
+   Responsive — Tablet
+   ────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .heroInlineRow {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    gap: 0.6rem;
+  }
+
+  .heroInlineTitle {
+    width: 100%;
+    text-align: center;
+  }
+
+  .heroTitle {
+    align-items: center;
+    white-space: normal;
+  }
+
+  .heroInlineDesc {
+    text-align: center;
+    max-width: none;
+  }
+
+  .heroInlineActions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typewriterLine {
+    animation: none !important;
+    clip-path: inset(-0.35em 0 -0.1em 0);
+  }
+}

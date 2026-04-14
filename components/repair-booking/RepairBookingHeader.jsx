@@ -1,25 +1,24 @@
+import styles from "./RepairBookingForm.module.css";
+
 /**
- * Renders the static header and account-prefill hint for the repair form.
+ * Renders a compact repair form heading without step cards or extra guidance blocks.
  *
  * @param {{ isAccountPrefilled: boolean }} props
  * @returns {JSX.Element}
  */
 export default function RepairBookingHeader({ isAccountPrefilled }) {
   return (
-    <>
-      <div className="repair-form-header">
-        <div className="repair-srv-icon">🛠️</div>
-        <div>
-          <h3>نموذج طلب صيانة</h3>
-          <p>أدخل بياناتك وسنرتب طلب الصيانة مباشرة.</p>
+    <header className={styles.header}>
+      <div className={styles.headerRow}>
+        <div className={styles.headerCopy}>
+          <h3 className={styles.formTitle}>احجز الصيانة</h3>
+          <p className={styles.formSubtitle}>املأ البيانات التالية ثم أرسل الطلب.</p>
         </div>
-      </div>
 
-      {isAccountPrefilled ? (
-        <p className="form-message" style={{ marginBottom: "1rem" }}>
-          تم تعبئة بياناتك من الحساب لتسهيل متابعة الطلب من لوحة التحكم.
-        </p>
-      ) : null}
-    </>
+        {isAccountPrefilled ? (
+          <span className={styles.prefillBadge}>تم تعبئة الاسم ورقم الهاتف من حسابك</span>
+        ) : null}
+      </div>
+    </header>
   );
 }

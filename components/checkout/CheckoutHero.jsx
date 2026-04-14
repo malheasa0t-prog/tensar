@@ -1,5 +1,5 @@
-import Breadcrumbs from '@/components/Breadcrumbs';
 import AppIcon from '@/components/AppIcon';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 /**
  * Renders the checkout hero and breadcrumb trail.
@@ -17,7 +17,9 @@ export default function CheckoutHero() {
               { href: '/products', label: 'المنتجات' },
               { label: 'إتمام الشراء' },
             ]}
+            currentPath="/checkout"
           />
+
           <span className="section-badge">
             <AppIcon name="credit-card" size={14} />
             إتمام الشراء

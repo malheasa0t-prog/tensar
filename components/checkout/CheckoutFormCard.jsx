@@ -1,34 +1,46 @@
-import AppIcon from '@/components/AppIcon';
+import AppIcon from "@/components/AppIcon";
+import CheckoutWalletTransferModal from "@/components/checkout/CheckoutWalletTransferModal";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 /**
  * Main checkout form card with dynamic payment and delivery options.
  *
  * @param {{
- *   checkoutOptions: { paymentMethods: Array<Record<string, unknown>>, deliveryMethods: Array<Record<string, unknown>> },
- *   form: Record<string, string>,
- *   loading: boolean,
- *   error: string,
- *   success: Record<string, unknown> | null,
  *   canSubmit: boolean,
- *   onSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>,
+ *   checkoutOptions: { paymentMethods: Array<Record<string, unknown>>, deliveryMethods: Array<Record<string, unknown>>, walletTransferNumber?: string },
+ *   checkoutTotal: number,
+ *   error: string,
+ *   form: Record<string, string>,
+ *   isWalletTransferModalOpen: boolean,
+ *   isWalletTransferUnavailable: boolean,
+ *   loading: boolean,
+ *   onCloseWalletTransferModal: () => void,
  *   onFieldChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void,
+ *   onSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>,
+ *   success: Record<string, unknown> | null,
+ *   walletTransferInstructions: { amountText: string, walletNumber: string } | null,
  * }} props
  * @returns {JSX.Element}
  */
 export default function CheckoutFormCard({
-  checkoutOptions,
-  form,
-  loading,
-  error,
-  success,
   canSubmit,
-  onSubmit,
+  checkoutOptions,
+  checkoutTotal,
+  error,
+  form,
+  isWalletTransferModalOpen,
+  isWalletTransferUnavailable,
+  loading,
+  onCloseWalletTransferModal,
   onFieldChange,
+  onSubmit,
+  success,
+  walletTransferInstructions,
 }) {
   return (
     <div className="surface-card checkout-main-card">
-      <h2 style={{ marginBottom: '0.75rem' }}>بيانات العميل</h2>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+      <h2 style={{ marginBottom: "0.75rem" }}>بيانات العميل</h2>
+      <p style={{ color: "var(--text-muted)", marginBottom: "1rem" }}>
         أكمل المعلومات الأساسية ثم راجع الملخص قبل تأكيد الطلب.
       </p>
 
@@ -39,7 +51,7 @@ export default function CheckoutFormCard({
         </div>
       ) : null}
 
-      <form onSubmit={onSubmit} className="auth-form" style={{ marginTop: '1rem' }}>
+      <form onSubmit={onSubmit} className="auth-form" style={{ marginTop: "1rem" }}>
         <div className="field-grid">
           <div className="form-field">
             <label htmlFor="customer_name">الاسم الكامل *</label>
@@ -65,19 +77,6 @@ export default function CheckoutFormCard({
               dir="ltr"
             />
           </div>
-        </div>
-
-        <div className="form-field">
-          <label htmlFor="customer_email">البريد الإلكتروني</label>
-          <input
-            id="customer_email"
-            className="form-input"
-            type="email"
-            name="customer_email"
-            value={form.customer_email}
-            onChange={onFieldChange}
-            dir="ltr"
-          />
         </div>
 
         <div className="field-grid">
@@ -113,6 +112,17 @@ export default function CheckoutFormCard({
                 </option>
               ))}
             </select>
+
+            {form.payment_method === "wallet" ? (
+              <div
+                className={isWalletTransferUnavailable ? "form-alert error" : "form-alert success"}
+                style={{ marginTop: "0.75rem" }}
+              >
+                {isWalletTransferUnavailable
+                  ? "لم يتم ضبط رقم المحفظة في لوحة التحكم بعد، لذلك لا يمكن استخدام هذا الخيار حالياً."
+                  : `سيظهر لك رقم المحفظة والمبلغ المطلوب (${walletTransferInstructions?.amountText || formatCurrency(checkoutTotal)}) في نافذة منبثقة.`}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -131,13 +141,19 @@ export default function CheckoutFormCard({
 
         <button
           type="submit"
-          className={loading ? 'btn btn-primary btn-block is-loading' : 'btn btn-primary btn-block'}
+          className={loading ? "btn btn-primary btn-block is-loading" : "btn btn-primary btn-block"}
           disabled={loading || !canSubmit}
         >
-          <AppIcon name="shopping-cart" size={16} />
-          {loading ? 'جاري إنشاء الطلب...' : 'تأكيد الطلب'}
+          <AppIcon name={loading ? "refresh" : success ? "badge-check" : "shopping-cart"} size={16} />
+          {loading ? "جارٍ إنشاء الطلب..." : success ? "تم الإرسال بنجاح" : "تأكيد الطلب"}
         </button>
       </form>
+
+      <CheckoutWalletTransferModal
+        instructions={walletTransferInstructions}
+        isOpen={isWalletTransferModalOpen}
+        onClose={onCloseWalletTransferModal}
+      />
     </div>
   );
 }

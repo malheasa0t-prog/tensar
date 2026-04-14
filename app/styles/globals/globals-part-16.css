@@ -1,0 +1,230 @@
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FEATURED BADGE
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.service-card.featured {
+  border-color: var(--border-glow);
+}
+
+.featured-badge {
+  position: absolute;
+  top: 1rem; left: 1rem;
+  background: var(--grad-brand);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--r-full);
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   REPAIR FORM / SERVICES PAGE
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.repair-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.repair-form-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-card);
+}
+
+.repair-form-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.repair-form-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.repair-form-header p {
+  font-size: 0.82rem;
+}
+
+.repair-form-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.repair-form-step {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(88, 101, 242, 0.12);
+  border: 1px solid rgba(136, 146, 255, 0.18);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.repair-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.repair-form-section {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(113, 83, 255, 0.08), rgba(10, 17, 34, 0.02)),
+    rgba(4, 10, 22, 0.36);
+}
+
+.repair-form-section-head {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.repair-form-section-head strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.repair-form-section-head span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.repair-form label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+}
+
+.repair-form input,
+.repair-form select,
+.repair-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0.7rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: rgba(5,10,20,0.6);
+  color: var(--text-primary);
+  transition: all var(--dur) var(--ease);
+  outline: none;
+  resize: vertical;
+}
+
+.repair-form input:focus,
+.repair-form select:focus,
+.repair-form textarea:focus {
+  border-color: var(--tz-emerald);
+  box-shadow: 0 0 0 3px var(--tz-emerald-glow);
+}
+
+.repair-form select option {
+  background-color: #121838;
+  color: #ffffff;
+}
+
+.repair-selected-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.12);
+  border-radius: var(--r-md);
+}
+
+.repair-selected-info strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.repair-selected-info span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.repair-mode-note {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--r-md);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.16);
+}
+
+.repair-mode-note strong {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.repair-mode-note span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.repair-form-footer {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+.repair-success {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.repair-success h3 {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  color: var(--tz-emerald);
+}
+
+.repair-success p {
+  margin-top: 0.5rem;
+}
+
+/* Services list (right side) */
+.repair-services-list {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-xl);
+  padding: 1.5rem;
+}
+
+.repair-services-list h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.repair-service-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  margin-bottom: 0.6rem;
+  transition: all var(--dur) var(--ease);
+}

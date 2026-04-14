@@ -1,0 +1,307 @@
+.visualStage {
+  --spotlight-x: 50%;
+  --spotlight-y: 35%;
+  --hero-tilt-x: 0deg;
+  --hero-tilt-y: 0deg;
+  position: relative;
+  min-height: clamp(23rem, 45vw, 35rem);
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.meshBackdrop,
+.spotlight,
+.orbitRing,
+.particle,
+.floatingCard,
+.deviceCard {
+  will-change: transform;
+}
+
+.meshBackdrop {
+  position: absolute;
+  inset: 5% 6%;
+  border-radius: 2rem;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(131, 56, 236, 0.3), transparent 28%),
+    radial-gradient(circle at 82% 18%, rgba(0, 217, 255, 0.22), transparent 24%),
+    radial-gradient(circle at 55% 78%, rgba(255, 255, 255, 0.1), transparent 18%),
+    linear-gradient(145deg, rgba(14, 11, 37, 0.92), rgba(8, 12, 31, 0.88));
+  filter: saturate(120%);
+  animation: hero-mesh-shift 10s ease-in-out infinite alternate;
+  transform: translateY(var(--hero-parallax-slow, 0px));
+}
+
+.spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(
+    240px circle at var(--spotlight-x) var(--spotlight-y),
+    rgba(255, 255, 255, 0.14),
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+.orbitRing {
+  position: absolute;
+  border: 1px solid rgba(192, 132, 252, 0.16);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.orbitRingPrimary {
+  width: 78%;
+  height: 78%;
+  animation: hero-ring-spin 18s linear infinite;
+  transform: translateY(var(--hero-parallax-medium, 0px));
+}
+
+.orbitRingSecondary {
+  width: 58%;
+  height: 58%;
+  border-color: rgba(0, 217, 255, 0.14);
+  animation: hero-ring-spin 13s linear infinite reverse;
+  transform: translateY(var(--hero-parallax-fast, 0px));
+}
+
+.particle {
+  position: absolute;
+  left: var(--particle-x);
+  top: var(--particle-y);
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(192, 132, 252, 0.35));
+  box-shadow: 0 0 18px rgba(192, 132, 252, 0.42);
+  animation: hero-particle-float var(--particle-duration) ease-in-out infinite;
+  animation-delay: var(--particle-delay);
+  transform: translateY(var(--hero-parallax-slow, 0px));
+}
+
+.deviceShell {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 31rem);
+}
+
+.deviceCard {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.35rem);
+  border-radius: 1.85rem;
+  border: 1px solid rgba(177, 92, 255, 0.2);
+  background:
+    linear-gradient(180deg, rgba(24, 14, 55, 0.94), rgba(8, 12, 31, 0.98)),
+    radial-gradient(circle at top, rgba(131, 56, 236, 0.18), transparent 50%);
+  box-shadow:
+    0 28px 48px rgba(4, 6, 18, 0.36),
+    0 0 0 1px rgba(177, 92, 255, 0.08);
+  transform: perspective(1200px) rotateY(calc(-10deg + var(--hero-tilt-x))) rotateX(calc(7deg + var(--hero-tilt-y)));
+  animation: hero-device-float 7s ease-in-out infinite;
+}
+
+.primaryMedia {
+  position: relative;
+  min-height: clamp(14rem, 28vw, 20rem);
+  overflow: hidden;
+  border-radius: 1.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(68, 35, 125, 0.88), rgba(12, 18, 42, 0.98)),
+    radial-gradient(circle at top, rgba(177, 92, 255, 0.22), transparent 58%);
+}
+
+.primaryImage {
+  object-fit: cover;
+  transform: scale(1.04);
+}
+
+.primaryFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at top, rgba(192, 132, 252, 0.3), transparent 30%),
+    linear-gradient(145deg, rgba(24, 14, 55, 0.94), rgba(8, 12, 31, 0.98));
+}
+
+.devicePanel {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.deviceKicker {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(192, 132, 252, 0.14);
+  color: #f3ddff;
+  font-size: 0.77rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.devicePanel strong,
+.floatingCard strong {
+  display: block;
+  margin: 0;
+  color: #f8f4ff;
+  font-size: 0.98rem;
+}
+
+.devicePanel p,
+.floatingCard span {
+  display: block;
+  margin: 0;
+  color: #c7d0f4;
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+.floatingCard {
+  --floating-parallax: var(--hero-parallax-medium, 0px);
+  position: absolute;
+  z-index: 3;
+  min-width: 11rem;
+  max-width: 12rem;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(177, 92, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(26, 16, 56, 0.88), rgba(8, 12, 31, 0.92)),
+    radial-gradient(circle at top, rgba(0, 217, 255, 0.14), transparent 55%);
+  box-shadow: 0 18px 34px rgba(4, 6, 18, 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.floatingCardTop {
+  top: 11%;
+  left: 1%;
+  animation: hero-float-card 6.2s ease-in-out infinite;
+}
+
+.floatingCardBottom {
+  --floating-parallax: var(--hero-parallax-fast, 0px);
+  right: 0;
+  bottom: 10%;
+  animation: hero-float-card 7.4s ease-in-out infinite reverse;
+}
+
+.floatingIcon {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, rgba(131, 56, 236, 0.34), rgba(0, 217, 255, 0.16));
+  color: #ffffff;
+  box-shadow: 0 14px 26px rgba(7, 10, 28, 0.28);
+}
+
+@keyframes hero-device-float {
+  0%,
+  100% {
+    transform: perspective(1200px) rotateY(calc(-10deg + var(--hero-tilt-x))) rotateX(calc(7deg + var(--hero-tilt-y))) translateY(0);
+  }
+  50% {
+    transform: perspective(1200px) rotateY(calc(-8deg + var(--hero-tilt-x))) rotateX(calc(5deg + var(--hero-tilt-y))) translateY(-10px);
+  }
+}
+
+@keyframes hero-float-card {
+  0%,
+  100% {
+    transform: translateY(var(--floating-parallax, 0px));
+  }
+  50% {
+    transform: translateY(calc(var(--floating-parallax, 0px) - 12px));
+  }
+}
+
+@keyframes hero-particle-float {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes hero-ring-spin {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes hero-mesh-shift {
+  0% {
+    filter: saturate(110%);
+    transform: translateY(var(--hero-parallax-slow, 0px)) scale(1) rotate(0deg);
+  }
+  100% {
+    filter: saturate(135%);
+    transform: translateY(var(--hero-parallax-slow, 0px)) scale(1.05) rotate(-4deg);
+  }
+}
+
+@media (max-width: 1024px) {
+  .visualStage {
+    min-height: 29rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .visualStage {
+    min-height: 24rem;
+  }
+
+  .deviceCard {
+    transform: none;
+  }
+
+  .floatingCard {
+    min-width: 9.2rem;
+    max-width: 10rem;
+    padding: 0.72rem 0.82rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .floatingCardTop {
+    top: 8%;
+    left: 0;
+  }
+
+  .floatingCardBottom {
+    right: 0;
+    bottom: 6%;
+  }
+
+  .floatingCard span {
+    font-size: 0.76rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meshBackdrop,
+  .orbitRing,
+  .particle,
+  .deviceCard,
+  .floatingCard {
+    animation: none !important;
+    transform: none !important;
+  }
+}

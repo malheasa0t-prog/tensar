@@ -1,0 +1,516 @@
+/* ──────────────────────────────────────────
+   Home Purple Theme — Compact Hero Layout
+   Everything visible above the fold
+   ────────────────────────────────────────── */
+
+.home-purple .home-hero {
+  display: block;
+  min-height: auto;
+  padding-top: 0;
+}
+
+/* ── Promo Banner Shell — COMPACT ── */
+.home-purple .home-hero-banner-shell {
+  width: calc(100% - clamp(1rem, 3vw, 2.75rem));
+  max-width: 1720px;
+  margin-inline: auto;
+  margin-top: clamp(0.3rem, 0.8vw, 0.5rem);
+  margin-bottom: clamp(0.4rem, 1vw, 0.65rem);
+}
+
+.home-purple .home-hero-banner-shell .promo-banner {
+  min-height: clamp(11rem, 22vw, 17rem);
+  border-radius: 0 0 28px 28px;
+  box-shadow: 0 20px 44px rgba(4, 6, 18, 0.32);
+}
+
+/* ── Hero Content Shell ── */
+.home-purple .home-hero-content-shell {
+  padding-top: 0.15rem;
+}
+
+/* ── Hero Grid: 2-column layout (text+buttons LEFT, categories RIGHT) ── */
+/* ── Hero Inline Row ── */
+.home-purple .home-hero-inline-row {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(177, 92, 255, 0.1);
+}
+
+.home-purple .hero-copy {
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: rgba(230, 236, 255, 0.85);
+}
+
+.home-purple .hero-title-highlight {
+  display: inline-block;
+  background: linear-gradient(135deg, #f4dcff 0%, #c084fc 36%, #8338ec 72%, #00d9ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Categories Panel — TIGHT ── */
+.home-purple .hero-categories-panel {
+  width: 100%;
+}
+
+.home-purple .hero-categories-panel--fullwidth {
+  margin-top: 0.35rem;
+}
+
+/* ── Stats Shell ── */
+.home-purple .hero-stats-shell {
+  display: grid;
+  margin-top: 1rem;
+}
+
+.home-purple .stats-row-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+/* ── Stat Cards (Compact) ── */
+.home-purple .stat-card.stat-card-compact {
+  position: relative;
+  min-height: 110px;
+  padding: 1rem;
+  border: 1px solid rgba(177, 92, 255, 0.18);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(31, 20, 63, 0.96), rgba(10, 14, 39, 0.98)),
+    radial-gradient(circle at top right, rgba(131, 56, 236, 0.14), transparent 34%);
+  box-shadow: 0 14px 28px rgba(4, 6, 18, 0.3);
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem;
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease,
+    box-shadow 0.4s ease;
+}
+
+.home-purple .stat-card.stat-card-compact:hover {
+  transform: translateY(-5px) !important;
+  border-color: rgba(177, 92, 255, 0.35);
+  box-shadow:
+    0 20px 40px rgba(4, 6, 18, 0.45),
+    0 0 20px rgba(131, 56, 236, 0.15);
+}
+
+.home-purple .stat-card.stat-card-compact .stat-card-head {
+  justify-content: center;
+}
+
+.home-purple .stat-card.stat-card-compact .stat-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(131, 56, 236, 0.35), rgba(0, 217, 255, 0.22));
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(177, 92, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(131, 56, 236, 0.18);
+}
+
+.home-purple .stat-card.stat-card-compact strong {
+  color: #f8f5ff !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  font-size: clamp(1.25rem, 1.8vw, 1.55rem) !important;
+  font-weight: 900;
+}
+
+.home-purple .stat-card.stat-card-compact span {
+  color: #dfe4ff !important;
+  font-weight: 700;
+  font-size: 0.84rem;
+}
+
+.home-purple .stat-card.stat-card-compact small {
+  color: #9ea8d1;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* ── Promo Banner Navigation ── */
+.home-purple .promo-banner-navigation {
+  inset-block-end: clamp(0.6rem, 2vw, 1rem);
+}
+
+/* ── Categories Shell ── */
+.home-purple .hero-categories-shell {
+  gap: 0.65rem;
+  margin-top: 0;
+  width: 100%;
+  padding: 0.85rem;
+}
+
+.home-purple .hero-categories-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.home-purple .hero-categories-copy {
+  gap: 0.25rem;
+}
+
+.home-purple .hero-categories-copy .section-badge {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.65rem;
+  min-height: 28px;
+}
+
+.home-purple .hero-categories-copy p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* ──────────────────────────────────────────
+   Category Cards Grid — COMPACT
+   ────────────────────────────────────────── */
+.home-purple .hero-category-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.home-purple .hero-category-cards-grid--hero {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  overflow: visible;
+  padding-bottom: 0;
+}
+
+.home-purple .hero-category-cards-grid--hero > * {
+  min-width: 0;
+  width: 100%;
+}
+
+/* ── Category Card — COMPACT ── */
+.home-purple .hero-category-card {
+  position: relative;
+  min-height: 200px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(180deg, rgba(31, 20, 63, 0.96), rgba(10, 14, 39, 0.98)),
+    radial-gradient(circle at bottom right, rgba(131, 56, 236, 0.16), transparent 30%);
+  border: 1px solid rgba(177, 92, 255, 0.18);
+  box-shadow:
+    0 14px 28px rgba(4, 6, 18, 0.3),
+    0 0 0 1px rgba(177, 92, 255, 0.06);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform, box-shadow, border-color;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+}
+
+.home-purple .hero-category-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 217, 255, 0.25),
+    rgba(131, 56, 236, 0.35),
+    rgba(255, 79, 216, 0.2)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+.home-purple .hero-category-card:hover::before {
+  opacity: 1;
+}
+
+.home-purple .hero-category-card-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Card Media ── */
+.home-purple .hero-category-card-media {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(34, 18, 71, 0.24), rgba(10, 14, 39, 0.2)),
+    radial-gradient(circle at center, rgba(177, 92, 255, 0.24), transparent 66%);
+}
+
+.home-purple .hero-category-card-media-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 1.15rem 1.15rem 0 0;
+  background:
+    linear-gradient(180deg, rgba(68, 35, 125, 0.88), rgba(12, 18, 42, 0.98)),
+    radial-gradient(circle at top, rgba(177, 92, 255, 0.24), transparent 58%);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+}
+
+.home-purple .hero-category-card-media-frame.has-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(10, 14, 39, 0.02), rgba(10, 14, 39, 0.22) 85%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.1), transparent 28%);
+  pointer-events: none;
+}
+
+/* ── Card Title Area ── */
+.home-purple .hero-category-card-copy--title-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0.65rem 0.8rem 0.7rem;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(180deg, rgba(22, 14, 50, 0.6), rgba(10, 10, 30, 0.98));
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.home-purple .hero-category-card-copy--title-only::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(177, 92, 255, 0.4), transparent);
+}
+
+.home-purple .hero-category-card-copy--title-only h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #ffffff;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* ── Card Image ── */
+.home-purple .hero-category-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.01);
+  transition: transform 0.78s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+/* ── Card Hover ── */
+.home-purple .hero-category-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: rgba(177, 92, 255, 0.35);
+  box-shadow:
+    0 0 24px rgba(131, 56, 236, 0.2),
+    0 22px 44px rgba(4, 6, 18, 0.42),
+    0 0 0 1px rgba(177, 92, 255, 0.15);
+}
+
+.home-purple .hero-category-card:hover .hero-category-card-media-frame {
+  transform: translate3d(0, -2px, 0) scale(1.02);
+}
+
+.home-purple .hero-category-card:hover .hero-category-card-image {
+  transform: scale(1.08);
+}
+
+/* ── Main Cards (generic) ── */
+.home-purple .hero-main-card {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform, box-shadow, border-color;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease;
+}
+
+.home-purple .hero-main-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow:
+    0 0 20px rgba(131, 56, 236, 0.15),
+    0 18px 38px rgba(4, 6, 18, 0.4);
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .home-purple .hero-category-card,
+  .home-purple .hero-category-card-media-frame,
+  .home-purple .hero-category-card-image,
+  .home-purple .hero-main-card {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
+
+/* ── Trust Bar ── */
+.home-purple .trust-bar {
+  padding-top: 0.75rem;
+}
+
+/* ── Hero Actions — tighter ── */
+.home-purple .hero-actions {
+  gap: 0.55rem;
+}
+
+.home-purple .hero-actions .btn {
+  min-height: 42px;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.88rem;
+}
+
+/* ── Hero Trust Badge — tighter ── */
+.home-purple .hero-trust-badge {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  min-height: 30px;
+}
+
+/* ── Section Badge — tighter ── */
+.home-purple .section-badge {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  min-height: 28px;
+}
+
+/* ── Section Header within hero — no big margins ── */
+.home-purple .section-header {
+  margin-bottom: 0;
+}
+
+/* ──────────────────────────────────────────
+   Responsive — Tablet
+   ────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .home-purple .hero-content-grid-home {
+    align-items: start;
+  }
+
+  .home-purple .home-hero-banner-shell .promo-banner {
+    min-height: clamp(10rem, 32vw, 15rem);
+  }
+
+  .home-purple .hero-copy-block h1,
+  .home-purple .hero-copy-block p {
+    max-width: none;
+  }
+
+  .home-purple .hero-category-cards-grid--hero {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ──────────────────────────────────────────
+   Responsive — Mobile
+   ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .home-purple .home-hero-banner-shell {
+    width: calc(100% - 0.7rem);
+    margin-top: 0.4rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .home-purple .home-hero-banner-shell .promo-banner {
+    min-height: 10rem;
+    border-radius: 0 0 22px 22px;
+  }
+
+  .home-purple .stats-row-compact {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .home-purple .stat-card.stat-card-compact {
+    min-height: 80px;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 0.8rem;
+    text-align: start !important;
+    padding: 0.85rem;
+  }
+
+  .home-purple .stat-card.stat-card-compact .stat-card-head {
+    justify-content: flex-start;
+  }
+
+  .home-purple .hero-category-cards-grid--hero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .home-purple .hero-category-card {
+    min-height: 175px;
+  }
+
+  .home-purple .hero-category-card-media-frame {
+    min-height: 110px;
+  }
+
+  .home-purple .hero-category-card-copy--title-only {
+    min-height: 46px;
+    padding-inline: 0.65rem;
+  }
+
+  .home-purple .hero-category-card-copy--title-only h3 {
+    font-size: 0.88rem;
+  }
+}
+
+/* ──────────────────────────────────────────
+   Responsive — Small Mobile
+   ────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .home-purple .hero-category-cards-grid--hero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-purple .hero-category-card {
+    min-height: 160px;
+  }
+
+  .home-purple .hero-category-card-media-frame {
+    min-height: 95px;
+  }
+}

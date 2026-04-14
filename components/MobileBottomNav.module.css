@@ -1,0 +1,98 @@
+.wrapper {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 60;
+  display: none;
+  pointer-events: none;
+}
+
+.bar {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  width: min(100%, 680px);
+  margin-inline: auto;
+  padding:
+    0.7rem 0.75rem
+    calc(0.7rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid rgba(30, 58, 95, 0.12);
+  box-shadow: 0 -18px 40px rgba(15, 23, 42, 0.14);
+}
+
+.item {
+  position: relative;
+  display: grid;
+  gap: 0.28rem;
+  justify-items: center;
+  padding: 0.45rem 0.25rem 0.1rem;
+  color: var(--color-muted);
+  border-radius: 16px;
+  transition:
+    color var(--transition-base),
+    background var(--transition-base),
+    transform var(--transition-base);
+}
+
+.itemActive {
+  color: var(--color-navy);
+  background: rgba(30, 58, 95, 0.08);
+}
+
+.cartButton {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.iconShell {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(30, 58, 95, 0.06);
+}
+
+.itemActive .iconShell {
+  background: rgba(30, 58, 95, 0.12);
+}
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.badge {
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-start: -6px;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding-inline: 0.25rem;
+  border-radius: 999px;
+  background: var(--color-orange);
+  color: var(--color-white);
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(232, 93, 4, 0.24);
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    display: block;
+  }
+
+  :global(body.mobile-bottom-nav-open main) {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+}

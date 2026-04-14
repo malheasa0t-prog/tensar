@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createProviderOrder } from '@/lib/providerAPI';
 import { supabaseAdmin, supabaseServer } from '@/lib/supabaseServer';
 
 export const runtime = 'nodejs';
@@ -125,11 +126,40 @@ export async function POST(request) {
       },
     ]);
 
-    // 7. TODO: Send to external provider API
-    // const externalResult = await sendToProvider(service.provider_service_id, link, quantity);
-    // if (externalResult.order_id) {
-    //   await supabase.from('service_orders').update({ external_order_id: externalResult.order_id, status: 'processing' }).eq('id', orderId);
-    // }
+    // 7. Send to Serva-S provider API automatically
+    if (service.provider_service_id) {
+      try {
+        const providerResult = await createProviderOrder(
+          service.provider_service_id,
+          link || null,
+          normalizedQuantity
+        );
+
+        if (providerResult.success && providerResult.orderId) {
+          await supabaseAdmin
+            .from('service_orders')
+            .update({
+              external_order_id: providerResult.orderId,
+              status: 'processing',
+            })
+            .eq('id', orderId);
+        } else {
+          console.error('Serva-S order failed:', providerResult.error);
+          // تسجيل الخطأ لكن لا نفشل الطلب المحلي
+          await supabaseAdmin
+            .from('service_orders')
+            .update({
+              metadata: {
+                provider_error: providerResult.error || 'Unknown provider error',
+                provider_attempted_at: new Date().toISOString(),
+              },
+            })
+            .eq('id', orderId);
+        }
+      } catch (providerError) {
+        console.error('Serva-S provider exception:', providerError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

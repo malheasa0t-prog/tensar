@@ -4,6 +4,71 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
+/**
+ * Loads the dashboard summary snapshot for the current user.
+ *
+ * @returns {Promise<{
+ *   userId: string,
+ *   recentOrders: Array<Record<string, unknown>>,
+ *   notifications: Array<Record<string, unknown>>,
+ *   syncMeta: { active: number, lastUpdate: number | null },
+ * }>}
+ */
+async function fetchDashboardHomeSnapshot() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      userId: '',
+      recentOrders: [],
+      notifications: [],
+      syncMeta: { active: 0, lastUpdate: null },
+    };
+  }
+
+  const [ordersRes, notificationsRes] = await Promise.all([
+    supabase
+      .from('service_orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(3),
+  ]);
+
+  const orders = ordersRes.data || [];
+  const recentNotifications = notificationsRes.data || [];
+  const activeSyncOrders = orders.filter(
+    (order) =>
+      order.external_order_id &&
+      ['pending', 'processing', 'in_progress', 'partial'].includes(order.status)
+  );
+
+  const latestOrderTs =
+    orders
+      .map((order) => order.updated_at || order.created_at)
+      .filter(Boolean)
+      .map((timestamp) => new Date(timestamp).getTime())
+      .filter(Boolean)
+      .sort((first, second) => second - first)[0] || null;
+
+  return {
+    userId: user.id,
+    recentOrders: orders.slice(0, 5),
+    notifications: recentNotifications,
+    syncMeta: {
+      active: activeSyncOrders.length,
+      lastUpdate: latestOrderTs,
+    },
+  };
+}
+
 export default function DashboardHome() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -11,52 +76,95 @@ export default function DashboardHome() {
   const [syncMeta, setSyncMeta] = useState({ active: 0, lastUpdate: null });
 
   useEffect(() => {
-    async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    let active = true;
+    let cleanupOrders = () => {};
+    let cleanupNotifications = () => {};
 
-      if (!user) return;
+    /**
+     * Refreshes the dashboard cards without recreating realtime channels.
+     *
+     * @returns {Promise<{
+     *   userId: string,
+     *   recentOrders: Array<Record<string, unknown>>,
+     *   notifications: Array<Record<string, unknown>>,
+     *   syncMeta: { active: number, lastUpdate: number | null },
+     * } | null>}
+     */
+    async function refreshSnapshot() {
+      const snapshot = await fetchDashboardHomeSnapshot();
 
-      const [ordersRes, notificationsRes] = await Promise.all([
-        supabase
-          .from('service_orders')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(3),
-      ]);
+      if (!active) {
+        return null;
+      }
 
-      const orders = ordersRes.data || [];
-      const recentNotifications = notificationsRes.data || [];
-
-      const activeSyncOrders = orders.filter((order) =>
-        order.external_order_id && ['pending', 'processing', 'in_progress', 'partial'].includes(order.status)
-      );
-
-      const latestOrderTs =
-        orders
-          .map((order) => order.updated_at || order.created_at)
-          .filter(Boolean)
-          .map((timestamp) => new Date(timestamp).getTime())
-          .filter(Boolean)
-          .sort((a, b) => b - a)[0] || null;
-
-      setRecentOrders(orders.slice(0, 5));
-      setNotifications(recentNotifications);
-      setSyncMeta({
-        active: activeSyncOrders.length,
-        lastUpdate: latestOrderTs,
-      });
+      setRecentOrders(snapshot.recentOrders);
+      setNotifications(snapshot.notifications);
+      setSyncMeta(snapshot.syncMeta);
       setLoading(false);
+
+      return snapshot;
     }
 
-    load();
+    /**
+     * Loads the initial dashboard snapshot once, then binds realtime updates.
+     *
+     * @returns {Promise<void>}
+     */
+    async function initialize() {
+      const snapshot = await refreshSnapshot();
+
+      if (!active || !snapshot?.userId) {
+        return;
+      }
+
+      const ordersChannel = supabase
+        .channel(`dashboard-home-orders-${snapshot.userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'service_orders',
+            filter: `user_id=eq.${snapshot.userId}`,
+          },
+          () => {
+            refreshSnapshot();
+          }
+        )
+        .subscribe();
+
+      const notificationsChannel = supabase
+        .channel(`dashboard-home-notifications-${snapshot.userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${snapshot.userId}`,
+          },
+          () => {
+            refreshSnapshot();
+          }
+        )
+        .subscribe();
+
+      cleanupOrders = () => {
+        void supabase.removeChannel(ordersChannel);
+      };
+
+      cleanupNotifications = () => {
+        void supabase.removeChannel(notificationsChannel);
+      };
+    }
+
+    initialize();
+
+    return () => {
+      active = false;
+      cleanupOrders();
+      cleanupNotifications();
+    };
   }, []);
 
   const STATUS_MAP = {
@@ -215,16 +323,14 @@ export default function DashboardHome() {
                       <span
                         className="dash-status-pill"
                         style={{
-                          background: `${STATUS_MAP[order.status]?.color}22`,
-                          color: STATUS_MAP[order.status]?.color || '#666',
+                          background: `${STATUS_MAP[order.status]?.color || '#777'}22`,
+                          color: STATUS_MAP[order.status]?.color || '#777',
                         }}
                       >
                         {STATUS_MAP[order.status]?.label || order.status}
                       </span>
                     </td>
-                    <td className="dash-center dash-date">
-                      {new Date(order.created_at).toLocaleDateString('ar-JO')}
-                    </td>
+                    <td className="dash-center">{new Date(order.created_at).toLocaleDateString('ar-JO')}</td>
                   </tr>
                 ))}
               </tbody>

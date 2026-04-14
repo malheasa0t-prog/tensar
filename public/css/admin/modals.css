@@ -1,0 +1,177 @@
+﻿/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.24s ease;
+}
+
+.modal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 30px;
+    width: 90%;
+    max-width: 480px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: modalPopIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modal-card h3 {
+    font-size: 1.15rem;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.modal-card p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.admin-confirm-modal {
+    display: grid;
+    gap: 18px;
+    text-align: center;
+}
+
+.admin-confirm-modal__icon {
+    width: 72px;
+    height: 72px;
+    margin-inline: auto;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    font-size: 1.7rem;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.modal-card--danger .admin-confirm-modal__icon {
+    color: #ff7675;
+    background: rgba(255, 118, 117, 0.12);
+}
+
+.modal-card--warning .admin-confirm-modal__icon {
+    color: #fdcb6e;
+    background: rgba(253, 203, 110, 0.14);
+}
+
+.modal-card--success .admin-confirm-modal__icon {
+    color: #55efc4;
+    background: rgba(85, 239, 196, 0.14);
+}
+
+.modal-card--info .admin-confirm-modal__icon {
+    color: #74b9ff;
+    background: rgba(116, 185, 255, 0.14);
+}
+
+.admin-confirm-modal__body {
+    display: grid;
+    gap: 8px;
+}
+
+.admin-confirm-modal__body p {
+    margin: 0;
+}
+
+.admin-confirm-modal__actions,
+.admin-bulk-modal-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.modal-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 15px;
+}
+
+.modal-choice-btn {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 20px 15px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    color: var(--text-primary);
+}
+
+.modal-choice-btn i {
+    font-size: 1.8rem;
+}
+
+.modal-choice-btn strong {
+    font-size: 0.95rem;
+}
+
+.modal-choice-btn span {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.modal-choice-btn.delivery-choice:hover {
+    border-color: #74b9ff;
+    background: rgba(116, 185, 255, 0.1);
+}
+
+.modal-choice-btn.delivery-choice:hover i {
+    color: #74b9ff;
+}
+
+.modal-choice-btn.pickup-choice:hover {
+    border-color: #00b894;
+    background: rgba(0, 184, 148, 0.1);
+}
+
+.modal-choice-btn.pickup-choice:hover i {
+    color: #00b894;
+}
+
+.modal-choice-btn.remote-choice:hover {
+    border-color: #00cec9;
+    background: rgba(0, 206, 201, 0.1);
+}
+
+.modal-choice-btn.remote-choice:hover i {
+    color: #00cec9;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+

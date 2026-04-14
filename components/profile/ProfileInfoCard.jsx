@@ -1,6 +1,14 @@
 import ProfileAlert from '@/components/profile/ProfileAlert';
 import {
+  cardTitleStyle,
+  disabledInputStyle,
+  fieldGridStyle,
+  fieldGroupStyle,
+  fieldLabelStyle,
+  formStyle,
   inputStyle,
+  mutedFieldLabelStyle,
+  primaryActionStyle,
   sectionBodyStyle,
   sectionCardStyle,
   sectionHeaderStyle,
@@ -32,44 +40,30 @@ export default function ProfileInfoCard({
   return (
     <div style={sectionCardStyle}>
       <div style={sectionHeaderStyle}>
-        <h3 style={{ fontSize: '1.1rem' }}>👤 الملف الشخصي</h3>
+        <h3 style={cardTitleStyle}>👤 الملف الشخصي</h3>
       </div>
 
       <div style={sectionBodyStyle}>
         <ProfileAlert message={success} tone="success" />
         <ProfileAlert message={error} tone="error" />
 
-        <div style={{ marginBottom: '20px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '6px',
-              fontSize: '0.85rem',
-              color: 'var(--text-muted)',
-            }}
-          >
-            البريد الإلكتروني
-          </label>
+        <div style={fieldGroupStyle}>
+          <label style={mutedFieldLabelStyle}>البريد الإلكتروني</label>
           <input
             type="email"
             value={email}
             disabled
             style={{
-              ...inputStyle,
-              color: 'var(--text-muted)',
+              ...disabledInputStyle,
               direction: 'ltr',
               textAlign: 'left',
-              cursor: 'not-allowed',
-              opacity: 0.7,
             }}
           />
         </div>
 
-        <form onSubmit={onSubmit}>
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              الاسم الكامل
-            </label>
+        <form onSubmit={onSubmit} style={formStyle}>
+          <div style={fieldGroupStyle}>
+            <label style={fieldLabelStyle}>الاسم الكامل</label>
             <input
               type="text"
               name="full_name"
@@ -80,10 +74,8 @@ export default function ProfileInfoCard({
             />
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              رقم الهاتف
-            </label>
+          <div style={fieldGroupStyle}>
+            <label style={fieldLabelStyle}>رقم الهاتف</label>
             <input
               type="tel"
               name="phone"
@@ -94,32 +86,9 @@ export default function ProfileInfoCard({
             />
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              رابط الصورة الشخصية
-            </label>
-            <input
-              type="url"
-              name="avatar_url"
-              value={form.avatar_url}
-              onChange={onFieldChange}
-              placeholder="https://..."
-              style={{ ...inputStyle, direction: 'ltr', textAlign: 'left' }}
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '12px',
-              marginBottom: '18px',
-            }}
-          >
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-                الدولة
-              </label>
+          <div style={fieldGridStyle}>
+            <div style={fieldGroupStyle}>
+              <label style={fieldLabelStyle}>الدولة</label>
               <input
                 type="text"
                 name="country"
@@ -129,10 +98,8 @@ export default function ProfileInfoCard({
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-                العملة المفضلة
-              </label>
+            <div style={fieldGroupStyle}>
+              <label style={fieldLabelStyle}>العملة المفضلة</label>
               <select
                 name="preferred_currency"
                 value={form.preferred_currency}
@@ -146,10 +113,8 @@ export default function ProfileInfoCard({
             </div>
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              اللغة المفضلة
-            </label>
+          <div style={fieldGroupStyle}>
+            <label style={fieldLabelStyle}>اللغة المفضلة</label>
             <select
               name="preferred_language"
               value={form.preferred_language}
@@ -161,28 +126,12 @@ export default function ProfileInfoCard({
             </select>
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-              نبذة قصيرة
-            </label>
-            <textarea
-              name="bio"
-              value={form.bio}
-              onChange={onFieldChange}
-              rows={4}
-              style={{ ...inputStyle, resize: 'vertical' }}
-            />
-          </div>
-
           <button
             type="submit"
             disabled={saving}
             className="btn btn-primary"
             style={{
-              padding: '14px 32px',
-              borderRadius: '12px',
-              fontWeight: '700',
-              fontSize: '1rem',
+              ...primaryActionStyle,
               opacity: saving ? 0.7 : 1,
             }}
           >

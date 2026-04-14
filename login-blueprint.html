@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serva Login Blueprint</title>
+    <!-- ملف التنسيق منفصل حتى يبقى HTML واضحاً كمخطط تعليمي قابل للقراءة. -->
+    <link rel="stylesheet" href="login-blueprint.css">
+</head>
+<body>
+    <!-- هذا المفتاح يبدّل بين العرض التعليمي والعرض النظيف بدون JavaScript. -->
+    <input id="show-annotations" class="visually-hidden" type="checkbox" checked>
+
+    <div class="page-shell">
+        <!-- العنوان يشرح فكرة الصفحة ويقدم مفتاحاً للتحكم بطبقة الشرح. -->
+        <header class="topbar">
+            <div class="topbar-copy">
+                <p class="eyebrow">Interactive Blueprint</p>
+                <h1>تشريح واضح لواجهة تسجيل الدخول</h1>
+                <p class="topbar-text">
+                    نفس شكل بطاقة تسجيل الدخول، لكن بشرح أبسط: كل عنصر يحمل رقماً صغيراً،
+                    والشرح المقابل يظهر مرتباً في بطاقات جانبية سهلة القراءة.
+                </p>
+            </div>
+
+            <label class="toggle-chip" for="show-annotations">
+                <span>إظهار الشرح</span>
+                <span class="toggle-switch" aria-hidden="true"></span>
+            </label>
+        </header>
+
+        <main class="blueprint-layout">
+            <!-- هذه المنطقة تعرض البطاقة نفسها بشكل قريب من الصورة الأصلية. -->
+            <section class="stage-panel" aria-label="واجهة تسجيل الدخول">
+                <div class="stage-intro">
+                    <span class="stage-pill">واجهة حقيقية</span>
+                    <p>الأرقام على البطاقة تطابق البطاقات التوضيحية في الجهة المقابلة.</p>
+                </div>
+
+                <div class="device-frame">
+                    <article class="login-card" aria-label="Serva login form">
+                        <!-- رأس البطاقة يوضح اسم الشاشة ويحتوي زر الإغلاق في مكان متوقع. -->
+                        <header class="card-header spot" data-step="1">
+                            <button class="close-button" type="button" aria-label="إغلاق النافذة">×</button>
+                            <div class="screen-title">
+                                <span class="title-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <path d="M12 12.5a4.25 4.25 0 1 0-4.25-4.25A4.25 4.25 0 0 0 12 12.5Zm0 2.25c-3.47 0-6.5 1.78-6.5 4v.75h13v-.75c0-2.22-3.03-4-6.5-4Z"></path>
+                                    </svg>
+                                </span>
+                                <span>تسجيل الدخول</span>
+                            </div>
+                        </header>
+
+                        <!-- ترتيب الحقول عمودي لأنه الأنسب للشاشات الصغيرة وتدفق الإدخال السريع. -->
+                        <form class="form-stack" action="#" method="post">
+                            <div class="field-block spot" data-step="2">
+                                <label for="email">البريد الإلكتروني</label>
+                                <input id="email" name="email" type="email" autocomplete="email" inputmode="email">
+                            </div>
+
+                            <div class="field-block spot" data-step="3">
+                                <label for="password">كلمة المرور</label>
+                                <input id="password" name="password" type="password" autocomplete="current-password">
+                            </div>
+
+                            <div class="spot" data-step="4">
+                                <button class="primary-button" type="submit">دخول</button>
+                            </div>
+
+                            <div class="divider" aria-hidden="true">
+                                <span>أو</span>
+                            </div>
+
+                            <div class="spot" data-step="5">
+                                <button class="secondary-button" type="button">
+                                    <span class="google-mark" aria-hidden="true">G</span>
+                                    <span>تسجيل الدخول بحساب Google</span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- الروابط الثانوية تبقى في الأسفل حتى لا تنافس الإجراء الرئيسي بصرياً. -->
+                        <footer class="card-footer spot" data-step="6">
+                            <div class="helper-links">
+                                <p>ليس لديك حساب؟</p>
+                                <a href="#" aria-label="إنشاء حساب جديد">إنشاء حساب جديد</a>
+                            </div>
+                            <a class="forgot-link" href="#" aria-label="نسيت كلمة المرور">نسيت كلمة المرور؟</a>
+                        </footer>
+                    </article>
+                </div>
+            </section>
+
+            <!-- العمود الجانبي يشرح كل رقم بترتيب ثابت وسهل المسح البصري. -->
+            <aside class="notes-panel" aria-label="شرح العناصر">
+                <section class="notes-intro">
+                    <p class="panel-label">طريقة القراءة</p>
+                    <h2>شرح مرتب بدل الفقاعات المبعثرة</h2>
+                    <p class="panel-text">
+                        انظر إلى الرقم داخل البطاقة، ثم اقرأ البطاقة المطابقة له هنا.
+                        بهذه الطريقة يبقى التصميم نظيفاً ويبقى الشرح مفهوماً.
+                    </p>
+                </section>
+
+                <ol class="note-list">
+                    <li class="note-card">
+                        <span class="note-number">1</span>
+                        <h3>رأس الشاشة</h3>
+                        <p><strong>برمجياً:</strong> يثبت السياق من أول نظرة ويضم زر الإغلاق في موضع معروف.</p>
+                        <p><strong>UX:</strong> يقلل الحيرة ويعطي المستخدم إحساساً بالتحكم.</p>
+                    </li>
+                    <li class="note-card">
+                        <span class="note-number">2</span>
+                        <h3>حقل البريد الإلكتروني</h3>
+                        <p><strong>برمجياً:</strong> <code>type="email"</code> يفعّل التحقق ولوحة مفاتيح مناسبة.</p>
+                        <p><strong>UX:</strong> مساحة الحقل الكبيرة تسهّل الكتابة والقراءة على الجوال.</p>
+                    </li>
+                    <li class="note-card">
+                        <span class="note-number">3</span>
+                        <h3>حقل كلمة المرور</h3>
+                        <p><strong>برمجياً:</strong> نوع <code>password</code> يحمي الخصوصية ويمنع كشف النص.</p>
+                        <p><strong>UX:</strong> ترتيبه بعد البريد مباشرة يطابق توقع المستخدم الطبيعي.</p>
+                    </li>
+                    <li class="note-card">
+                        <span class="note-number">4</span>
+                        <h3>زر الإجراء الرئيسي</h3>
+                        <p><strong>برمجياً:</strong> زر بعرض كامل ليسهل الضغط عليه ويبرز نقطة التحويل الأساسية.</p>
+                        <p><strong>UX:</strong> اللون الأكثر سطوعاً يوجّه الانتباه مباشرة إلى خطوة الدخول.</p>
+                    </li>
+                    <li class="note-card">
+                        <span class="note-number">5</span>
+                        <h3>مسار Google البديل</h3>
+                        <p><strong>برمجياً:</strong> يفتح باب OAuth لتقليل الإدخال اليدوي وتسريع الإكمال.</p>
+                        <p><strong>UX:</strong> وجوده بعد الفاصل يوضح أنه بديل محترم لا ينافس الزر الرئيسي.</p>
+                    </li>
+                    <li class="note-card">
+                        <span class="note-number">6</span>
+                        <h3>الروابط الثانوية</h3>
+                        <p><strong>برمجياً:</strong> مسارات مستقلة لإنشاء الحساب أو استرجاع الوصول عند الحاجة.</p>
+                        <p><strong>UX:</strong> تمنع انسداد الرحلة وتبقي المستخدم داخل النظام بدل مغادرته.</p>
+                    </li>
+                </ol>
+
+                <section class="summary-panel" aria-label="ملخص بصري">
+                    <article class="summary-card">
+                        <h3>لماذا الخط أكبر الآن؟</h3>
+                        <p>لتحسين القراءة العربية وتقليل الإحساس بالتكدس داخل بطاقات الشرح.</p>
+                    </article>
+                    <article class="summary-card">
+                        <h3>لماذا الأرقام أفضل؟</h3>
+                        <p>لأنها تربط العنصر بشرحه فوراً بدون خطوط متقاطعة أو ازدحام بصري.</p>
+                    </article>
+                </section>
+            </aside>
+        </main>
+    </div>
+</body>
+</html>

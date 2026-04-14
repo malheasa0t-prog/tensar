@@ -1,88 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { normalizeSiteSettings } from "@/lib/contactChannels";
+import {
+  buildRepairBookingPayload,
+  createRepairBookingFormState,
+  resolveRepairDeliveryOptions,
+  validateRepairBookingForm,
+} from "@/lib/repairBookingModel.mjs";
 import {
   createRepairBooking,
   createRepairBookingId,
   getRepairBookingAccountSnapshot,
 } from "@/services/repairBookingService";
 
-const DEFAULT_DELIVERY_METHODS = normalizeSiteSettings().deliveryMethods;
-
 /**
  * @typedef {Object} RepairBookingFormState
  * @property {string} name
  * @property {string} phone
- * @property {string} email
  * @property {string} serviceId
  * @property {string} description
  * @property {string} mode
  * @property {string} address
  */
-
-/**
- * Creates the base form state while preserving any trusted prefilled values.
- *
- * @param {Array<{ id?: string }>} services
- * @param {Array<{ value?: string }>} deliveryOptions
- * @param {Partial<RepairBookingFormState>} [preservedValues]
- * @returns {RepairBookingFormState}
- */
-function createRepairBookingFormState(services, deliveryOptions, preservedValues = {}) {
-  return {
-    name: preservedValues.name || "",
-    phone: preservedValues.phone || "",
-    email: preservedValues.email || "",
-    serviceId: services[0]?.id || "",
-    description: "",
-    mode: deliveryOptions[0]?.value || "delivery",
-    address: "",
-  };
-}
-
-/**
- * Validates the user input before sending the booking to the backend.
- *
- * @param {RepairBookingFormState} form
- * @returns {string}
- */
-function validateRepairBookingForm(form) {
-  if (!form.name.trim() || !form.phone.trim() || !form.serviceId) {
-    return "يرجى تعبئة الحقول المطلوبة.";
-  }
-
-  if (form.mode === "delivery" && !form.address.trim()) {
-    return "يرجى إدخال العنوان عند اختيار التوصيل.";
-  }
-
-  return "";
-}
-
-/**
- * Builds the normalized payload expected by the `repair_bookings` table.
- *
- * @param {RepairBookingFormState} form
- * @param {{ name?: string } | undefined} selectedService
- * @returns {Record<string, unknown>}
- */
-function buildRepairBookingPayload(form, selectedService) {
-  return {
-    id: createRepairBookingId(),
-    name: form.name.trim(),
-    phone: form.phone.trim(),
-    email: form.email.trim() || null,
-    service_id: form.serviceId,
-    service_name: selectedService?.name || "خدمة صيانة",
-    device: null,
-    description: form.description.trim() || null,
-    preferred_date: null,
-    mode: form.mode,
-    address: form.mode === "delivery" ? form.address.trim() : null,
-    status: "pending",
-    created_at: new Date().toISOString(),
-  };
-}
 
 /**
  * Manages repair booking state, validation, account prefilling, and submission.
@@ -101,10 +40,15 @@ function buildRepairBookingPayload(form, selectedService) {
  */
 export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
   const deliveryOptions = useMemo(
-    () => (deliveryMethods.length > 0 ? deliveryMethods : DEFAULT_DELIVERY_METHODS),
+    () => resolveRepairDeliveryOptions(deliveryMethods),
     [deliveryMethods]
   );
-  const [form, setForm] = useState(() => createRepairBookingFormState(services, deliveryOptions));
+  const [form, setForm] = useState(() =>
+    createRepairBookingFormState({
+      services,
+      deliveryOptions,
+    })
+  );
   const [currentUserId, setCurrentUserId] = useState("");
   const [isAccountPrefilled, setIsAccountPrefilled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -161,7 +105,6 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
         ...prev,
         name: prev.name || accountSnapshot.name,
         phone: prev.phone || accountSnapshot.phone,
-        email: prev.email || accountSnapshot.email,
       }));
     }
 
@@ -180,7 +123,11 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
    */
   function handleFieldChange(event) {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+      address: name === "mode" && value !== "delivery" ? "" : prev.address,
+    }));
   }
 
   /**
@@ -202,29 +149,32 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
 
     setLoading(true);
 
-    const payload = buildRepairBookingPayload(form, selectedService);
+    const payload = buildRepairBookingPayload({
+      bookingId: createRepairBookingId(),
+      form,
+      selectedService,
+    });
     const response = await createRepairBooking(payload, currentUserId);
 
     setLoading(false);
 
     if (response.error) {
-      setError("تعذر إرسال الطلب حاليًا. حاول مرة أخرى.");
+      setError("تعذر إرسال الطلب حالياً. حاول مرة أخرى.");
       return;
     }
 
-    setMessage("تم إرسال طلب الصيانة بنجاح. سنتواصل معك قريبًا.");
+    setMessage("تم إرسال طلب الصيانة بنجاح. سنتواصل معك قريباً.");
     setForm(
-      createRepairBookingFormState(
+      createRepairBookingFormState({
         services,
         deliveryOptions,
-        isAccountPrefilled
+        preservedValues: isAccountPrefilled
           ? {
               name: form.name,
               phone: form.phone,
-              email: form.email,
             }
-          : {}
-      )
+          : {},
+      })
     );
   }
 

@@ -1,23 +1,75 @@
-// ===== TechZone Admin - Hierarchical Categories =====
+// ===== TechZone Admin - Categories =====
 (function () {
     'use strict';
 
     const A = window.AdminApp;
     const accessoryCatalog = A.accessoryCatalog || TZ.accessoryCatalog || {};
+    const state = A.categoriesState || (A.categoriesState = { viewMode: 'all', showForm: false, editingId: '', form: null });
 
-    function isAccessoryCatalogCategoryId(categoryId) {
+    function escapeText(value) {
+        return TZ.escapeHtml(value == null ? '' : String(value));
+    }
+
+    function getActorId() {
+        return TZ.getSession ? TZ.getSession()?.userId : null;
+    }
+
+    function isAccessoryCategory(categoryId) {
         return typeof accessoryCatalog.isAccessoryCatalogCategoryId === 'function'
             ? accessoryCatalog.isAccessoryCatalogCategoryId(categoryId)
             : false;
     }
 
-    function getVisibleCategories() {
-        return TZ.db.categories.filter((category) => !isAccessoryCatalogCategoryId(category.id));
+    function visibleCategories() {
+        return (TZ.db.categories || []).filter((category) => !isAccessoryCategory(category.id));
     }
 
-    function slugifyArabic(text) {
-        return (text || '')
-            .toString()
+    function mainCategories() {
+        return visibleCategories().filter((category) => !category.parentId);
+    }
+
+    function topNavMap() {
+        if (!TZ.db.settings) TZ.db.settings = {};
+        if (!TZ.db.settings.categoryNavVisibility) TZ.db.settings.categoryNavVisibility = {};
+        return TZ.db.settings.categoryNavVisibility;
+    }
+
+    function captureState() {
+        return {
+            categories: TZ.clone(TZ.db.categories || []),
+            products: TZ.clone(TZ.db.products || []),
+            services: TZ.clone(TZ.db.services || []),
+            settings: TZ.clone(TZ.db.settings || {})
+        };
+    }
+
+    function restoreState(snapshot) {
+        TZ.db.categories = TZ.clone(snapshot.categories || []);
+        TZ.db.products = TZ.clone(snapshot.products || []);
+        TZ.db.services = TZ.clone(snapshot.services || []);
+        TZ.db.settings = TZ.clone(snapshot.settings || {});
+    }
+
+    async function commitChange(action, details, resource) {
+        await Promise.resolve(TZ.commitDb(action, getActorId(), details, resource));
+    }
+
+    async function runMutation(mutator, successMessage, fallbackMessage) {
+        const snapshot = captureState();
+        try {
+            const tasks = mutator() || [];
+            for (const task of tasks) await task();
+            render(state.viewMode);
+            A.showToast(successMessage);
+        } catch (error) {
+            restoreState(snapshot);
+            render(state.viewMode);
+            A.showToast(error?.message || fallbackMessage);
+        }
+    }
+
+    function slugify(value) {
+        return String(value || '')
             .trim()
             .toLowerCase()
             .replace(/\s+/g, '-')
@@ -26,63 +78,72 @@
             .replace(/^-|-$/g, '');
     }
 
-    function upsertUniqueSlug(baseSlug, currentId) {
-        const clean = baseSlug || 'category';
+    function uniqueSlug(baseSlug, currentId) {
+        const raw = baseSlug || 'category';
         const existing = new Set(
-            TZ.db.categories
+            visibleCategories()
                 .filter((category) => category.id !== currentId)
-                .map((category) => (category.slug || '').trim())
+                .map((category) => String(category.slug || '').trim())
                 .filter(Boolean)
         );
-
-        if (!existing.has(clean)) return clean;
-
+        if (!existing.has(raw)) return raw;
         let index = 2;
-        while (existing.has(`${clean}-${index}`)) index += 1;
-        return `${clean}-${index}`;
+        while (existing.has(`${raw}-${index}`)) index += 1;
+        return `${raw}-${index}`;
     }
 
-    function mainCategories() {
-        return getVisibleCategories()
-            .filter((category) => !category.parentId)
-            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    function createForm(type) {
+        return {
+            type,
+            parentId: type === 'sub' ? (mainCategories()[0]?.id || '') : '',
+            name: '',
+            slug: '',
+            icon: 'fa-folder',
+            image: '',
+            description: '',
+            status: 'active',
+            sortOrder: '0',
+            showInNavbar: type === 'main'
+        };
     }
 
-    function subCategories() {
-        return getVisibleCategories()
-            .filter((category) => !!category.parentId)
-            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    function fillForm(category) {
+        return {
+            type: category.parentId ? 'sub' : 'main',
+            parentId: category.parentId || '',
+            name: category.name || '',
+            slug: category.slug || '',
+            icon: category.icon || 'fa-folder',
+            image: category.image || '',
+            description: category.description || '',
+            status: category.status || 'active',
+            sortOrder: String(category.sortOrder || 0),
+            showInNavbar: category.showInNavbar !== false
+        };
     }
 
-    function categoryTypeLabel(category) {
-        return category.parentId ? 'فرعية' : 'رئيسية';
+    function openForm(type, category) {
+        state.editingId = category?.id || '';
+        state.form = category ? fillForm(category) : createForm(type);
+        state.showForm = true;
+        render(state.viewMode);
     }
 
-    function categoryStatusBadge(status) {
-        return status === 'active'
-            ? '<span class="status-badge active">ظاهر</span>'
-            : '<span class="status-badge hidden">مخفي</span>';
+    function closeForm() {
+        state.editingId = '';
+        state.form = null;
+        state.showForm = false;
+        render(state.viewMode);
     }
 
-    function getTopNavVisibilityMap() {
-        if (!TZ.db.settings) TZ.db.settings = {};
-        if (!TZ.db.settings.categoryNavVisibility) TZ.db.settings.categoryNavVisibility = {};
-        return TZ.db.settings.categoryNavVisibility;
+    function getParentName(parentId) {
+        if (!parentId) return '—';
+        const parent = visibleCategories().find((category) => category.id === parentId);
+        return parent?.name || 'غير معروف';
     }
 
-    function shouldShowInTopNav(category) {
-        const map = getTopNavVisibilityMap();
-        if (Object.prototype.hasOwnProperty.call(map, category.id)) {
-            return map[category.id] !== false;
-        }
-        return category.showInNavbar !== false;
-    }
-
-    function topNavStatusBadge(category) {
-        if (category.parentId) return '<span style="color:var(--text-muted)">—</span>';
-        return shouldShowInTopNav(category)
-            ? '<span class="status-badge active">يظهر</span>'
-            : '<span class="status-badge hidden">مخفي</span>';
+    function isVisibleInTopNav(category) {
+        return !category.parentId && topNavMap()[category.id] !== false && category.showInNavbar !== false;
     }
 
     function switchAdminSection(section) {
@@ -93,502 +154,260 @@
         A.renderSection(section);
     }
 
-    function renderCategories(viewMode = 'all') {
-        const mains = mainCategories();
-        const subs = subCategories();
-        const visibleCategories = getVisibleCategories()
-            .slice()
-            .sort((a, b) => {
-                const aDepth = a.parentId ? 1 : 0;
-                const bDepth = b.parentId ? 1 : 0;
-                if (aDepth !== bDepth) return aDepth - bDepth;
-                if ((a.parentId || '') !== (b.parentId || '')) return (a.parentId || '').localeCompare(b.parentId || '');
-                return (a.sortOrder || 0) - (b.sortOrder || 0);
-            })
-            .filter((category) => {
-                if (viewMode === 'main') return !category.parentId;
-                if (viewMode === 'sub') return !!category.parentId;
-                return true;
+    function collectCategoryIds(rootId) {
+        const ids = new Set([rootId]);
+        let changed = true;
+        while (changed) {
+            changed = false;
+            visibleCategories().forEach((category) => {
+                if (category.parentId && ids.has(category.parentId) && !ids.has(category.id)) {
+                    ids.add(category.id);
+                    changed = true;
+                }
             });
-        const viewTitle = viewMode === 'main'
-            ? 'إدارة الفئات الرئيسية'
-            : viewMode === 'sub'
-                ? 'إدارة الفئات الفرعية'
-                : 'إدارة الفئات الهرمية';
-        const viewHint = viewMode === 'main'
-            ? 'هنا تضيف الأقسام العليا التي تندرج تحتها الفئات الفرعية.'
-            : viewMode === 'sub'
-                ? 'هنا تضيف الفئات الفرعية التي يمكن ربط المنتجات والخدمات بها.'
-                : 'هنا تتابع العلاقة بين الفئات الرئيسية والفئات الفرعية من مكان واحد.';
+        }
+        return ids;
+    }
 
-        A.adminContent.innerHTML = `
-            ${viewMode !== 'all' ? `
-                <div class="admin-panel" style="margin-bottom:18px;">
-                    <div class="panel-body" style="display:grid;gap:10px;">
-                        <strong>${viewTitle}</strong>
-                        <div style="color:var(--text-muted);font-size:.92rem;">${viewHint}</div>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                            ${viewMode !== 'main' ? '<button class="btn btn-outline btn-sm" id="jumpMainCategoriesBtn">فتح الفئات الرئيسية</button>' : ''}
-                            ${viewMode !== 'sub' ? '<button class="btn btn-outline btn-sm" id="jumpSubCategoriesBtn">فتح الفئات الفرعية</button>' : ''}
-                            <button class="btn btn-outline btn-sm" id="jumpCategoryHubBtn">فتح مركز الفئات</button>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-
+    function renderFormPanel() {
+        if (!state.showForm || !state.form) return '';
+        const mains = mainCategories();
+        const submitLabel = state.editingId ? 'حفظ الفئة' : 'إضافة الفئة';
+        return `
             <div class="admin-panel" style="margin-bottom:18px;">
-                <div class="panel-header">
-                    <h2><i class="fas fa-sitemap"></i> ${viewTitle} (${visibleCategories.length})</h2>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button class="btn btn-primary btn-sm" id="addMainCategoryBtn">إضافة فئة رئيسية</button>
-                        <button class="btn btn-outline btn-sm" id="addSubCategoryBtn">إضافة فئة فرعية</button>
-                        <button class="btn btn-outline btn-sm" id="openProductsSectionBtn">الانتقال إلى المنتجات</button>
-                    </div>
-                </div>
+                <div class="panel-header"><h2>${state.editingId ? 'تعديل الفئة' : 'إضافة فئة جديدة'}</h2></div>
                 <div class="panel-body">
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>النوع</th>
-                                    <th>الاسم</th>
-                                    <th>الأب</th>
-                                    <th>الترتيب</th>
-                                    <th>الرابط (slug)</th>
-                                    <th>الحالة</th>
-                                    <th>الشريط العلوي</th>
-                                    <th>إجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${visibleCategories
-                                    .map((category) => {
-                                        const parent = category.parentId ? TZ.db.categories.find((item) => item.id === category.parentId) : null;
-                                        const servicesCount = (TZ.db.services || []).filter((service) => (service.subcategoryId || service.categoryId) === category.id).length;
-                                        const productsCount = TZ.db.products.filter((product) => product.categoryId === category.id).length;
-
-                                        return `
-                                            <tr>
-                                                <td>${categoryTypeLabel(category)}</td>
-                                                <td>
-                                                    <strong>${TZ.escapeHtml(category.name)}</strong>
-                                                    ${category.description ? `<br><small style="color:var(--text-muted)">${TZ.escapeHtml(category.description.substring(0, 70))}</small>` : ''}
-                                                    ${category.image ? '<br><small style="color:var(--success)">صورة مرفقة</small>' : ''}
-                                                    ${(servicesCount || productsCount) ? `<br><small style="color:var(--text-muted)">خدمات: ${servicesCount} | منتجات: ${productsCount}</small>` : ''}
-                                                </td>
-                                                <td>${parent ? TZ.escapeHtml(parent.name) : '—'}</td>
-                                                <td>${Number(category.sortOrder || 0)}</td>
-                                                <td><code>${TZ.escapeHtml(category.slug || '')}</code></td>
-                                                <td>${categoryStatusBadge(category.status || 'active')}</td>
-                                                <td>${topNavStatusBadge(category)}</td>
-                                                <td class="actions-cell">
-                                                    <button class="action-btn edit-cat-btn" data-id="${category.id}" title="تعديل"><i class="fas fa-edit"></i></button>
-                                                    <button class="action-btn success toggle-cat-btn" data-id="${category.id}" title="إظهار/إخفاء"><i class="fas fa-toggle-on"></i></button>
-                                                    ${!category.parentId ? `<button class="action-btn warning toggle-nav-btn" data-id="${category.id}" title="إظهار/إخفاء في الشريط العلوي"><i class="fas fa-bars"></i></button>` : ''}
-                                                    <button class="action-btn danger delete-cat-btn" data-id="${category.id}" title="حذف"><i class="fas fa-trash"></i></button>
-                                                </td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="admin-panel" id="categoryFormPanel" style="display:none;">
-                <div class="panel-header"><h2 id="catFormTitle"><i class="fas fa-plus"></i> إضافة فئة</h2></div>
-                <div class="panel-body padded">
-                    <div style="margin-bottom:18px;padding:14px;border:1px solid var(--border-color);border-radius:12px;background:var(--bg-lighter);display:grid;gap:8px;">
-                        <strong>أفضل ترتيب للعمل</strong>
-                        <div style="color:var(--text-muted);font-size:.92rem;">ابدأ بالفئة الرئيسية، ثم أضف الفئة الفرعية التابعة لها، وبعد الحفظ انتقل إلى قسم المنتجات.</div>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                            <button type="button" class="btn btn-outline btn-sm" id="jumpToProductsBtn">الذهاب إلى المنتجات</button>
+                    <form id="categoryForm" class="admin-form admin-form-stack">
+                        <div class="admin-polish-grid">
+                            <input id="categoryName" placeholder="اسم الفئة" value="${escapeText(state.form.name)}" required>
+                            <input id="categorySlug" placeholder="slug" value="${escapeText(state.form.slug)}">
+                            <input id="categoryIcon" placeholder="fa-laptop" value="${escapeText(state.form.icon)}">
+                            <input id="categorySortOrder" type="number" min="0" placeholder="الترتيب" value="${escapeText(state.form.sortOrder)}">
                         </div>
-                    </div>
-
-                    <form class="admin-form" id="categoryForm">
-                        <div class="form-grid">
-                            <div class="admin-form-group">
-                                <label>نوع الفئة *</label>
-                                <select id="catType" required>
-                                    <option value="main">رئيسية</option>
-                                    <option value="sub">فرعية</option>
-                                </select>
-                            </div>
-                            <div class="admin-form-group" id="parentWrap" style="display:none;">
-                                <label>الفئة الرئيسية *</label>
-                                <select id="catParentId">
-                                    <option value="">اختر فئة رئيسية</option>
-                                    ${mains.map((category) => `<option value="${category.id}">${TZ.escapeHtml(category.name)}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>اسم الفئة *</label>
-                                <div class="admin-input-wrap"><i class="fas fa-tag"></i><input type="text" id="catName" required></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>Slug (يتولد تلقائياً)</label>
-                                <div class="admin-input-wrap"><i class="fas fa-link"></i><input type="text" id="catSlug" placeholder="auto-generated"></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>الحالة</label>
-                                <select id="catStatus">
-                                    <option value="active">ظاهر</option>
-                                    <option value="hidden">مخفي</option>
-                                </select>
-                            </div>
-                            <div class="admin-form-group" id="catTopNavWrap">
-                                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
-                                    <input type="checkbox" id="catShowInNavbar" checked>
-                                    إظهار الفئة الرئيسية في الشريط العلوي
-                                </label>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>الترتيب</label>
-                                <div class="admin-input-wrap"><i class="fas fa-sort-numeric-down"></i><input type="number" id="catSortOrder" min="0" value="0"></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>الأيقونة</label>
-                                <div class="admin-input-wrap"><i class="fas fa-icons"></i><input type="text" id="catIcon" placeholder="fa-layer-group"></div>
-                            </div>
-                            <div class="admin-form-group full">
-                                <label>الوصف</label>
-                                <textarea id="catDescription" rows="3"></textarea>
-                            </div>
-                            <div class="admin-form-group full">
-                                <label>صورة الفئة</label>
-                                <div class="image-upload-area" id="catImageUploadArea" style="cursor:pointer;">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>اضغط لرفع صورة (حد أقصى 1MB)</p>
-                                    <input type="file" id="catImageInput" accept="image/*" style="display:none;">
-                                </div>
-                                <div id="catImagePreview" style="margin-top:10px;"></div>
-                            </div>
+                        <div class="admin-polish-grid">
+                            <select id="categoryType">
+                                <option value="main" ${state.form.type === 'main' ? 'selected' : ''}>فئة رئيسية</option>
+                                <option value="sub" ${state.form.type === 'sub' ? 'selected' : ''}>فئة فرعية</option>
+                            </select>
+                            <select id="categoryParent" ${state.form.type === 'sub' ? '' : 'disabled'}>
+                                <option value="">اختر الفئة الرئيسية</option>
+                                ${mains.map((category) => `<option value="${escapeText(category.id)}" ${state.form.parentId === category.id ? 'selected' : ''}>${escapeText(category.name)}</option>`).join('')}
+                            </select>
+                            <select id="categoryStatus">
+                                <option value="active" ${state.form.status === 'active' ? 'selected' : ''}>نشطة</option>
+                                <option value="hidden" ${state.form.status === 'hidden' ? 'selected' : ''}>مخفية</option>
+                            </select>
+                            <label class="admin-toggle-card">
+                                <input id="categoryShowInNavbar" type="checkbox" ${state.form.showInNavbar ? 'checked' : ''} ${state.form.type === 'sub' ? 'disabled' : ''}>
+                                <span>إظهار في الشريط العلوي</span>
+                            </label>
                         </div>
-                        <div style="margin-top:15px;display:flex;gap:10px;">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
-                            <button type="button" class="btn btn-outline" id="cancelCatBtn">إلغاء</button>
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block;margin-bottom:8px;font-weight:700;">صورة الفئة (اختياري)</label>
+                            <input type="file" id="categoryImageFile" accept="image/*" style="display:none;">
+                            <div class="image-upload-area" id="categoryImageUploadArea" style="cursor:pointer;padding:15px;border:2px dashed var(--border-color);border-radius:12px;text-align:center;background:var(--bg-lighter);">
+                                <i class="fas fa-image" style="font-size:1.5rem;color:var(--text-muted);margin-bottom:8px;display:block;"></i>
+                                <span style="font-size:0.9rem;color:var(--text-muted);">انقر لاختيار صورة للمرفقات (حد أقصى ${A.getAdminImageUploadLimitText()})</span>
+                            </div>
+                            <div id="categoryImagePreview" style="margin-top:10px;text-align:center;${state.form.image ? '' : 'display:none;'}">
+                                <img src="${escapeText(state.form.image)}" style="max-width:150px;max-height:150px;border-radius:8px;border:1px solid var(--border-color);">
+                            </div>
+                            <input id="categoryImage" type="hidden" value="${escapeText(state.form.image)}">
+                        </div>
+                        <textarea id="categoryDescription" rows="3" placeholder="وصف مختصر">${escapeText(state.form.description)}</textarea>
+                        <div class="admin-form-actions">
+                            <button class="btn btn-primary" type="submit">${submitLabel}</button>
+                            <button class="btn btn-outline" type="button" id="cancelCategoryFormBtn">إلغاء</button>
                         </div>
                     </form>
                 </div>
             </div>
         `;
-
-        bindCategoryEvents();
     }
 
-    function bindCategoryEvents() {
-        const formPanel = document.getElementById('categoryFormPanel');
-        const form = document.getElementById('categoryForm');
-        const typeInput = document.getElementById('catType');
-        const parentWrap = document.getElementById('parentWrap');
-        const parentInput = document.getElementById('catParentId');
-        const nameInput = document.getElementById('catName');
-        const slugInput = document.getElementById('catSlug');
-        const statusInput = document.getElementById('catStatus');
-        const topNavWrap = document.getElementById('catTopNavWrap');
-        const showInNavbarInput = document.getElementById('catShowInNavbar');
-        const sortInput = document.getElementById('catSortOrder');
-        const iconInput = document.getElementById('catIcon');
-        const descInput = document.getElementById('catDescription');
-        const preview = document.getElementById('catImagePreview');
-        let imageValue = '';
+    function renderRows() {
+        const categories = visibleCategories()
+            .filter((category) => state.viewMode === 'main' ? !category.parentId : state.viewMode === 'sub' ? !!category.parentId : true)
+            .sort((first, second) => (first.parentId ? 1 : 0) - (second.parentId ? 1 : 0) || (first.sortOrder || 0) - (second.sortOrder || 0));
 
-        function applyTypeVisibility() {
-            const isSub = typeInput.value === 'sub';
-            parentWrap.style.display = isSub ? '' : 'none';
-            parentInput.required = isSub;
-            if (!isSub) parentInput.value = '';
-            topNavWrap.style.display = isSub ? 'none' : '';
-            if (isSub) showInNavbarInput.checked = false;
+        if (categories.length === 0) {
+            return '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:22px;">لا توجد فئات مضافة بعد.</td></tr>';
         }
 
-        function renderImagePreview() {
-            if (!imageValue) {
-                preview.innerHTML = '';
-                return;
-            }
+        return categories.map((category) => `
+            <tr>
+                <td><img src="${category.image || 'https://placehold.co/100x100/1e293b/a9bww2?text=NA'}" alt="N/A" style="width:40px;height:40px;border-radius:6px;object-fit:cover;"></td>
+                <td>${category.parentId ? 'فرعية' : 'رئيسية'}</td>
+                <td><strong>${escapeText(category.name)}</strong></td>
+                <td>${escapeText(getParentName(category.parentId))}</td>
+                <td>${escapeText(category.sortOrder || 0)}</td>
+                <td>${escapeText(category.slug || '—')}</td>
+                <td>${category.status === 'active' ? 'ظاهرة' : 'مخفية'}</td>
+                <td>${category.parentId ? '—' : (isVisibleInTopNav(category) ? 'نعم' : 'لا')}</td>
+                <td>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-outline btn-sm" data-action="edit" data-id="${escapeText(category.id)}">تعديل</button>
+                        <button class="btn btn-outline btn-sm" data-action="toggle" data-id="${escapeText(category.id)}">إظهار/إخفاء</button>
+                        ${!category.parentId ? `<button class="btn btn-outline btn-sm" data-action="nav" data-id="${escapeText(category.id)}">الشريط العلوي</button>` : ''}
+                        <button class="btn btn-outline btn-sm" data-action="delete" data-id="${escapeText(category.id)}" style="border-color:rgba(231,76,60,0.4);color:#ff7675;">حذف</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
 
-            preview.innerHTML = `
-                <div class="image-preview" style="display:inline-block;position:relative;">
-                    <img src="${imageValue}" alt="صورة الفئة" style="max-width:120px;border-radius:8px;">
-                    <button type="button" class="remove-img" style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:10px;"><i class="fas fa-times"></i></button>
+    function render(viewMode) {
+        state.viewMode = viewMode || state.viewMode || 'all';
+        const mains = mainCategories().length;
+        const subs = visibleCategories().filter((category) => category.parentId).length;
+
+        A.adminContent.innerHTML = `
+            <div class="admin-panel" style="margin-bottom:18px;">
+                <div class="panel-body admin-quick-grid">
+                    <div><strong style="font-size:1.2rem;">${mains}</strong><div style="color:var(--text-muted);">فئات رئيسية</div></div>
+                    <div><strong style="font-size:1.2rem;">${subs}</strong><div style="color:var(--text-muted);">فئات فرعية</div></div>
+                    <div><strong style="font-size:1.2rem;">${visibleCategories().length}</strong><div style="color:var(--text-muted);">إجمالي الفئات</div></div>
                 </div>
-            `;
+            </div>
+            <div class="admin-panel" style="margin-bottom:18px;">
+                <div class="panel-body admin-form-actions">
+                    <button class="btn btn-primary" id="addMainCategoryBtn">إضافة فئة رئيسية</button>
+                    <button class="btn btn-outline" id="addSubCategoryBtn">إضافة فئة فرعية</button>
+                    <button class="btn btn-outline" id="openProductsSectionBtn">الانتقال إلى المنتجات</button>
+                </div>
+            </div>
+            ${renderFormPanel()}
+            <div class="admin-panel">
+                <div class="panel-header"><h2>إدارة الفئات</h2></div>
+                <div class="panel-body">
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead><tr><th style="width:50px;">الصورة</th><th>النوع</th><th>الاسم</th><th>الأب</th><th>الترتيب</th><th>Slug</th><th>الحالة</th><th>الشريط العلوي</th><th>إجراءات</th></tr></thead>
+                            <tbody>${renderRows()}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
 
-            preview.querySelector('.remove-img')?.addEventListener('click', () => {
-                imageValue = '';
-                renderImagePreview();
-            });
-        }
-
-        function setFormData(category, forcedType) {
-            const isSub = forcedType ? forcedType === 'sub' : !!category?.parentId;
-            form.reset();
-            slugInput.dataset.edited = '';
-            typeInput.value = isSub ? 'sub' : 'main';
-            applyTypeVisibility();
-            statusInput.value = category?.status || 'active';
-            sortInput.value = Number(category?.sortOrder || 0);
-            iconInput.value = category?.icon || '';
-            descInput.value = category?.description || '';
-            nameInput.value = category?.name || '';
-            slugInput.value = category?.slug || '';
-            parentInput.value = category?.parentId || '';
-            showInNavbarInput.checked = isSub ? false : (category ? shouldShowInTopNav(category) : true);
-            imageValue = category?.image || '';
-            renderImagePreview();
-        }
-
-        document.getElementById('addMainCategoryBtn').addEventListener('click', function () {
-            A.editingCategoryId = null;
-            document.getElementById('catFormTitle').innerHTML = '<i class="fas fa-plus"></i> إضافة فئة رئيسية';
-            setFormData(null, 'main');
-            formPanel.style.display = 'block';
-            formPanel.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('addMainCategoryBtn')?.addEventListener('click', () => openForm('main'));
+        document.getElementById('addSubCategoryBtn')?.addEventListener('click', () => {
+            if (mainCategories().length === 0) return A.showToast('أضف فئة رئيسية أولًا.');
+            openForm('sub');
         });
-
-        document.getElementById('addSubCategoryBtn').addEventListener('click', function () {
-            if (mainCategories().length === 0) {
-                A.showToast('أضف فئة رئيسية أولاً.');
-                return;
-            }
-            A.editingCategoryId = null;
-            document.getElementById('catFormTitle').innerHTML = '<i class="fas fa-folder-plus"></i> إضافة فئة فرعية';
-            setFormData(null, 'sub');
-            parentInput.value = mainCategories()[0]?.id || '';
-            formPanel.style.display = 'block';
-            formPanel.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('openProductsSectionBtn')?.addEventListener('click', () => switchAdminSection('products'));
+        document.getElementById('cancelCategoryFormBtn')?.addEventListener('click', closeForm);
+        document.getElementById('categoryType')?.addEventListener('change', (event) => {
+            const isSub = event.target.value === 'sub';
+            const parentInput = document.getElementById('categoryParent');
+            const navbarInput = document.getElementById('categoryShowInNavbar');
+            parentInput.disabled = !isSub;
+            navbarInput.disabled = isSub;
+            if (!isSub) parentInput.value = '';
         });
-
-        document.getElementById('openProductsSectionBtn').addEventListener('click', function () {
-            if (subCategories().length === 0) {
-                A.showToast('أضف فئة فرعية واحدة على الأقل قبل إضافة المنتجات.');
-                return;
-            }
-            switchAdminSection('products');
+        
+        document.getElementById('categoryImageUploadArea')?.addEventListener('click', () => {
+            document.getElementById('categoryImageFile').click();
         });
-
-        document.getElementById('jumpToProductsBtn').addEventListener('click', function () {
-            if (subCategories().length === 0) {
-                A.showToast('أضف فئة فرعية أولاً ثم انتقل إلى المنتجات.');
-                return;
-            }
-            switchAdminSection('products');
-        });
-
-        document.getElementById('jumpMainCategoriesBtn')?.addEventListener('click', function () {
-            switchAdminSection('main-categories');
-        });
-
-        document.getElementById('jumpSubCategoriesBtn')?.addEventListener('click', function () {
-            switchAdminSection('subcategories');
-        });
-
-        document.getElementById('jumpCategoryHubBtn')?.addEventListener('click', function () {
-            switchAdminSection('categories');
-        });
-
-        document.getElementById('cancelCatBtn').addEventListener('click', function () {
-            formPanel.style.display = 'none';
-        });
-
-        typeInput.addEventListener('change', applyTypeVisibility);
-
-        nameInput.addEventListener('input', function () {
-            if (!slugInput.dataset.edited) {
-                slugInput.value = slugifyArabic(nameInput.value);
-            }
-        });
-
-        slugInput.addEventListener('input', function () {
-            slugInput.dataset.edited = '1';
-            slugInput.value = slugifyArabic(slugInput.value);
-        });
-
-        document.querySelectorAll('.edit-cat-btn').forEach((button) => {
-            button.addEventListener('click', function () {
-                const category = TZ.db.categories.find((item) => item.id === this.dataset.id);
-                if (!category) return;
-                A.editingCategoryId = category.id;
-                document.getElementById('catFormTitle').innerHTML = '<i class="fas fa-edit"></i> تعديل الفئة';
-                setFormData(category);
-                slugInput.dataset.edited = '1';
-                formPanel.style.display = 'block';
-                formPanel.scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-
-        document.querySelectorAll('.toggle-cat-btn').forEach((button) => {
-            button.addEventListener('click', function () {
-                const category = TZ.db.categories.find((item) => item.id === this.dataset.id);
-                if (!category) return;
-                category.status = category.status === 'active' ? 'hidden' : 'active';
-                TZ.commitDb('category_toggle', TZ.getSession()?.userId, `${category.name}: ${category.status}`, { type: 'category', data: category });
-                A.renderSection(A.currentSection);
-                A.showToast('تم تحديث حالة الفئة.');
-            });
-        });
-
-        document.querySelectorAll('.toggle-nav-btn').forEach((button) => {
-            button.addEventListener('click', function () {
-                const category = TZ.db.categories.find((item) => item.id === this.dataset.id);
-                if (!category || category.parentId) return;
-                const next = !shouldShowInTopNav(category);
-                const navMap = getTopNavVisibilityMap();
-                navMap[category.id] = next;
-                category.showInNavbar = next;
-                TZ.commitDb('settings_update', TZ.getSession()?.userId, `تحديث ظهور الفئة في الشريط: ${category.name}`, { type: 'settings_update', data: TZ.db.settings });
-                A.renderSection(A.currentSection);
-                A.showToast('تم تحديث ظهور الفئة في الشريط العلوي.');
-            });
-        });
-
-        document.querySelectorAll('.delete-cat-btn').forEach((button) => {
-            button.addEventListener('click', function () {
-                const category = TZ.db.categories.find((item) => item.id === this.dataset.id);
-                if (!category) return;
-
-                const categoryIdsToDelete = new Set([category.id]);
-                let changed = true;
-                while (changed) {
-                    changed = false;
-                    TZ.db.categories.forEach((item) => {
-                        if (item.parentId && categoryIdsToDelete.has(item.parentId) && !categoryIdsToDelete.has(item.id)) {
-                            categoryIdsToDelete.add(item.id);
-                            changed = true;
-                        }
-                    });
-                }
-
-                const categoriesToDelete = TZ.db.categories.filter((item) => categoryIdsToDelete.has(item.id));
-                const productsToDelete = TZ.db.products.filter((product) => categoryIdsToDelete.has(product.categoryId));
-                const servicesToDelete = (TZ.db.services || []).filter((service) => categoryIdsToDelete.has(service.subcategoryId || service.categoryId));
-                const summary = `سيتم حذف ${categoriesToDelete.length} فئة، ${productsToDelete.length} منتج، ${servicesToDelete.length} خدمة.`;
-
-                A.showConfirmModal('حذف الفئة وما بداخلها', `${summary} هل تريد المتابعة؟`, () => {
-                    TZ.db.categories = TZ.db.categories.filter((item) => !categoryIdsToDelete.has(item.id));
-                    TZ.db.products = TZ.db.products.filter((product) => !categoryIdsToDelete.has(product.categoryId));
-                    TZ.db.services = (TZ.db.services || []).filter((service) => !categoryIdsToDelete.has(service.subcategoryId || service.categoryId));
-
-                    A.renderSection(A.currentSection);
-                    A.showToast('تم حذف الفئة وكل العناصر المرتبطة بها.');
-
-                    categoriesToDelete.forEach((item) => {
-                        TZ.commitDb('category_delete', TZ.getSession()?.userId, item.name, { type: 'category_delete', data: { id: item.id } });
-                    });
-                    productsToDelete.forEach((item) => {
-                        TZ.commitDb('product_delete', TZ.getSession()?.userId, item.name, { type: 'product_delete', data: { id: item.id } });
-                    });
-                    servicesToDelete.forEach((item) => {
-                        TZ.commitDb('service_delete', TZ.getSession()?.userId, item.name, { type: 'service_delete', data: { id: item.id } });
-                    });
-                });
-            });
-        });
-
-        const imageUpload = document.getElementById('catImageUploadArea');
-        const imageInput = document.getElementById('catImageInput');
-        imageUpload.addEventListener('click', () => imageInput.click());
-        imageInput.addEventListener('change', function () {
-            const file = this.files[0];
+        document.getElementById('categoryImageFile')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 1048576) {
-                A.showToast('حجم الصورة يتجاوز 1MB.');
-                return;
-            }
+            if (A.isAdminImageUploadTooLarge(file)) return A.showAdminImageUploadLimitToast();
             const reader = new FileReader();
-            reader.onload = function (event) {
-                imageValue = event.target.result;
-                renderImagePreview();
+            reader.onload = function(event) {
+                const dataUrl = event.target.result;
+                document.getElementById('categoryImage').value = dataUrl;
+                const preview = document.getElementById('categoryImagePreview');
+                preview.style.display = 'block';
+                preview.innerHTML = `<img src="${dataUrl}" style="max-width:150px;max-height:150px;border-radius:8px;border:1px solid var(--border-color);">`;
             };
             reader.readAsDataURL(file);
         });
 
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
+        document.getElementById('categoryForm')?.addEventListener('submit', handleSubmit);
+        A.adminContent.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', handleRowAction));
+    }
 
-            const type = typeInput.value;
-            const parentId = type === 'sub' ? parentInput.value : null;
-            const name = nameInput.value.trim();
-            const status = statusInput.value;
-            const showInNavbar = type === 'main' ? !!showInNavbarInput.checked : false;
-            const sortOrder = Number(sortInput.value || 0);
-            const icon = iconInput.value.trim() || 'fa-folder';
-            const description = descInput.value.trim();
+    async function handleSubmit(event) {
+        event.preventDefault();
+        const type = document.getElementById('categoryType').value;
+        const parentId = type === 'sub' ? document.getElementById('categoryParent').value : '';
+        const name = document.getElementById('categoryName').value.trim();
+        if (!name) return A.showToast('يرجى إدخال اسم الفئة.');
+        if (type === 'sub' && !parentId) return A.showToast('اختر الفئة الرئيسية أولًا.');
 
-            if (!name) {
-                A.showToast('يرجى إدخال اسم الفئة.');
-                return;
-            }
+        const formData = {
+            id: state.editingId || TZ.generateId('cat-'),
+            name,
+            parentId: parentId || null,
+            status: document.getElementById('categoryStatus').value,
+            showInNavbar: type === 'main' && document.getElementById('categoryShowInNavbar').checked,
+            sortOrder: Number(document.getElementById('categorySortOrder').value || 0),
+            icon: document.getElementById('categoryIcon').value.trim() || 'fa-folder',
+            image: document.getElementById('categoryImage').value.trim(),
+            description: document.getElementById('categoryDescription').value.trim(),
+            slug: uniqueSlug(slugify(document.getElementById('categorySlug').value || name), state.editingId || '')
+        };
 
-            if (type === 'sub' && !parentId) {
-                A.showToast('اختر الفئة الرئيسية أولاً.');
-                return;
-            }
+        await runMutation(() => {
+            const collection = TZ.db.categories || (TZ.db.categories = []);
+            const existing = collection.find((category) => category.id === formData.id);
+            if (existing) Object.assign(existing, formData);
+            else collection.push(formData);
+            if (formData.parentId) delete topNavMap()[formData.id];
+            else topNavMap()[formData.id] = formData.showInNavbar;
+            state.showForm = false;
+            state.editingId = '';
+            state.form = null;
 
-            let slug = slugifyArabic(slugInput.value || name);
-            slug = upsertUniqueSlug(slug, A.editingCategoryId);
+            return [
+                () => commitChange(existing ? 'category_update' : 'category_create', formData.name, { type: 'category', data: formData }),
+                () => commitChange('settings_update', `تحديث ظهور الفئة في الشريط العلوي: ${formData.name}`, { type: 'settings_update', data: TZ.db.settings })
+            ];
+        }, state.editingId ? 'تم تحديث الفئة.' : 'تمت إضافة الفئة.', 'تعذر حفظ الفئة في قاعدة البيانات.');
+    }
 
-            if (A.editingCategoryId) {
-                const category = TZ.db.categories.find((item) => item.id === A.editingCategoryId);
-                if (!category) return;
+    async function handleRowAction(event) {
+        const category = visibleCategories().find((item) => item.id === event.currentTarget.dataset.id);
+        if (!category) return;
+        const action = event.currentTarget.dataset.action;
+        if (action === 'edit') return openForm(category.parentId ? 'sub' : 'main', category);
+        if (action === 'toggle') {
+            return runMutation(() => {
+                category.status = category.status === 'active' ? 'hidden' : 'active';
+                return [() => commitChange('category_toggle', `${category.name}: ${category.status}`, { type: 'category', data: category })];
+            }, 'تم تحديث حالة الفئة.', 'تعذر تحديث حالة الفئة.');
+        }
+        if (action === 'nav') {
+            return runMutation(() => {
+                category.showInNavbar = !isVisibleInTopNav(category);
+                topNavMap()[category.id] = category.showInNavbar;
+                return [() => commitChange('settings_update', `تحديث ظهور الفئة في الشريط العلوي: ${category.name}`, { type: 'settings_update', data: TZ.db.settings })];
+            }, 'تم تحديث ظهور الفئة في الشريط العلوي.', 'تعذر تحديث ظهور الفئة في الشريط العلوي.');
+        }
 
-                if (type === 'sub' && parentId === category.id) {
-                    A.showToast('لا يمكن ربط الفئة بنفسها.');
-                    return;
-                }
-
-                Object.assign(category, {
-                    name,
-                    parentId,
-                    status,
-                    showInNavbar,
-                    sortOrder,
-                    icon,
-                    description,
-                    image: imageValue || '',
-                    slug
-                });
-
-                if (!parentId) {
-                    getTopNavVisibilityMap()[category.id] = showInNavbar;
-                    TZ.commitDb('settings_update', TZ.getSession()?.userId, `تحديث ظهور الفئة في الشريط: ${name}`, { type: 'settings_update', data: TZ.db.settings });
-                }
-
-                TZ.commitDb('category_update', TZ.getSession()?.userId, name, { type: 'category', data: category });
-                A.showToast('تم تحديث الفئة.');
-            } else {
-                const newCategory = {
-                    id: TZ.generateId('cat-'),
-                    name,
-                    parentId,
-                    status,
-                    showInNavbar,
-                    sortOrder,
-                    icon,
-                    description,
-                    image: imageValue || '',
-                    slug
-                };
-
-                TZ.db.categories.push(newCategory);
-
-                if (!parentId) {
-                    getTopNavVisibilityMap()[newCategory.id] = showInNavbar;
-                    TZ.commitDb('settings_update', TZ.getSession()?.userId, `تحديث ظهور الفئة في الشريط: ${name}`, { type: 'settings_update', data: TZ.db.settings });
-                }
-
-                TZ.commitDb('category_create', TZ.getSession()?.userId, name, { type: 'category', data: newCategory });
-                A.showToast('تمت إضافة الفئة.');
-            }
-
-            A.renderSection(A.currentSection);
+        const categoryIds = collectCategoryIds(category.id);
+        const categoriesToDelete = visibleCategories().filter((item) => categoryIds.has(item.id));
+        const productsToDelete = (TZ.db.products || []).filter((item) => categoryIds.has(item.categoryId));
+        const servicesToDelete = (TZ.db.services || []).filter((item) => categoryIds.has(item.subcategoryId || item.categoryId));
+        const sortedCategories = categoriesToDelete.slice().sort((first, second) => Number(Boolean(second.parentId)) - Number(Boolean(first.parentId)));
+        A.showConfirmModal('حذف الفئة', `سيتم حذف ${categoriesToDelete.length} فئة و${productsToDelete.length} منتج و${servicesToDelete.length} خدمة. هل تريد المتابعة؟`, async () => {
+            await runMutation(() => {
+                TZ.db.categories = (TZ.db.categories || []).filter((item) => !categoryIds.has(item.id));
+                TZ.db.products = (TZ.db.products || []).filter((item) => !categoryIds.has(item.categoryId));
+                TZ.db.services = (TZ.db.services || []).filter((item) => !categoryIds.has(item.subcategoryId || item.categoryId));
+                sortedCategories.forEach((item) => delete topNavMap()[item.id]);
+                return [
+                    ...servicesToDelete.map((item) => () => commitChange('service_delete', item.name, { type: 'service_delete', data: { id: item.id } })),
+                    ...productsToDelete.map((item) => () => commitChange('product_delete', item.name, { type: 'product_delete', data: { id: item.id } })),
+                    ...sortedCategories.map((item) => () => commitChange('category_delete', item.name, { type: 'category_delete', data: { id: item.id } })),
+                    () => commitChange('settings_update', 'تحديث إعدادات الفئات', { type: 'settings_update', data: TZ.db.settings })
+                ];
+            }, 'تم حذف الفئة وكل العناصر المرتبطة بها.', 'تعذر حذف الفئة من قاعدة البيانات.');
         });
     }
 
-    A.sections.categories = () => renderCategories('all');
-    A.sections['main-categories'] = () => renderCategories('main');
-    A.sections.subcategories = () => renderCategories('sub');
+    A.sections.categories = () => render('all');
+    A.sections['main-categories'] = () => render('main');
+    A.sections.subcategories = () => render('sub');
 })();

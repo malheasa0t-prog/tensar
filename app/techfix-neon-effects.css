@@ -1,0 +1,445 @@
+.techfix-filter-bar,
+.repair-form-card {
+  background: linear-gradient(180deg, rgba(20, 24, 55, 0.94), rgba(11, 14, 35, 0.96));
+}
+
+.form-input,
+.form-select,
+input,
+select,
+textarea {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+select option {
+  background-color: #121838;
+  color: #ffffff;
+}
+
+.form-input::placeholder,
+textarea::placeholder {
+  color: rgba(220, 225, 247, 0.54);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(255, 0, 110, 0.65);
+  box-shadow: 0 0 0 4px rgba(255, 0, 110, 0.12), var(--glow-pink);
+}
+
+.promo-banner {
+  background:
+    radial-gradient(circle at top right, rgba(255, 0, 110, 0.28), transparent 24%),
+    linear-gradient(135deg, rgba(10, 14, 39, 0.96), rgba(18, 24, 56, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.promo-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(131, 56, 236, 0.18), transparent 20%),
+    radial-gradient(circle at 80% 80%, rgba(0, 217, 255, 0.14), transparent 24%);
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+.promo-banner-overlay {
+  background:
+    linear-gradient(180deg, rgba(10, 14, 39, 0.1), rgba(10, 14, 39, 0.94)),
+    linear-gradient(135deg, rgba(255, 0, 110, 0.12), rgba(131, 56, 236, 0.1));
+}
+
+.promo-banner-overlay .section-badge,
+.promo-banner-control,
+.promo-banner-indicator.is-active {
+  box-shadow: var(--glow-pink);
+}
+
+.promo-banner-indicator {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.techfix-service-grid .service-card:nth-child(3n + 1),
+.techfix-feature-grid .techfix-feature-card:nth-child(3n + 1) {
+  background:
+    linear-gradient(180deg, rgba(31, 12, 49, 0.92), rgba(10, 14, 39, 0.96)),
+    linear-gradient(135deg, rgba(255, 0, 110, 0.1), transparent);
+}
+
+.techfix-service-grid .service-card:nth-child(3n + 2),
+.techfix-feature-grid .techfix-feature-card:nth-child(3n + 2) {
+  background:
+    linear-gradient(180deg, rgba(12, 27, 54, 0.92), rgba(10, 14, 39, 0.96)),
+    linear-gradient(135deg, rgba(0, 217, 255, 0.1), transparent);
+}
+
+.techfix-service-grid .service-card:nth-child(3n),
+.techfix-feature-grid .techfix-feature-card:nth-child(3n) {
+  background:
+    linear-gradient(180deg, rgba(37, 20, 52, 0.92), rgba(10, 14, 39, 0.96)),
+    linear-gradient(135deg, rgba(251, 86, 7, 0.1), transparent);
+}
+
+.trust-item strong,
+.stat-card strong,
+.internal-hero-stat strong {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff006e, #00d9ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mobile-overlay {
+  background: rgba(4, 6, 18, 0.72);
+}
+
+.site-footer {
+  background: linear-gradient(180deg, rgba(10, 14, 39, 0.36), rgba(3, 4, 12, 0.98));
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.footer-contact-link,
+.footer-mobile-link,
+.footer-bar {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.footer-contact-link .contact-detail-icon,
+.footer-social-strip .social-icon {
+  background: rgba(255, 0, 110, 0.14);
+  color: #ff4da0;
+  box-shadow: none;
+}
+
+.footer-social-strip span,
+.footer-contact-block h3,
+.footer-links-panel h3 {
+  color: #ffffff;
+}
+
+.footer-bar .social-row a:hover,
+.footer-links-list a:hover,
+.footer-mobile-link:hover {
+  color: #ff77b8;
+}
+
+.contact-page-actions .btn,
+.hero-actions .btn,
+.state-panel-actions .btn {
+  min-width: 170px;
+}
+
+.home-purple {
+  position: relative;
+  isolation: isolate;
+}
+
+.home-purple::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 34rem;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(131, 56, 236, 0.24), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(177, 92, 255, 0.18), transparent 24%);
+  filter: blur(18px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-purple .hero-content-grid,
+.home-purple .techfix-home-grid,
+.home-purple .techfix-contact-grid {
+  align-items: start;
+}
+
+.home-purple .hero-copy,
+.home-purple .section-header p,
+.home-purple .techfix-cta-panel p {
+  color: #d1d8f8;
+}
+
+.home-purple .hero-trust-badge {
+  background: rgba(131, 56, 236, 0.14);
+  border-color: rgba(177, 92, 255, 0.24);
+  box-shadow: var(--glow-purple);
+}
+
+.home-purple .hero-actions .btn-secondary {
+  background: linear-gradient(180deg, rgba(59, 34, 107, 0.7), rgba(21, 25, 54, 0.86));
+  border-color: rgba(177, 92, 255, 0.3);
+}
+
+.home-purple .hero-main-cards-shell {
+  padding: 1.4rem;
+  background:
+    linear-gradient(180deg, rgba(34, 18, 71, 0.92), rgba(10, 14, 39, 0.98)),
+    radial-gradient(circle at top right, rgba(131, 56, 236, 0.18), transparent 32%);
+  border-color: rgba(177, 92, 255, 0.18);
+  box-shadow: var(--glow-purple), var(--shadow-md);
+}
+
+.home-purple .hero-main-cards-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.home-purple .hero-main-card {
+  min-height: 206px;
+  background:
+    linear-gradient(180deg, rgba(29, 18, 60, 0.94), rgba(11, 16, 42, 0.98)),
+    radial-gradient(circle at top right, rgba(177, 92, 255, 0.16), transparent 28%);
+  border-color: rgba(177, 92, 255, 0.16);
+  box-shadow: 0 20px 42px rgba(5, 7, 20, 0.46);
+}
+
+.home-purple .hero-main-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -22px -26px auto;
+  width: 112px;
+  height: 112px;
+  background: radial-gradient(circle, rgba(131, 56, 236, 0.28), transparent 66%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.home-purple .hero-main-card-body {
+  gap: 1rem;
+  align-items: center;
+}
+
+.home-purple .hero-main-card-icon-wrap {
+  width: 6.5rem;
+  min-width: 6.5rem;
+  height: 6.5rem;
+  border-radius: 1.6rem;
+  box-shadow: var(--glow-purple);
+}
+
+.home-purple .hero-main-card-copy h3,
+.home-purple .techfix-cta-panel h3 {
+  color: #f5f2ff;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.home-purple .hero-main-card-copy p {
+  color: #d8defb;
+  line-height: 1.85;
+}
+
+.home-purple .hero-main-card-footer {
+  margin-top: auto;
+  justify-content: center;
+}
+
+.home-purple .hero-main-card .section-count-badge,
+.home-purple .techfix-cta-panel .section-badge,
+.home-purple .techfix-meta span {
+  background: rgba(131, 56, 236, 0.14);
+  border-color: rgba(177, 92, 255, 0.24);
+}
+
+.home-purple .service-card,
+.home-purple .techfix-feature-card,
+.home-purple .techfix-testimonial-card,
+.home-purple .contact-social-card,
+.home-purple .techfix-cta-panel {
+  background:
+    linear-gradient(180deg, rgba(29, 18, 60, 0.94), rgba(10, 14, 39, 0.98)),
+    radial-gradient(circle at top left, rgba(131, 56, 236, 0.12), transparent 34%);
+  border-color: rgba(177, 92, 255, 0.16);
+}
+
+.home-purple .service-card:hover,
+.home-purple .techfix-feature-card:hover,
+.home-purple .techfix-testimonial-card:hover,
+.home-purple .contact-social-card:hover,
+.home-purple .hero-main-card:hover {
+  border-color: rgba(177, 92, 255, 0.3);
+  box-shadow: var(--glow-purple), var(--shadow-lg);
+}
+
+.home-purple .service-icon,
+.home-purple .contact-social-icon {
+  background: linear-gradient(135deg, rgba(131, 56, 236, 0.34), rgba(0, 217, 255, 0.18));
+}
+
+.home-purple .trust-item {
+  background: linear-gradient(180deg, rgba(24, 19, 58, 0.84), rgba(10, 14, 39, 0.94));
+  border-color: rgba(177, 92, 255, 0.14);
+}
+
+@media (max-width: 992px) {
+  .home-purple .hero-main-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(
+    .hero-main-card,
+    .techfix-feature-card,
+    .techfix-testimonial-card,
+    .service-card,
+    .category-hub-card,
+    .contact-social-card,
+    .contact-detail-card,
+    .contact-hours-card,
+    .repair-service-item,
+    .detail-media-card,
+    .detail-content-card,
+    .checkout-main-card,
+    .checkout-summary-card,
+    .category-section-card,
+    .repair-form-card,
+    .repair-services-list,
+    .auth-card,
+    .hero-summary-card,
+    .detail-side-card,
+    .detail-meta-card,
+    .detail-subcard,
+    .stat-card,
+    .trust-item
+  ) {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    transition:
+      transform var(--card-motion-duration) var(--card-motion-ease),
+      box-shadow var(--card-motion-duration) var(--card-motion-ease),
+      border-color var(--card-motion-duration-fast) var(--ease),
+      background var(--card-motion-duration-fast) var(--ease);
+  }
+
+  :is(
+    .hero-main-card,
+    .techfix-feature-card,
+    .techfix-testimonial-card,
+    .service-card,
+    .category-hub-card,
+    .contact-social-card,
+    .contact-detail-card,
+    .repair-service-item,
+    .stat-card
+  ):hover {
+    will-change: transform, box-shadow, border-color;
+    transform: translate3d(0, calc(var(--card-motion-hover-lift) * -1), 0)
+      scale(var(--card-motion-hover-scale));
+    box-shadow: var(--card-motion-shadow), var(--shadow-lg);
+  }
+
+  :is(
+    .contact-hours-card,
+    .detail-media-card,
+    .detail-content-card,
+    .checkout-main-card,
+    .checkout-summary-card,
+    .category-section-card,
+    .repair-form-card,
+    .repair-services-list,
+    .auth-card,
+    .hero-summary-card,
+    .detail-side-card,
+    .detail-meta-card,
+    .detail-subcard
+  ):hover {
+    will-change: transform, box-shadow;
+    transform: translate3d(0, -4px, 0);
+    box-shadow: var(--card-motion-shadow), var(--shadow-card);
+  }
+
+  :is(
+    .hero-main-card-icon-wrap,
+    .service-icon,
+    .repair-srv-icon,
+    .contact-detail-icon,
+    .contact-social-icon,
+    .stat-card-icon
+  ) {
+    transition:
+      transform var(--card-motion-duration) var(--card-motion-ease),
+      box-shadow var(--card-motion-duration-fast) var(--ease),
+      border-color var(--card-motion-duration-fast) var(--ease),
+      background var(--card-motion-duration-fast) var(--ease);
+  }
+
+  :is(
+    .hero-main-card,
+    .techfix-feature-card,
+    .techfix-testimonial-card,
+    .service-card,
+    .category-hub-card,
+    .contact-social-card,
+    .contact-detail-card,
+    .repair-service-item,
+    .stat-card
+  ):hover
+    :is(
+      .hero-main-card-icon-wrap,
+      .service-icon,
+      .repair-srv-icon,
+      .contact-detail-icon,
+    .contact-social-icon,
+    .stat-card-icon
+    ) {
+    will-change: transform;
+    transform: translate3d(0, -2px, 0) scale(1.02);
+  }
+
+  :is(.hero-main-card-image, .category-hub-image) {
+    transition: transform 0.72s var(--card-motion-ease);
+  }
+
+  :is(.hero-main-card:hover .hero-main-card-image, .category-hub-card:hover .category-hub-image) {
+    will-change: transform;
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .hero-main-card,
+    .techfix-feature-card,
+    .techfix-testimonial-card,
+    .service-card,
+    .category-hub-card,
+    .contact-social-card,
+    .contact-detail-card,
+    .contact-hours-card,
+    .repair-service-item,
+    .detail-media-card,
+    .detail-content-card,
+    .checkout-main-card,
+    .checkout-summary-card,
+    .category-section-card,
+    .repair-form-card,
+    .repair-services-list,
+    .auth-card,
+    .hero-summary-card,
+    .detail-side-card,
+    .detail-meta-card,
+    .detail-subcard,
+    .stat-card,
+    .trust-item,
+    .hero-main-card-icon-wrap,
+    .service-icon,
+    .repair-srv-icon,
+    .contact-detail-icon,
+    .contact-social-icon,
+    .stat-card-icon,
+    .hero-main-card-image,
+    .category-hub-image
+  ) {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}

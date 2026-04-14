@@ -7,19 +7,20 @@ const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
 /**
  * Returns the fallback checkout option sets used before dynamic settings load.
  *
- * @returns {{ paymentMethods: Array<{ value: string, label: string }>, deliveryMethods: Array<{ value: string, label: string }> }}
+ * @returns {{ paymentMethods: Array<{ value: string, label: string }>, deliveryMethods: Array<{ value: string, label: string, fee?: number }>, walletTransferNumber: string }}
  */
 export function getDefaultCheckoutOptions() {
   return {
     paymentMethods: DEFAULT_SITE_SETTINGS.paymentMethods,
     deliveryMethods: DEFAULT_SITE_SETTINGS.deliveryMethods,
+    walletTransferNumber: DEFAULT_SITE_SETTINGS.walletTransferNumber || '',
   };
 }
 
 /**
  * Loads payment and delivery options from site settings with a safe fallback.
  *
- * @returns {Promise<{ paymentMethods: Array<{ value: string, label: string }>, deliveryMethods: Array<{ value: string, label: string }> }>}
+ * @returns {Promise<{ paymentMethods: Array<{ value: string, label: string }>, deliveryMethods: Array<{ value: string, label: string, fee?: number }>, walletTransferNumber: string }>}
  */
 export async function fetchCheckoutOptions() {
   try {
@@ -28,6 +29,7 @@ export async function fetchCheckoutOptions() {
     return {
       paymentMethods: siteSettings.paymentMethods,
       deliveryMethods: siteSettings.deliveryMethods,
+      walletTransferNumber: siteSettings.walletTransferNumber || '',
     };
   } catch {
     return getDefaultCheckoutOptions();

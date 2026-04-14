@@ -42,26 +42,37 @@ async function findCategory(routeValue) {
 }
 
 /**
- * Counts active products for the provided subcategory ids.
+ * Counts active products AND digital services for the provided subcategory ids.
  *
  * @param {string[]} subCategoryIds
  * @returns {Promise<Record<string, number>>}
  */
-async function loadSubCategoryProductCounts(subCategoryIds) {
+async function loadSubCategoryItemCounts(subCategoryIds) {
   if (!subCategoryIds.length) {
     return {};
   }
 
-  const response = await supabase
-    .from('products')
-    .select('category_id')
-    .eq('status', 'active')
-    .in('category_id', subCategoryIds);
+  const [productsResponse, servicesResponse] = await Promise.all([
+    supabase
+      .from('products')
+      .select('category_id')
+      .eq('status', 'active')
+      .in('category_id', subCategoryIds),
+    supabase
+      .from('services')
+      .select('category_id')
+      .eq('status', 'active')
+      .in('category_id', subCategoryIds),
+  ]);
 
-  return (response.data || []).reduce((accumulator, product) => {
-    accumulator[product.category_id] = (accumulator[product.category_id] || 0) + 1;
-    return accumulator;
-  }, {});
+  const counts = {};
+  for (const item of (productsResponse.data || [])) {
+    counts[item.category_id] = (counts[item.category_id] || 0) + 1;
+  }
+  for (const item of (servicesResponse.data || [])) {
+    counts[item.category_id] = (counts[item.category_id] || 0) + 1;
+  }
+  return counts;
 }
 
 /**
@@ -102,7 +113,7 @@ export async function loadCategoryPageSnapshot(routeValue) {
   }
 
   const rootCategoryId = category.parent_id || category.id;
-  const [rootResponse, subCategoriesResponse, productsResponse] = await Promise.all([
+  const [rootResponse, subCategoriesResponse, productsResponse, servicesResponse] = await Promise.all([
     supabase
       .from('categories')
       .select('*')
@@ -122,19 +133,32 @@ export async function loadCategoryPageSnapshot(routeValue) {
       .eq('status', 'active')
       .eq('category_id', category.id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('services')
+      .select('*')
+      .eq('status', 'active')
+      .eq('category_id', category.id)
+      .order('sort_order', { ascending: true }),
   ]);
 
   const subCategories = subCategoriesResponse.data || [];
   const subCategoryProductsCount = !category.parent_id
-    ? await loadSubCategoryProductCounts(subCategories.map((subCategory) => subCategory.id))
+    ? await loadSubCategoryItemCounts(subCategories.map((subCategory) => subCategory.id))
     : {};
+
+  const physicalProducts = productsResponse.data || [];
+  const digitalServices = (servicesResponse.data || []).map((service) => ({
+    ...service,
+    _isDigitalService: true,
+  }));
+  const allItems = [...physicalProducts, ...digitalServices];
 
   return {
     error: false,
     category,
     mainCategory: rootResponse.data || null,
     subCategories,
-    products: productsResponse.data || [],
+    products: allItems,
     subCategoryProductsCount,
   };
 }

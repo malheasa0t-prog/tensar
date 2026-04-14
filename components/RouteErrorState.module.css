@@ -1,0 +1,78 @@
+.section {
+  padding: 4rem 0;
+}
+
+.card {
+  display: grid;
+  gap: 1rem;
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2.4rem);
+  border-radius: 28px;
+  border: var(--site-border);
+  background:
+    radial-gradient(circle at top right, rgba(251, 86, 7, 0.12), transparent 36%),
+    linear-gradient(180deg, rgba(18, 24, 56, 0.94), rgba(10, 14, 39, 0.98));
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+}
+
+.iconWrap {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-inline: auto;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(251, 86, 7, 0.18), rgba(131, 56, 236, 0.22));
+  color: #ffffff;
+  box-shadow: 0 0 0 10px rgba(251, 86, 7, 0.08);
+}
+
+.eyebrow {
+  justify-self: center;
+  display: inline-flex;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(251, 86, 7, 0.12);
+  color: #ffd7c2;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  line-height: 1.14;
+}
+
+.description,
+.message {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.message {
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.92rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .section {
+    padding: 3rem 0;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+}

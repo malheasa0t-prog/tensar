@@ -1,34 +1,50 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { buildRevealClassName, resolveRevealDelay } from "@/lib/scrollRevealModel";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-export default function ScrollReveal({ children, className = "", delay = 0 }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setTimeout(() => {
-              entry.target.classList.add("anim-visible");
-            }, delay);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [delay]);
+/**
+ * Wraps content with a scroll-triggered reveal animation shell.
+ *
+ * @param {{
+ *   children: import("react").ReactNode,
+ *   className?: string,
+ *   delayMs?: number,
+ *   once?: boolean,
+ *   rootMargin?: string,
+ *   style?: Record<string, unknown>,
+ *   threshold?: number,
+ *   variant?: string,
+ * }} props
+ * @returns {JSX.Element}
+ */
+export default function ScrollReveal({
+  children,
+  className = "",
+  delayMs = 0,
+  once = true,
+  rootMargin,
+  style,
+  threshold,
+  variant,
+  ...restProps
+}) {
+  const { ref, isVisible } = useScrollReveal({
+    once,
+    rootMargin,
+    threshold,
+  });
 
   return (
-    <div ref={ref} className={`anim-item ${className}`}>
+    <div
+      ref={ref}
+      className={buildRevealClassName(className, variant, isVisible)}
+      style={{
+        ...style,
+        "--reveal-delay": resolveRevealDelay(delayMs),
+      }}
+      {...restProps}
+    >
       {children}
     </div>
   );

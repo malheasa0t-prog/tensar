@@ -1,0 +1,113 @@
+.shell {
+  position: fixed;
+  right: 1rem;
+  left: 1rem;
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 115;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.panel {
+  width: min(100%, 56rem);
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(177, 92, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(12, 16, 38, 0.96), rgba(8, 12, 28, 0.98)),
+    radial-gradient(circle at top, rgba(131, 56, 236, 0.14), transparent 48%);
+  box-shadow: 0 22px 48px rgba(2, 6, 23, 0.34);
+  pointer-events: auto;
+}
+
+.copy,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.copy strong,
+.eyebrow {
+  color: #ffffff;
+}
+
+.copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.copy p {
+  margin: 0;
+  color: #aeb8d8;
+  font-size: 0.84rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  background: rgba(131, 56, 236, 0.16);
+}
+
+.items {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.itemChip,
+.ghostButton,
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.8rem;
+  padding: 0.72rem 0.95rem;
+  border-radius: 999px;
+}
+
+.itemChip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dbe3ff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ghostButton {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+}
+
+.primaryButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d28d9, #8338ec 55%, #ff4fd8);
+}
+
+.disabledButton {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .shell {
+    bottom: calc(6.4rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none !important;
+  }
+}

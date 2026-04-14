@@ -1,0 +1,190 @@
+.card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(18, 23, 52, 0.96), rgba(9, 12, 31, 0.99));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 22px 48px rgba(3, 6, 18, 0.22);
+}
+
+.head {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.head h2,
+.resultCopy h3 {
+  margin: 0;
+  color: #f8fbff;
+}
+
+.head h2 {
+  font-size: clamp(1.05rem, 1.45vw, 1.32rem);
+  line-height: 1.5;
+}
+
+.head p,
+.resultCopy p,
+.resultMetaItem span,
+.feedback {
+  margin: 0;
+  color: #cfdcf5;
+  line-height: 1.8;
+}
+
+.badge,
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0.45rem 0.82rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.badge {
+  color: #f8fbff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.field span,
+.resultMetaItem strong,
+.resultEyebrow {
+  color: #f8fbff;
+}
+
+.field span {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0.8rem 0.95rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 12, 30, 0.82);
+  color: #f8fbff;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.input::placeholder {
+  color: rgba(207, 220, 245, 0.5);
+}
+
+.input:focus {
+  border-color: rgba(0, 217, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+}
+
+.submitButton {
+  min-height: 52px;
+}
+
+.feedback {
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.88rem;
+}
+
+.feedbackError {
+  color: #ffd6d6;
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.resultCard {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.resultHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.resultCopy {
+  display: grid;
+  gap: 0.24rem;
+}
+
+.resultEyebrow {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #7ce5ff;
+}
+
+.statusBadge {
+  color: var(--status-color, #7ce5ff);
+  background: color-mix(in srgb, var(--status-color, #7ce5ff) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-color, #7ce5ff) 24%, transparent);
+}
+
+.resultMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.resultMetaItem {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.resultMetaItem span {
+  font-size: 0.8rem;
+}
+
+.resultMetaItem strong {
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .fields,
+  .resultMeta {
+    grid-template-columns: 1fr;
+  }
+}

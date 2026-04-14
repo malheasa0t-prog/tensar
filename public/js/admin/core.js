@@ -1,11 +1,10 @@
-﻿// ===== TechZone Admin - Core =====
-// Auth (Supabase), navigation, shared state, confirm modal, undo toast
+// ===== TechZone Admin - Core =====
 (function () {
     'use strict';
 
-    // Shared admin state
     window.AdminApp = {
         currentSection: 'dashboard',
+        currentUser: null,
         currentOrderStatusTab: 'all',
         editingProductId: null,
         editingCategoryId: null,
@@ -14,44 +13,14 @@
         editingCouponId: null,
         productImages: [],
         _undoTimer: null,
-        sections: {},  // Each sub-module registers its render function here
+        sections: {},
         accessoryCatalog: (window.TZ && window.TZ.accessoryCatalog) || null
     };
 
     const A = window.AdminApp;
-    let _undoTimer = null;
-    let initialized = false;
-
-    // ===== Custom Confirm Modal (replaces browser confirm) =====
-    function showConfirmModal(title, message, onConfirm) {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.innerHTML = `
-            <div class="modal-card">
-                <h3><i class="fas fa-exclamation-triangle" style="color:#fdcb6e"></i> ${title}</h3>
-                <p>${message}</p>
-                <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;">
-                    <button class="btn btn-primary confirm-yes-btn"><i class="fas fa-check"></i> ØªØ£ÙƒÙŠØ¯</button>
-                    <button class="btn btn-outline confirm-no-btn"><i class="fas fa-times"></i> Ø¥Ù„ØºØ§Ø¡</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-        overlay.querySelector('.confirm-no-btn').addEventListener('click', () => overlay.remove());
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-        overlay.querySelector('.confirm-yes-btn').addEventListener('click', () => {
-            overlay.remove();
-            onConfirm();
-        });
-    }
-
-    // ===== Undo Toast =====
-    function showUndoToast(msg, onUndo, onExpire) {
-        if (onExpire) { onExpire(); }
-        showToast(msg);
-    }
-
-    // ===== DOM =====
+    const helpers = window.AdminCoreHelpers;
+    const ui = window.AdminCoreUi;
+    const SIDEBAR_GROUP_STORAGE_KEY = 'tz_admin_sidebar_groups';
     const loginOverlay = document.getElementById('adminLoginOverlay');
     const adminLayout = document.getElementById('adminLayout');
     const adminContent = document.getElementById('adminContent');
@@ -63,257 +32,322 @@
     const sidebarClose = document.getElementById('sidebarClose');
     const sidebar = document.getElementById('adminSidebar');
 
-    // ===== Auth (Supabase) =====
+    let initialized = false;
+    let lastOfflineQueueCount = 0;
+    let sectionRenderToken = 0;
+
+    async function resolveAdminUser(authUser) {
+        if (!authUser) return null;
+
+        const [profileRes, legacyRes] = await Promise.all([
+            TZ.supabase.from('user_profiles').select('*').eq('user_id', authUser.id).maybeSingle(),
+            authUser.email
+                ? TZ.supabase.from('app_users').select('*').ilike('email', authUser.email).maybeSingle()
+                : Promise.resolve({ data: null })
+        ]);
+
+        const candidates = [
+            profileRes.data ? {
+                id: profileRes.data.user_id || authUser.id,
+                fullName: profileRes.data.full_name || authUser.email || 'Admin',
+                role: profileRes.data.role || 'user',
+                status: profileRes.data.status || 'active'
+            } : null,
+            legacyRes.data ? {
+                id: legacyRes.data.id || authUser.id,
+                fullName: legacyRes.data.full_name || authUser.email || 'Admin',
+                role: legacyRes.data.role || 'user',
+                status: legacyRes.data.status || 'active'
+            } : null
+        ].filter(Boolean);
+
+        return candidates.find((candidate) => TZ.canAccessAdmin(candidate)) || null;
+    }
+
     async function checkAuth() {
         try {
             const authUser = await TZ.getSupabaseUser();
             if (authUser) {
-                await TZ.refreshData();
-                const appUser = TZ.findUserByAuthUser(authUser);
+                const appUser = await resolveAdminUser(authUser);
                 if (appUser && TZ.canAccessAdmin(appUser)) {
+                    helpers.requestAdminRuntimeAccess(true);
+                    await TZ.refreshData();
+                    TZ.startRealtime?.();
                     showAdmin(appUser);
                     return;
                 }
             }
-        } catch (e) {
-            void e;
+        } catch (error) {
+            void error;
         }
+
         showLogin();
     }
 
     function showLogin() {
+        A.currentUser = null;
+        helpers.requestAdminRuntimeAccess(false);
         TZ.clearSession();
-        loginOverlay.style.display = 'flex';
-        adminLayout.style.display = 'none';
+        if (loginOverlay) loginOverlay.style.display = 'flex';
+        if (adminLayout) adminLayout.style.display = 'none';
     }
 
     function showAdmin(user) {
+        helpers.requestAdminRuntimeAccess(true);
+        A.currentUser = user;
         TZ.setSession(user.id, user.role, user.fullName);
-        loginOverlay.style.display = 'none';
-        adminLayout.style.display = 'flex';
+        if (loginOverlay) loginOverlay.style.display = 'none';
+        if (adminLayout) adminLayout.style.display = 'flex';
         document.getElementById('adminName').textContent = user.fullName;
         document.getElementById('adminRole').textContent = TZ.ROLES[user.role]?.label || user.role;
-        updateOrdersBadge();
-        renderSection(A.currentSection);
-        showLegacyModeNotice();
+        helpers.applySectionPermissions(TZ, user);
+        helpers.updateOrdersBadge(TZ);
+        helpers.updateSidebarState(A.currentSection, SIDEBAR_GROUP_STORAGE_KEY);
+        renderAdminSection(A.currentSection, { history: 'replace' });
+        ui.showLegacyModeNotice(TZ);
     }
 
-    function showLegacyModeNotice() {
-        if (TZ.legacyWriteEnabled) return;
+    function setSidebarLoadingState(section, isLoading) {
+        document.querySelectorAll('.sidebar-link').forEach((link) => {
+            const matchesSection = link.dataset.section === section;
+            link.classList.toggle('is-loading', matchesSection && isLoading);
+            if (matchesSection) {
+                link.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+            } else {
+                link.removeAttribute('aria-busy');
+            }
+        });
+        adminLayout?.classList.toggle('is-section-loading', isLoading);
+    }
 
-        const old = document.getElementById('legacyReadOnlyNotice');
-        if (old) old.remove();
-
-        const notice = document.createElement('div');
-        notice.id = 'legacyReadOnlyNotice';
-        notice.style.cssText = 'margin:12px 16px 0;padding:12px 14px;border:1px solid rgba(241,196,15,.45);background:rgba(241,196,15,.12);border-radius:10px;color:#f5c542;font-size:.92rem;line-height:1.7';
-        notice.innerHTML = 'ÙˆØ¶Ø¹ Ø¢Ù…Ù†: Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© ØªØ¹Ù…Ù„ Ø­Ø§Ù„ÙŠØ§Ù‹ Ø¨ØµÙ„Ø§Ø­ÙŠØ© Ù‚Ø±Ø§Ø¡Ø© ÙÙ‚Ø· Ù„Ù…Ù†Ø¹ Ø§Ù„ÙƒØªØ§Ø¨Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø© Ù…Ù† Ø§Ù„Ù…ØªØµÙØ­. Ù„Ø¥Ø¬Ø±Ø§Ø¡ ØªØ¹Ø¯ÙŠÙ„Ø§Øª ÙØ¹Ù„ÙŠØ© Ø§Ø³ØªØ®Ø¯Ù… Ù„ÙˆØ­Ø© Next.js Ø§Ù„Ø­Ø¯ÙŠØ«Ø©.';
-
-        const content = document.getElementById('adminContent');
-        if (content && content.parentNode) {
-            content.parentNode.insertBefore(notice, content);
+    async function ensureSectionModuleLoaded(section) {
+        if (typeof window.__TZ_ADMIN_LOAD_SECTION_MODULES === 'function') {
+            await window.__TZ_ADMIN_LOAD_SECTION_MODULES(section);
         }
     }
 
-    // We must wait for Supabase to load our data into TZ.db before doing anything
-    window.addEventListener('tz-ready', async () => {
-        if (initialized) return;
-        initialized = true;
+    async function renderAdminSection(section, options = {}) {
+        const normalizedSection = helpers.normalizeSection(section);
+        const historyMode = options.history || 'push';
+        const previousSection = A.currentSection;
+        const renderToken = ++sectionRenderToken;
 
-        // ===== Auth Events =====
-        loginForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const email = document.getElementById('adminEmail').value.trim();
-            const pass = document.getElementById('adminPassword').value;
-            const btn = loginForm.querySelector('button[type="submit"]');
-            const origBtn = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¯Ø®ÙˆÙ„...';
-            btn.disabled = true;
+        if (typeof A.teardownCurrentSection === 'function') {
+            A.teardownCurrentSection();
+            A.teardownCurrentSection = null;
+        }
 
-            const result = await TZ.supabaseSignIn(email, pass);
+        A.currentSection = normalizedSection;
+        helpers.updateSidebarState(normalizedSection, SIDEBAR_GROUP_STORAGE_KEY);
+        if (historyMode === 'replace') helpers.syncSectionInUrl(normalizedSection, { replace: true });
+        if (historyMode === 'push' && previousSection !== normalizedSection) helpers.syncSectionInUrl(normalizedSection);
 
-            if (result.error) {
-                loginError.textContent = result.error === 'Invalid login credentials'
-                    ? 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯Ø®ÙˆÙ„ ØºÙŠØ± ØµØ­ÙŠØ­Ø©'
-                    : result.error;
-                loginError.style.display = 'block';
-                btn.innerHTML = origBtn;
-                btn.disabled = false;
-                return;
-            }
-
-            // Check app_users for role/permissions
-            await TZ.refreshData();
-            const authUser = await TZ.getSupabaseUser();
-            const appUser = TZ.findUserByAuthUser(authUser);
-            if (!appUser || !TZ.canAccessAdmin(appUser)) {
-                loginError.textContent = 'Ù„ÙŠØ³ Ù„Ø¯ÙŠÙƒ ØµÙ„Ø§Ø­ÙŠØ© Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©';
-                loginError.style.display = 'block';
-                await TZ.supabaseSignOut();
-                btn.innerHTML = origBtn;
-                btn.disabled = false;
-                return;
-            }
-
-            TZ.commitDb('admin_login', appUser.id, 'ØªØ³Ø¬ÙŠÙ„ Ø¯Ø®ÙˆÙ„: ' + appUser.fullName);
-            loginError.style.display = 'none';
-            btn.innerHTML = origBtn;
-            btn.disabled = false;
-            showAdmin(appUser);
-        });
-
-        logoutBtn.addEventListener('click', async function () {
-            await TZ.supabaseSignOut();
-            showLogin();
-        });
-
-        // Initialize admin panel
-        await checkAuth();
-    });
-
-    // Realtime: auto-refresh current section when data changes
-    window.addEventListener('tz-data-updated', (e) => {
-        const table = e.detail ? e.detail.table : 'all';
-        const sec = A.currentSection;
-        if (sec === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
-        if (sec === 'analytics' && A.sections.analytics) A.sections.analytics();
-        if (sec === 'orders' && (table === 'orders' || table === 'service_orders' || table === 'repair_bookings' || table === 'all') && A.sections.orders) A.sections.orders();
-        if (sec === 'accessories' && (table === 'products' || table === 'categories' || table === 'all') && A.sections.accessories) A.sections.accessories();
-        if (sec === 'products' && (table === 'products' || table === 'all') && A.sections.products) A.sections.products();
-        if (sec === 'categories' && (table === 'categories' || table === 'all') && A.sections.categories) A.sections.categories();
-        if (sec === 'main-categories' && (table === 'categories' || table === 'all') && A.sections['main-categories']) A.sections['main-categories']();
-        if (sec === 'subcategories' && (table === 'categories' || table === 'all') && A.sections.subcategories) A.sections.subcategories();
-        if (sec === 'services' && (table === 'services' || table === 'categories' || table === 'all') && A.sections.services) A.sections.services();
-        if (sec === 'messages' && (table === 'contact_messages' || table === 'all') && A.sections.messages) A.sections.messages();
-        if (sec === 'deposits' && (table === 'deposits' || table === 'all') && A.sections.deposits) A.sections.deposits();
-        if (sec === 'refunds' && A.sections.refunds) A.sections.refunds();
-        if (sec === 'coupons' && (table === 'coupons' || table === 'all') && A.sections.coupons) A.sections.coupons();
-        if (sec === 'notifications' && A.sections.notifications) A.sections.notifications();
-        updateOrdersBadge();
-    });
-
-    // ===== Sidebar =====
-    document.querySelectorAll('.sidebar-link').forEach(function (link) {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-            const section = this.dataset.section;
-            if (!section) return;
-            A.currentSection = section;
-            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-            this.classList.add('active');
-            renderSection(section);
-            sidebar.classList.remove('open');
-        });
-    });
-
-    sidebarToggle.addEventListener('click', () => sidebar.classList.add('open'));
-    sidebarClose.addEventListener('click', () => sidebar.classList.remove('open'));
-
-    function updateOrdersBadge() {
-        const productOrders = TZ.db.orders.filter(o => o.status === 'awaiting_delivery' || o.status === 'awaiting_device').length;
-        const repairOrders = TZ.db.repairBookings.filter((booking) => ['pending', 'awaiting_delivery', 'awaiting_device'].includes(booking.status)).length;
-        const digitalOrders = (TZ.db.serviceOrders || []).filter((order) => ['pending', 'processing', 'in_progress'].includes(order.status)).length;
-        const newOrders = productOrders + repairOrders + digitalOrders;
-        const badge = document.getElementById('ordersBadge');
-        badge.textContent = newOrders;
-        badge.style.display = newOrders > 0 ? 'inline' : 'none';
-    }
-
-    // ===== Section Router =====
-    const SECTION_TITLES = {
-        dashboard: 'لوحة المعلومات',
-        analytics: 'التحليلات',
-        orders: 'إدارة الطلبات',
-        accessories: 'إدارة منتجات الإكسسوارات',
-        products: 'إدارة المنتجات',
-        'main-categories': 'إدارة الفئات الرئيسية',
-        subcategories: 'إدارة الفئات الفرعية',
-        categories: 'مركز الفئات',
-        services: 'إدارة الخدمات',
-        customers: 'العملاء',
-        deposits: 'إدارة الإيداعات',
-        refunds: 'طلبات الاسترجاع',
-        coupons: 'الكوبونات والخصومات',
-        notifications: 'إشعارات المستخدمين',
-        messages: 'رسائل التواصل',
-        settings: 'الإعدادات',
-        logs: 'سجل العمليات'
-    };
-
-    function renderSection(section) {
-        pageTitle.textContent = SECTION_TITLES[section] || section;
+        pageTitle.textContent = helpers.SECTION_TITLES[normalizedSection] || normalizedSection;
         A.editingProductId = null;
         A.editingCategoryId = null;
         A.editingServiceId = null;
         A.editingCouponId = null;
         A.productImages = [];
-        if (A.sections[section]) {
-            A.sections[section]();
-        } else {
-            adminContent.innerHTML = '<div class="empty-state"><i class="fas fa-tools"></i><p>Ù‚Ø³Ù… Ù‚ÙŠØ¯ Ø§Ù„ØªØ·ÙˆÙŠØ±</p></div>';
+
+        if (!helpers.canAccessSection(A.currentUser, TZ, normalizedSection)) {
+            ui.renderAccessDeniedState(adminContent, helpers.SECTION_TITLES[normalizedSection] || normalizedSection);
+            window.dispatchEvent(new CustomEvent('tz-admin-section-rendered', { detail: { section: normalizedSection } }));
+            return;
         }
+
+        setSidebarLoadingState(normalizedSection, true);
+        ui.renderSectionLoadingState(adminContent, helpers.SECTION_TITLES[normalizedSection] || normalizedSection);
+
+        try {
+            await ensureSectionModuleLoaded(normalizedSection);
+            if (renderToken !== sectionRenderToken) return;
+
+            if (A.sections[normalizedSection]) {
+                adminContent.classList.remove('is-section-ready');
+                A.sections[normalizedSection]();
+                adminContent.classList.add('is-section-ready');
+            } else {
+                adminContent.innerHTML = '<div class="empty-state"><i class="fas fa-tools"></i><p>قسم قيد التطوير</p></div>';
+            }
+        } catch (error) {
+            console.error('Failed to render admin section.', error);
+            if (renderToken !== sectionRenderToken) return;
+            ui.renderSectionErrorState(adminContent, error);
+        } finally {
+            if (renderToken === sectionRenderToken) {
+                setSidebarLoadingState(normalizedSection, false);
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('tz-admin-section-rendered', { detail: { section: normalizedSection } }));
     }
 
-    // ===== HELPERS =====
-    function statusLabel(status) {
-        const labels = {
-            awaiting_delivery: 'بانتظار التوصيل',
-            awaiting_device: 'بانتظار وصول الجهاز',
-            under_maintenance: 'تحت الصيانة',
-            awaiting_pickup: 'بانتظار الاستلام',
-            pending: 'قيد الانتظار',
-            processing: 'قيد المعالجة',
-            in_progress: 'قيد التنفيذ',
-            completed: 'مكتمل',
-            partial: 'جزئي',
-            failed: 'فشل',
-            cancelled: 'ملغي',
-            refunded: 'مسترجع',
-            active: 'نشط',
-            hidden: 'مخفي'
-        };
-        return labels[status] || status;
+    async function initializeAdminShell() {
+        if (initialized) return;
+        initialized = true;
+
+        if (loginForm) {
+            loginForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                const email = document.getElementById('adminEmail').value.trim();
+                const password = document.getElementById('adminPassword').value;
+                const submitButton = loginForm.querySelector('button[type="submit"]');
+                const originalHtml = submitButton.innerHTML;
+
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الدخول...';
+                submitButton.disabled = true;
+
+                const result = await TZ.supabaseSignIn(email, password);
+                if (result.error) {
+                    loginError.textContent = result.error === 'Invalid login credentials' ? 'بيانات الدخول غير صحيحة' : result.error;
+                    loginError.style.display = 'block';
+                    submitButton.innerHTML = originalHtml;
+                    submitButton.disabled = false;
+                    return;
+                }
+
+                const authUser = await TZ.getSupabaseUser();
+                const appUser = await resolveAdminUser(authUser);
+                helpers.requestAdminRuntimeAccess(true);
+                if (!appUser || !TZ.canAccessAdmin(appUser)) {
+                    loginError.textContent = 'ليس لديك صلاحية الوصول إلى لوحة الإدارة';
+                    loginError.style.display = 'block';
+                    helpers.requestAdminRuntimeAccess(false);
+                    await TZ.supabaseSignOut();
+                    submitButton.innerHTML = originalHtml;
+                    submitButton.disabled = false;
+                    return;
+                }
+
+                TZ.commitDb('admin_login', appUser.id, `تسجيل دخول: ${appUser.fullName}`);
+                await TZ.refreshData();
+                TZ.startRealtime?.();
+                loginError.style.display = 'none';
+                submitButton.innerHTML = originalHtml;
+                submitButton.disabled = false;
+                showAdmin(appUser);
+            });
+        }
+
+        logoutBtn.addEventListener('click', async function () {
+            helpers.requestAdminRuntimeAccess(false);
+            await TZ.supabaseSignOut();
+            window.location.href = '/';
+        });
+
+        await checkAuth();
     }
 
-    function paymentLabel(method) {
-        const labels = { card_mada: 'Ø¨Ø·Ø§Ù‚Ø© Ù…Ø¯Ù‰', wallet: 'Ù…Ø­ÙØ¸Ø©', bank_transfer: 'ØªØ­ÙˆÙŠÙ„ Ø¨Ù†ÙƒÙŠ', cod: 'Ø¯ÙØ¹ Ø¹Ù†Ø¯ Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù…' };
-        return labels[method] || method || '-';
+    function scheduleAdminInitialization() {
+        if (window.__TZ_ADMIN_BOOTSTRAPPED === true && window.TZ) {
+            void initializeAdminShell();
+            return;
+        }
+
+        window.addEventListener('tz-admin-bootstrap-ready', () => {
+            void initializeAdminShell();
+        }, { once: true });
     }
 
-    function formatDate(iso) {
-        if (!iso) return '-';
-        const d = new Date(iso);
-        return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
-    }
+    scheduleAdminInitialization();
 
-    function formatDateTime(iso) {
-        if (!iso) return '-';
-        const d = new Date(iso);
-        return d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
-    }
+    window.addEventListener('tz-data-updated', (event) => {
+        const table = event.detail ? event.detail.table : 'all';
+        const section = A.currentSection;
+        if (section === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
+        if (section === 'analytics' && A.sections.analytics) A.sections.analytics();
+        if (section === 'orders' && ['orders', 'service_orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
+        if (section === 'product-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['product-orders']) A.sections['product-orders']();
+        if (section === 'accessory-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['accessory-orders']) A.sections['accessory-orders']();
+        if (section === 'accessories' && ['products', 'categories', 'all'].includes(table) && A.sections.accessories) A.sections.accessories();
+        if (section === 'products' && ['products', 'all'].includes(table) && A.sections.products) A.sections.products();
+        if (section === 'categories' && ['categories', 'all'].includes(table) && A.sections.categories) A.sections.categories();
+        if (section === 'main-categories' && ['categories', 'all'].includes(table) && A.sections['main-categories']) A.sections['main-categories']();
+        if (section === 'subcategories' && ['categories', 'all'].includes(table) && A.sections.subcategories) A.sections.subcategories();
+        if (section === 'services' && ['services', 'categories', 'all'].includes(table) && A.sections.services) A.sections.services();
+        if (section === 'messages' && ['contact_messages', 'all'].includes(table) && A.sections.messages) A.sections.messages();
+        if (section === 'deposits' && ['deposits', 'all'].includes(table) && A.sections.deposits) A.sections.deposits();
+        if (section === 'refunds' && A.sections.refunds) A.sections.refunds();
+        if (section === 'coupons' && ['coupons', 'all'].includes(table) && A.sections.coupons) A.sections.coupons();
+        if (section === 'notifications' && A.sections.notifications) A.sections.notifications();
+        helpers.updateOrdersBadge(TZ);
+    });
 
-    function showToast(msg) {
-        const toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:12px 24px;border-radius:10px;font-family:inherit;font-size:0.9rem;z-index:9999;box-shadow:0 5px 20px rgba(0,0,0,0.3);animation:fadeInUp 0.3s ease;';
-        toast.textContent = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 2500);
-    }
+    window.addEventListener('tz-offline-queue-updated', (event) => {
+        const queueCount = Number(event.detail?.count || 0);
+        const queueIncreased = queueCount > lastOfflineQueueCount;
+        lastOfflineQueueCount = queueCount;
 
-    // Export core functions to shared namespace
-    A.showConfirmModal = showConfirmModal;
-    A.showUndoToast = showUndoToast;
-    A.renderSection = renderSection;
-    A.updateOrdersBadge = updateOrdersBadge;
-    A.statusLabel = statusLabel;
-    A.paymentLabel = paymentLabel;
-    A.formatDate = formatDate;
-    A.formatDateTime = formatDateTime;
-    A.showToast = showToast;
+        if (queueIncreased && queueCount > 0 && navigator.onLine === false) {
+            ui.showToast('تم حفظ العملية محليًا وسيتم إرسالها عند عودة الاتصال.');
+        }
+
+        if (A.currentSection === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
+    });
+
+    window.addEventListener('tz-offline-sync-complete', (event) => {
+        const syncedCount = Number(event.detail?.syncedCount || 0);
+        if (syncedCount > 0) ui.showToast(`تمت مزامنة ${syncedCount} عملية مؤجلة بنجاح.`);
+        if (A.currentSection === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
+    });
+
+    window.addEventListener('tz-health-updated', () => {
+        if (A.currentSection === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
+    });
+
+    ['online', 'offline'].forEach((eventName) => {
+        window.addEventListener(eventName, () => {
+            if (A.currentSection === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
+        });
+    });
+
+    document.querySelectorAll('.sidebar-group-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', function () {
+            const group = document.querySelector(`.sidebar-group[data-sidebar-group="${this.dataset.sidebarGroupToggle}"]`);
+            if (!group) return;
+            const containsActive = Boolean(group.querySelector(`.sidebar-link[data-section="${A.currentSection}"]`));
+            if (containsActive) return;
+            group.classList.toggle('is-open');
+            helpers.persistSidebarGroupState(SIDEBAR_GROUP_STORAGE_KEY);
+        });
+    });
+
+    document.querySelectorAll('.sidebar-link').forEach((link) => {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            const section = this.dataset.section;
+            if (!section) return;
+            helpers.persistSidebarGroupState(SIDEBAR_GROUP_STORAGE_KEY);
+            renderAdminSection(section, { history: 'push' });
+            sidebar.classList.remove('open');
+        });
+    });
+
+    window.addEventListener('popstate', (event) => {
+        const nextSection = helpers.normalizeSection(event.state?.section || helpers.getInitialSection());
+        renderAdminSection(nextSection, { history: 'skip' });
+        sidebar.classList.remove('open');
+    });
+
+    sidebarToggle.addEventListener('click', () => sidebar.classList.add('open'));
+    sidebarClose.addEventListener('click', () => sidebar.classList.remove('open'));
+
+    A.showConfirmModal = ui.showConfirmModal;
+    A.showModal = ui.showModal;
+    A.showUndoToast = ui.showUndoToast;
+    A.showToast = ui.showToast;
+    A.renderSection = renderAdminSection;
+    A.updateOrdersBadge = () => helpers.updateOrdersBadge(TZ);
+    A.canAccessSection = (section) => helpers.canAccessSection(A.currentUser, TZ, section);
+    A.statusLabel = helpers.statusLabel;
+    A.paymentLabel = helpers.paymentLabel;
+    A.formatDate = helpers.formatDate;
+    A.formatDateTime = helpers.formatDateTime;
+    A.getAdminImageUploadLimitText = ui.getAdminImageUploadLimitText;
+    A.isAdminImageUploadTooLarge = ui.isAdminImageUploadTooLarge;
+    A.showAdminImageUploadLimitToast = ui.showAdminImageUploadLimitToast;
     A.checkAuth = checkAuth;
     A.showLogin = showLogin;
     A.showAdmin = showAdmin;
     A.adminContent = adminContent;
-
 })();
-

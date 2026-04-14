@@ -27,10 +27,11 @@ try {
         
         $localPath = $request.Url.LocalPath
         if ($localPath -eq "/") {
-            $localPath = "/index.html"
+            $localPath = "/admin.html"
         }
         
-        $filePath = Join-Path $PWD $localPath.Replace('/', '\')
+        $publicDir = Join-Path $PWD "public"
+        $filePath = Join-Path $publicDir $localPath.Replace('/', '\')
         
         if (Test-Path $filePath -PathType Leaf) {
             $content = [System.IO.File]::ReadAllBytes($filePath)

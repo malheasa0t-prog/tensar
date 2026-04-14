@@ -1,0 +1,215 @@
+.shell {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100vh - var(--nav-h, 72px));
+  overflow: clip;
+}
+
+.ambientBackdrop,
+.transitionOverlay,
+.screenReaderStatus {
+  pointer-events: none;
+}
+
+.ambientBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.glow,
+.glowAlt,
+.grid {
+  position: absolute;
+  inset: auto;
+}
+
+.glow {
+  top: -8rem;
+  inset-inline-start: -10rem;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.16), transparent 68%);
+  filter: blur(18px);
+}
+
+.glowAlt {
+  inset-inline-end: -8rem;
+  bottom: -10rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.14), transparent 70%);
+  filter: blur(20px);
+}
+
+.grid {
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 88%);
+  opacity: 0.7;
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  min-height: inherit;
+  animation: pageEnter 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, filter;
+}
+
+.shell[data-phase="exit"] .page {
+  animation: pageExit 180ms cubic-bezier(0.55, 0, 0.45, 1) forwards;
+}
+
+.transitionOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at top, rgba(34, 211, 238, 0.1), transparent 32%),
+    linear-gradient(180deg, rgba(4, 10, 22, 0.08), rgba(4, 10, 22, 0.82));
+  opacity: 0;
+  transform: scale(1.02);
+  transition:
+    opacity 240ms ease,
+    transform 280ms ease;
+}
+
+.overlayVisible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.transitionPanel {
+  display: grid;
+  gap: 0.8rem;
+  width: min(32rem, 100%);
+  padding: clamp(1.35rem, 3vw, 1.9rem);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(8, 15, 30, 0.98)),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 35%);
+  box-shadow: 0 28px 80px rgba(2, 8, 23, 0.45);
+  text-align: center;
+}
+
+.transitionEyebrow {
+  justify-self: center;
+  display: inline-flex;
+  padding: 0.38rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.12);
+  color: #67e8f9;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.transitionTitle {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1.16;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.transitionCopy {
+  color: rgba(226, 232, 240, 0.78);
+  font-size: clamp(0.94rem, 1.8vw, 1.02rem);
+  line-height: 1.9;
+}
+
+.transitionBar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.transitionBar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22d3ee, #a855f7, #38bdf8);
+  transform: translateX(100%);
+  animation: transitionPulse 760ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.screenReaderStatus {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.992);
+    filter: blur(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes pageExit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.988);
+    filter: blur(8px);
+  }
+}
+
+@keyframes transitionPulse {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(-10%);
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    min-height: calc(100vh - 64px);
+  }
+
+  .transitionPanel {
+    border-radius: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow,
+  .glowAlt,
+  .page,
+  .transitionBar::after,
+  .transitionOverlay {
+    animation: none !important;
+    transition: none !important;
+  }
+}

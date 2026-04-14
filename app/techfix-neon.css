@@ -1,0 +1,412 @@
+:root {
+  --color-navy: #0a0e27;
+  --color-navy-strong: #06081a;
+  --color-cyan: #00d9ff;
+  --color-orange: #fb5607;
+  --color-orange-strong: #ff7b2f;
+  --color-pink: #ff006e;
+  --color-purple: #8338ec;
+  --color-yellow: #ffbe0b;
+  --color-white: #ffffff;
+  --color-surface: #10162f;
+  --color-surface-strong: #161d3a;
+  --color-ink: #ffffff;
+  --color-muted: #b6bfde;
+  --color-border: rgba(154, 166, 209, 0.16);
+  --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 26px 60px rgba(0, 0, 0, 0.42);
+  --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.52);
+  --site-border: 1px solid rgba(160, 170, 220, 0.14);
+  --site-panel: linear-gradient(180deg, rgba(20, 27, 61, 0.88), rgba(10, 14, 39, 0.94));
+  --site-panel-strong: rgba(18, 24, 56, 0.94);
+  --gradient-neon: linear-gradient(135deg, #6d28d9 0%, #8338ec 48%, #ff4fd8 100%);
+  --gradient-heading: linear-gradient(135deg, #d7a7ff 0%, #8338ec 46%, #00d9ff 100%);
+  --gradient-cyan: linear-gradient(135deg, #00d9ff 0%, #8338ec 100%);
+  --glow-pink: 0 0 20px rgba(131, 56, 236, 0.36), 0 0 44px rgba(255, 79, 216, 0.18);
+  --glow-cyan: 0 0 18px rgba(0, 217, 255, 0.42), 0 0 36px rgba(0, 217, 255, 0.18);
+  --glow-purple: 0 0 22px rgba(131, 56, 236, 0.48), 0 0 42px rgba(131, 56, 236, 0.24);
+}
+
+html {
+  scrollbar-color: #ff006e #0f1430;
+}
+
+body {
+  color: var(--color-ink);
+  background:
+    radial-gradient(circle at 15% 10%, rgba(131, 56, 236, 0.38), transparent 24%),
+    radial-gradient(circle at 84% 18%, rgba(177, 92, 255, 0.26), transparent 20%),
+    radial-gradient(circle at 72% 76%, rgba(0, 217, 255, 0.1), transparent 22%),
+    linear-gradient(180deg, #0a0e27 0%, #080b1f 100%);
+}
+
+body::before {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(131, 56, 236, 0.28), transparent 22%),
+    radial-gradient(circle at 88% 18%, rgba(177, 92, 255, 0.2), transparent 20%),
+    radial-gradient(circle at 50% 85%, rgba(255, 79, 216, 0.08), transparent 26%);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f1430;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8338ec, #ff4fd8);
+  border-radius: 999px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.brand-text,
+.section-header h2,
+.internal-hero-copy h1 {
+  background: var(--gradient-heading);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+p,
+li,
+label,
+input,
+select,
+textarea,
+.footer-links-list a,
+.footer-bar .social-row a,
+.main-nav a,
+.footer-bar p {
+  color: var(--color-muted);
+}
+
+.gradient-text {
+  background: var(--gradient-heading);
+}
+
+.glow-pink {
+  box-shadow: var(--glow-pink);
+}
+
+.surface-card,
+.surface-panel,
+.section-shell,
+.hero-summary-card,
+.detail-side-card,
+.hero-main-cards-shell,
+.techfix-cta-panel,
+.techfix-filter-bar,
+.repair-form-card,
+.repair-services-list,
+.trust-item,
+.stat-card,
+.internal-hero-stat,
+.service-card,
+.techfix-feature-card,
+.techfix-testimonial-card,
+.category-hub-card,
+.contact-social-card,
+.contact-detail-card,
+.contact-hours-card,
+.repair-service-item {
+  background: var(--site-panel);
+  border: var(--site-border);
+  box-shadow: var(--shadow-md);
+}
+
+.section.alt,
+.trust-bar {
+  background: linear-gradient(180deg, rgba(13, 17, 43, 0.82), rgba(7, 10, 26, 0.96));
+}
+
+.section-badge {
+  color: var(--color-cyan);
+  background: rgba(0, 217, 255, 0.08);
+  border-color: rgba(0, 217, 255, 0.22);
+}
+
+.section-count-badge,
+.category-hub-pill,
+.techfix-meta span,
+.techfix-chip {
+  color: #f5f7ff;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.btn {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.btn:hover:not(:disabled),
+.btn:focus-visible:not(:disabled),
+.nav-icon-btn:hover,
+.mobile-toggle:hover,
+.social-icon:hover {
+  box-shadow: var(--glow-purple);
+}
+
+.btn-primary,
+.btn-solid,
+.btn-orange,
+.cta-link,
+.techfix-chip.is-active,
+.featured-badge,
+.back-to-top {
+  background: var(--gradient-neon);
+  color: var(--color-white);
+  border-color: transparent;
+  box-shadow: var(--glow-pink);
+}
+
+.btn-secondary,
+.btn-outline,
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-white);
+  border-color: rgba(255, 0, 110, 0.32);
+}
+
+.site-header {
+  background: rgba(10, 14, 39, 0.8);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  transition:
+    background var(--transition-slow),
+    border-color var(--transition-slow),
+    box-shadow var(--transition-slow),
+    backdrop-filter var(--transition-slow);
+}
+
+.site-header.is-scrolled {
+  --nav-h: 60px;
+  background: rgba(4, 9, 18, 0.95);
+  border-bottom-color: rgba(131, 56, 236, 0.22);
+  box-shadow: 0 14px 40px rgba(3, 7, 18, 0.34), 0 0 24px rgba(131, 56, 236, 0.08);
+  backdrop-filter: blur(22px);
+}
+
+.site-header::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 79, 216, 0.65), rgba(0, 217, 255, 0.48), transparent);
+  transition: opacity var(--transition-slow);
+}
+
+.site-header.is-scrolled::after {
+  opacity: 1;
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, #8338ec 0%, #ff006e 68%, #fb5607 100%);
+  box-shadow: var(--glow-purple);
+  transition:
+    width var(--transition-slow),
+    height var(--transition-slow),
+    border-radius var(--transition-slow),
+    transform var(--transition-slow);
+}
+
+.brand-text,
+.nav-search-trigger,
+.nav-search-trigger span,
+.nav-search-trigger small,
+.cta-link,
+.cta-link-label,
+.nav-shell {
+  transition:
+    min-height var(--transition-slow),
+    width var(--transition-slow),
+    min-width var(--transition-slow),
+    padding var(--transition-slow),
+    font-size var(--transition-slow),
+    opacity var(--transition-slow),
+    transform var(--transition-slow);
+}
+
+.main-nav a,
+.cta-link,
+.footer-mobile-link {
+  position: relative;
+}
+
+.main-nav a:hover,
+.main-nav a.is-active,
+.footer-links-list a:hover,
+.footer-bar .social-row a:hover,
+.footer-mobile-link:hover {
+  color: #ffd7e8;
+  background: rgba(255, 0, 110, 0.08);
+}
+
+.main-nav a.is-active::after,
+.main-nav a:hover::after {
+  content: "";
+  position: absolute;
+  right: 1rem;
+  left: 1rem;
+  bottom: 0;
+  width: auto;
+  transform: none;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8338ec, #ff4fd8);
+}
+
+.nav-icon-btn,
+.mobile-toggle,
+.social-icon,
+.hero-trust-badge,
+.mobile-overlay > div,
+.mobile-overlay a:not(.btn),
+.footer-contact-link {
+  background: rgba(19, 24, 55, 0.84);
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 769px) {
+  .site-header.is-scrolled .nav-shell {
+    min-height: 60px;
+  }
+
+  .site-header.is-scrolled .brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .site-header.is-scrolled .brand-text,
+  .site-header.is-scrolled .nav-search-trigger span,
+  .site-header.is-scrolled .nav-search-trigger small,
+  .site-header.is-scrolled .cta-link-label {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+  }
+
+  .site-header.is-scrolled .brand-text {
+    font-size: 0.92rem;
+  }
+
+  .site-header.is-scrolled .nav-search-trigger,
+  .site-header.is-scrolled .cta-link {
+    min-width: 46px;
+    width: 46px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .site-header.is-scrolled .main-nav a {
+    padding: 0.58rem 0.78rem;
+  }
+}
+
+.hero,
+.page-hero {
+  position: relative;
+  overflow: clip;
+}
+
+.hero::before,
+.page-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(131, 56, 236, 0.32), transparent 24%),
+    radial-gradient(circle at 76% 18%, rgba(177, 92, 255, 0.24), transparent 22%),
+    radial-gradient(circle at 68% 70%, rgba(0, 217, 255, 0.1), transparent 24%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.hero-copy,
+.section-shell-copy p,
+.techfix-list li,
+.contact-detail-card p,
+.contact-social-card p,
+.contact-hours-card p,
+.form-message {
+  color: #c5ccef;
+}
+
+.trust-dot,
+.contact-detail-icon,
+.contact-social-icon,
+.service-icon,
+.repair-srv-icon,
+.hero-main-card-icon-wrap,
+.promo-banner-control {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.16), rgba(131, 56, 236, 0.24), rgba(0, 217, 255, 0.14));
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 24px rgba(131, 56, 236, 0.18);
+}
+
+.trust-dot {
+  box-shadow: 0 0 0 6px rgba(255, 0, 110, 0.14);
+}
+
+.hero-main-card,
+.service-card,
+.techfix-feature-card,
+.category-hub-card,
+.techfix-testimonial-card,
+.contact-social-card,
+.repair-service-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-main-card::before,
+.service-card::before,
+.techfix-feature-card::before,
+.category-hub-card::before,
+.techfix-testimonial-card::before,
+.contact-social-card::before,
+.repair-service-item::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: var(--gradient-neon);
+}
+
+.techfix-service-grid .service-card:nth-child(3n + 2)::before,
+.techfix-feature-grid .techfix-feature-card:nth-child(3n + 2)::before {
+  background: linear-gradient(90deg, #00d9ff, #8338ec);
+}
+
+.techfix-service-grid .service-card:nth-child(3n)::before,
+.techfix-feature-grid .techfix-feature-card:nth-child(3n)::before {
+  background: linear-gradient(90deg, #ffbe0b, #fb5607);
+}
+
+.hero-main-card:hover,
+.service-card:hover,
+.techfix-feature-card:hover,
+.category-hub-card:hover,
+.techfix-testimonial-card:hover,
+.contact-social-card:hover,
+.contact-detail-card:hover,
+.repair-service-item:hover {
+  transform: translateY(-8px);
+  border-color: rgba(255, 0, 110, 0.35);
+  box-shadow: var(--glow-pink), var(--shadow-lg);
+}

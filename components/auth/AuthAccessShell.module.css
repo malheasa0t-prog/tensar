@@ -1,0 +1,281 @@
+.shell {
+  min-height: calc(100vh - 110px);
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 4vw, 3rem) 1rem 3rem;
+}
+
+.layout {
+  width: min(1180px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 460px) minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: stretch;
+}
+
+.formCard,
+.showcaseCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.formCard {
+  width: 100%;
+  padding: 2rem;
+}
+
+.showcaseCard {
+  padding: clamp(1.5rem, 3vw, 2rem);
+  display: grid;
+  gap: 1.15rem;
+  min-height: 100%;
+}
+
+.showcaseBadge,
+.inlineHint {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  color: #9ff3cf;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.showcaseCard h2 {
+  margin: 0;
+  font-size: clamp(1.65rem, 2.6vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.showcaseCard > p { color: var(--text-secondary); }
+
+.visualStage {
+  position: relative;
+  min-height: 260px;
+  padding: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background:
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.14), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.16), transparent 30%),
+    rgba(8, 14, 28, 0.72);
+}
+
+.glowOrb {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  inset-block-start: -58px;
+  inset-inline-end: -42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.24), rgba(34, 211, 238, 0));
+  filter: blur(8px);
+}
+
+.dashboardCard,
+.floatingCard,
+.statCard,
+.featureItem {
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(9, 16, 32, 0.76);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
+.dashboardCard {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 22px;
+}
+
+.dashboardBar { display: flex; gap: 0.4rem; }
+
+.dashboardBar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.dashboardMetric {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.dashboardMetric strong,
+.featureItem strong {
+  font-size: 0.96rem;
+}
+
+.dashboardMetric small,
+.floatingCard small,
+.statCard span,
+.featureItem p {
+  color: var(--text-secondary);
+}
+
+.floatingCard {
+  position: absolute;
+  inset-block-end: 1.2rem;
+  inset-inline-end: 1.2rem;
+  z-index: 2;
+  width: min(260px, calc(100% - 2.4rem));
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+  border-radius: 20px;
+}
+
+.featureIcon,
+.metricIcon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--tz-emerald);
+}
+
+.statsRow,
+.socialGrid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.statsRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.statCard {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 20px;
+}
+
+.statCard strong {
+  font-size: 1.35rem;
+  color: #ffffff;
+}
+
+.featureList {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.featureItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 1rem;
+  border-radius: 20px;
+}
+
+.featureItem p {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.helperRow,
+.footerSlot,
+.actionRow {
+  display: flex;
+  align-items: center;
+}
+
+.helperRow {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: -0.2rem;
+}
+
+.forgotLink,
+.backLink {
+  color: #8ce6c2;
+  font-weight: 700;
+}
+
+.authSuccessCard,
+.socialSection {
+  display: grid;
+  gap: 1rem;
+}
+
+.authSuccessCard { padding-top: 0.25rem; }
+
+.socialGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.providerButton {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.providerButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(34, 211, 238, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.providerIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.providerIcon svg { display: block; }
+
+.footerSlot {
+  margin-top: 1.35rem;
+  justify-content: center;
+}
+
+.resetGrid { display: grid; gap: 1rem; }
+
+.actionRow {
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; }
+  .showcaseCard { order: -1; }
+}
+
+@media (max-width: 720px) {
+  .formCard,
+  .showcaseCard { padding: 1.35rem; }
+  .socialGrid,
+  .statsRow,
+  .dashboardGrid { grid-template-columns: 1fr; }
+  .helperRow,
+  .actionRow { flex-direction: column; align-items: stretch; }
+  .floatingCard { position: static; width: 100%; margin-top: 0.85rem; }
+}

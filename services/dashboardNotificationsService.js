@@ -37,7 +37,7 @@ export async function fetchNotificationsSnapshot(userId) {
 
   return {
     notifications: response.data || [],
-    error: response.error ? 'تعذر تحميل الإشعارات حالياً' : '',
+    error: response.error ? 'تعذر تحميل الإشعارات حاليًا' : '',
   };
 }
 
@@ -76,4 +76,35 @@ export async function markAllNotificationsAsRead({ userId, notificationIds }) {
     .in('id', notificationIds);
 
   return response.error ? 'تعذر تعليم جميع الإشعارات كمقروءة' : '';
+}
+
+/**
+ * Subscribes to realtime notification changes for the current user.
+ *
+ * @param {string} userId
+ * @param {() => void} onChange
+ * @returns {() => void}
+ */
+export function subscribeToNotifications(userId, onChange) {
+  if (!userId) {
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`dashboard-notifications-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      onChange
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

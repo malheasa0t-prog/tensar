@@ -27,21 +27,55 @@ export default function SiteFooterClient({ siteSettings }) {
   const year = new Date().getFullYear();
   const pathname = usePathname();
 
-  if (pathname && (pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin"))) {
+  if (pathname && pathname.startsWith("/admin")) {
     return null;
   }
 
   const company = siteSettings.company;
-  const contactItems = getContactMethods(siteSettings).slice(0, 4);
-  const mobileContactItems = contactItems.slice(0, 2);
-  const socialLinks = getSocialLinks(siteSettings);
+  const contactItems = getContactMethods(siteSettings).slice(0, 3);
+  const socialLinks = getSocialLinks(siteSettings).slice(0, 5);
   const navigation = siteSettings.navigation;
-  const brandName = company.name || "TechZone";
+  const brandName = company.name || "TechFix";
   const brandMark = getBrandMark(brandName);
 
   return (
     <footer className="site-footer">
       <div className="container">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '0.75rem',
+          marginBottom: '1.75rem',
+          marginTop: '0.5rem'
+        }}>
+          {socialLinks.filter((item) => item?.key !== "youtube" && item?.label !== "YouTube").map((item) => (
+            <a
+              key={item.key}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="contact-social-card"
+              style={{
+                minHeight: 'auto',
+                padding: '0.75rem 1rem',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}
+            >
+              <span className="contact-social-icon" style={{ width: '36px', height: '36px', flexShrink: 0 }}>
+                <AppIcon name={item.icon} size={18} />
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#f8f4ff' }}>{item.label}</h3>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  {item.description || 'تواصل لدعم أسرع ومعلومات أكثر.'}
+                </p>
+              </div>
+            </a>
+          ))}
+        </div>
+
         <div className="footer-main">
           <div className="footer-brand">
             <Link href="/" className="brand">
@@ -51,55 +85,42 @@ export default function SiteFooterClient({ siteSettings }) {
 
             <p>
               {company.slogan ||
-                "متجرك التقني لشراء الأجهزة، الإكسسوارات، وخدمات الصيانة في الأردن بتجربة حديثة وواضحة من التصفح حتى الطلب."}
+                "حلول تقنية متكاملة لشراء الأجهزة والإكسسوارات وخدمات الصيانة ضمن تجربة أكثر وضوحًا واحترافية."}
             </p>
 
-            <div className="footer-payment">
-              <span>دفع آمن ومريح</span>
-              <div className="payment-icons">
-                {siteSettings.paymentMethods.slice(0, 3).map((method) => (
-                  <span key={method.value} className="footer-chip">
-                    <AppIcon name={getPaymentIcon(method.value)} size={16} />
-                    {method.label}
-                  </span>
-                ))}
-              </div>
+            <div className="techfix-meta">
+              {siteSettings.paymentMethods.slice(0, 3).map((method) => (
+                <span key={method.value}>
+                  <AppIcon name={getPaymentIcon(method.value)} size={14} />
+                  {method.label}
+                </span>
+              ))}
             </div>
           </div>
 
           <div className="footer-links-panel">
-            <h4>تصفح سريع</h4>
+            <h3>روابط سريعة</h3>
             <div className="footer-link-columns">
-              <div className="footer-link-group">
-                <span className="footer-link-label">الأساسيات</span>
-                <ul className="footer-links-list">
-                  {navigation.footerQuick.map((item) => (
-                    <li key={`${item.href}-${item.label}`}>
-                      <Link href={item.href}>{item.label}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul className="footer-links-list">
+                {navigation.footerQuick.map((item) => (
+                  <li key={`${item.href}-${item.label}`}>
+                    <Link href={item.href}>{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
 
-              <div className="footer-link-group">
-                <span className="footer-link-label">الخدمات والمتابعة</span>
-                <ul className="footer-links-list">
-                  {navigation.footerSupport.map((item) => (
-                    <li key={`${item.href}-${item.label}`}>
-                      <Link href={item.href}>{item.label}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul className="footer-links-list">
+                {navigation.footerSupport.map((item) => (
+                  <li key={`${item.href}-${item.label}`}>
+                    <Link href={item.href}>{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
           <div className="footer-contact-block">
-            <div className="footer-contact-head">
-              <h4>تواصل معنا</h4>
-              <p>القنوات الأساسية في مكان واحد وبطريقة أخف بصريًا.</p>
-            </div>
-
+            <h3>تواصل معنا</h3>
             <div className="footer-contact-stack">
               {contactItems.map((item) => (
                 <a
@@ -109,13 +130,10 @@ export default function SiteFooterClient({ siteSettings }) {
                   target={item.external ? "_blank" : undefined}
                   rel={item.external ? "noopener noreferrer" : undefined}
                 >
-                  <span className="footer-contact-icon">
-                    <AppIcon name={item.icon} size={18} />
+                  <span className="contact-detail-icon">
+                    <AppIcon name={item.icon} size={16} />
                   </span>
-                  <span className="footer-contact-copy">
-                    <span className="footer-contact-label">{item.label}</span>
-                    <span className="footer-contact-value">{item.value}</span>
-                  </span>
+                  <span>{item.value}</span>
                 </a>
               ))}
             </div>
@@ -144,74 +162,23 @@ export default function SiteFooterClient({ siteSettings }) {
         </div>
 
         <div className="footer-mobile-sheet">
-          <div className="footer-mobile-top">
-            <Link href="/" className="brand">
-              <span className="brand-mark">{brandMark}</span>
-              <span className="brand-text">{brandName}</span>
-            </Link>
-
-            <p>
-              {company.slogan ||
-                "روابط أساسية وقنوات التواصل الأهم في نهاية سريعة وخفيفة تناسب الجوال."}
-            </p>
-          </div>
+          <Link href="/" className="brand">
+            <span className="brand-mark">{brandMark}</span>
+            <span className="brand-text">{brandName}</span>
+          </Link>
 
           <div className="footer-mobile-links">
             {navigation.mobilePrimary.map((item) => (
               <Link key={`${item.href}-${item.label}`} href={item.href} className="footer-mobile-link">
-                <span>{item.label}</span>
-                <AppIcon name="arrow-left" size={14} />
+                {item.label}
               </Link>
             ))}
           </div>
-
-          {mobileContactItems.length > 0 ? (
-            <div className="footer-mobile-contacts">
-              {mobileContactItems.map((item) => (
-                <a
-                  key={item.key}
-                  href={item.href}
-                  className="footer-mobile-contact"
-                  target={item.external ? "_blank" : undefined}
-                  rel={item.external ? "noopener noreferrer" : undefined}
-                >
-                  <span className="footer-contact-icon">
-                    <AppIcon name={item.icon} size={16} />
-                  </span>
-                  <span className="footer-mobile-contact-copy">
-                    <strong>{item.label}</strong>
-                    <span>{item.value}</span>
-                  </span>
-                </a>
-              ))}
-            </div>
-          ) : null}
-
-          {socialLinks.length > 0 ? (
-            <div className="footer-mobile-social">
-              <span>تابعنا</span>
-              <div className="social-row">
-                {socialLinks.map((item) => (
-                  <a
-                    key={item.key}
-                    href={item.href}
-                    className="social-icon"
-                    title={item.label}
-                    aria-label={item.label}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <AppIcon name={item.icon} size={16} />
-                  </a>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div className="footer-bar">
           <p>&copy; {year} {brandName}. تجربة تقنية أوضح وأكثر احترافية.</p>
-          <div className="footer-bar-links">
+          <div className="social-row">
             {navigation.footerBar.map((item) => (
               <Link key={`${item.href}-${item.label}`} href={item.href}>
                 {item.label}

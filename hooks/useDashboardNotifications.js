@@ -7,10 +7,11 @@ import {
   getNotificationsUserId,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  subscribeToNotifications,
 } from '@/services/dashboardNotificationsService';
 
 /**
- * Manages loading, polling, filtering, and mutating dashboard notifications.
+ * Manages loading, realtime refresh, filtering, and mutating dashboard notifications.
  *
  * @returns {{
  *   loading: boolean,
@@ -72,10 +73,10 @@ export function useDashboardNotifications() {
 
   useEffect(() => {
     let active = true;
-    let intervalId = null;
+    let unsubscribe = () => {};
 
     /**
-     * Bootstraps the notification dashboard and starts polling.
+     * Bootstraps the notification dashboard and binds realtime updates.
      *
      * @returns {Promise<void>}
      */
@@ -98,18 +99,16 @@ export function useDashboardNotifications() {
         return;
       }
 
-      intervalId = window.setInterval(() => {
+      unsubscribe = subscribeToNotifications(currentUserId, () => {
         loadNotifications({ currentUserId, silent: true });
-      }, 20000);
+      });
     }
 
     initNotifications();
 
     return () => {
       active = false;
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
+      unsubscribe();
     };
   }, []);
 

@@ -1,0 +1,356 @@
+.repair-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  gap: 1.5rem;
+}
+
+.repair-primary-column {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+}
+
+.repair-services-list {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.repair-side-note {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 1.15rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.repair-side-note h3,
+.repair-side-step strong {
+  margin: 0;
+  color: #f8fbff;
+}
+
+.repair-side-note p,
+.repair-side-step span:last-child {
+  margin: 0;
+  color: #cfdbf3;
+  line-height: 1.7;
+}
+
+.repair-side-note-steps {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.repair-side-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 16px;
+  background: rgba(8, 12, 31, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.repair-side-step strong {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8338ec, #ff006e);
+}
+
+.repair-form-faq-block {
+  display: grid;
+  gap: 1rem;
+}
+
+.repair-form-faq-block .section-header {
+  text-align: start;
+  margin-bottom: 0.4rem;
+}
+
+.repair-form-faq-block .section-header h2 {
+  margin-bottom: 0;
+  max-width: none;
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+  font-weight: 900;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.repair-form,
+.repair-form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.repair-form label {
+  display: grid;
+  gap: 0.5rem;
+  color: #e6eef9;
+  font-weight: 700;
+}
+
+.repair-form label > span,
+.repair-form-section-head strong,
+.repair-form-header h3,
+.repair-selected-info strong,
+.repair-mode-note strong {
+  color: #f8fbff;
+}
+
+.repair-form-header p,
+.repair-form-section-head span,
+.repair-selected-info span,
+.repair-mode-note span {
+  color: #d4e1f1;
+  line-height: 1.75;
+}
+
+.repair-form-step {
+  color: #edf4ff;
+  background: rgba(88, 101, 242, 0.18);
+  border-color: rgba(168, 184, 255, 0.3);
+}
+
+.repair-form input::placeholder,
+.repair-form textarea::placeholder {
+  color: #aebfd4;
+  opacity: 1;
+}
+
+.repair-form-card .form-message {
+  color: #e9fff2;
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(110, 231, 183, 0.28);
+}
+
+.repair-form-card .form-message.is-error {
+  color: #ffe2e2;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(252, 165, 165, 0.3);
+}
+
+.techfix-service-grid--pricing {
+  grid-template-columns: 1fr;
+  gap: 1.35rem;
+}
+
+.service-card-pricing {
+  position: relative;
+  gap: 1rem;
+  align-content: start;
+  padding: 1.4rem;
+  border-color: rgba(131, 56, 236, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(0, 217, 255, 0.08), transparent 28%),
+    radial-gradient(circle at top left, rgba(255, 0, 110, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(15, 20, 48, 0.98), rgba(8, 11, 28, 0.99));
+  box-shadow: 0 22px 46px rgba(2, 6, 23, 0.32);
+}
+
+.service-card-pricing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.45), rgba(131, 56, 236, 0.45), rgba(255, 79, 216, 0.4));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.service-card-pricing .featured-badge {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff7a18, #ff4d15);
+}
+
+.service-card-pricing .service-icon {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.18), rgba(131, 56, 236, 0.16));
+  color: #f8fbff;
+}
+
+.service-card-pricing h3 {
+  margin: 0;
+  color: #f8fbff;
+  font-size: clamp(1.28rem, 2vw, 1.6rem);
+}
+
+.service-card-pricing p {
+  margin: 0;
+  color: #d4def6;
+  line-height: 1.85;
+}
+
+.service-card-pricing .techfix-meta span {
+  color: #f6fbff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.service-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.service-tier-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 0.8rem;
+  min-height: 100%;
+  padding: 1.05rem 1rem 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(14, 19, 44, 0.96), rgba(9, 12, 29, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 28px rgba(2, 6, 23, 0.22);
+}
+
+.service-tier-card--basic {
+  border-color: rgba(0, 217, 255, 0.18);
+}
+
+.service-tier-card--advanced {
+  border-color: rgba(131, 56, 236, 0.22);
+}
+
+.service-tier-card--complete {
+  border-color: rgba(255, 79, 216, 0.2);
+}
+
+.service-tier-card.is-popular {
+  transform: translateY(-6px);
+  border-color: rgba(255, 79, 216, 0.3);
+  background:
+    radial-gradient(circle at top, rgba(131, 56, 236, 0.18), transparent 46%),
+    linear-gradient(180deg, rgba(26, 18, 60, 0.98), rgba(10, 11, 31, 0.99));
+  box-shadow: 0 20px 38px rgba(131, 56, 236, 0.24);
+}
+
+.service-tier-badge {
+  position: absolute;
+  inset-block-start: 0.9rem;
+  inset-inline-start: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.34rem 0.78rem;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #8338ec, #ff4fd8);
+  box-shadow: 0 10px 20px rgba(131, 56, 236, 0.24);
+}
+
+.service-tier-head,
+.service-tier-features {
+  display: grid;
+}
+
+.service-tier-head {
+  gap: 0.35rem;
+  padding-top: 0.2rem;
+}
+
+.service-tier-card.is-popular .service-tier-head {
+  padding-top: 1.6rem;
+}
+
+.service-tier-head strong {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.service-tier-head span {
+  color: #aebee4;
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.service-tier-price {
+  color: #f8fbff;
+  font-size: clamp(1.42rem, 2vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.service-tier-features {
+  gap: 0.6rem;
+  align-content: start;
+}
+
+.service-tier-feature {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+  color: #dce7ff;
+  font-size: 0.84rem;
+  line-height: 1.7;
+}
+
+.service-tier-feature svg {
+  margin-top: 0.16rem;
+}
+
+.service-tier-feature.is-included svg {
+  color: var(--color-emerald);
+}
+
+.service-tier-feature.is-excluded {
+  color: rgba(174, 190, 228, 0.62);
+}
+
+.service-tier-feature.is-excluded svg {
+  color: #ef4444;
+}
+
+.service-tier-cta,
+.service-card-details-link {
+  width: 100%;
+  justify-content: center;
+}
+
+.service-tier-cta {
+  min-height: 46px;
+  margin-top: 0.15rem;
+}
+
+.service-card-details-link {
+  border-color: rgba(255, 79, 216, 0.22);
+}
+
+@media (min-width: 1600px) {
+  .techfix-service-grid--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .repair-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1100px) {
+  .service-tier-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-tier-card.is-popular {
+    transform: none;
+  }
+}

@@ -1,0 +1,199 @@
+.shell {
+  min-height: 100vh;
+  padding-top: 100px;
+  padding-bottom: 3rem;
+}
+
+.hero,
+.content,
+.panelCard,
+.statCard {
+  border: var(--site-border);
+  background: var(--site-panel);
+  box-shadow: var(--shadow-md);
+}
+
+.hero,
+.heroActions,
+.tabs,
+.statsGrid,
+.panelGrid,
+.list {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 1.65rem 1.8rem;
+  border-radius: 24px;
+}
+
+.heroCopy {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.heroActions {
+  justify-items: end;
+  min-width: 220px;
+}
+
+.tabs {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(110px, 1fr);
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.content {
+  margin-top: 1rem;
+  padding: 1.2rem;
+  border-radius: 24px;
+}
+
+.statsGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.panelGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panelCard,
+.statCard {
+  display: grid;
+  gap: 0.8rem;
+  min-height: 148px;
+  padding: 1.1rem;
+  border-radius: 20px;
+}
+
+.badge,
+.title,
+.subtitle,
+.wallet,
+.button,
+.tab,
+.cardLabel,
+.cardValue,
+.cardMeta,
+.panelTitle,
+.panelLine,
+.listRow {
+  display: inline-flex;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.12), rgba(226, 232, 240, 0.26), rgba(148, 163, 184, 0.12));
+  background-size: 200% 100%;
+  animation: dashboardShimmer 1.8s linear infinite;
+}
+
+.badge {
+  width: 7rem;
+  height: 1.8rem;
+}
+
+.title {
+  width: min(22rem, 100%);
+  height: 1.35rem;
+}
+
+.subtitle {
+  width: min(30rem, 100%);
+  height: 1rem;
+}
+
+.wallet {
+  width: 11rem;
+  height: 3.3rem;
+}
+
+.button {
+  width: 8rem;
+  height: 2.8rem;
+}
+
+.tab {
+  height: 2.8rem;
+}
+
+.cardLabel {
+  width: 5.4rem;
+  height: 0.92rem;
+}
+
+.cardValue {
+  width: 8rem;
+  height: 1.5rem;
+}
+
+.cardMeta {
+  width: 6.8rem;
+  height: 0.88rem;
+}
+
+.panelTitle {
+  width: 10rem;
+  height: 1rem;
+}
+
+.panelLine,
+.listRow {
+  width: 100%;
+  height: 0.92rem;
+}
+
+.panelLineShort {
+  width: 68%;
+}
+
+.list {
+  gap: 0.75rem;
+}
+
+@keyframes dashboardShimmer {
+  from {
+    background-position: 200% 50%;
+  }
+
+  to {
+    background-position: -200% 50%;
+  }
+}
+
+@media (max-width: 920px) {
+  .hero,
+  .panelGrid,
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    justify-items: stretch;
+    min-width: 0;
+  }
+
+  .tabs {
+    grid-auto-columns: minmax(120px, 1fr);
+    overflow-x: auto;
+    padding-bottom: 0.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge,
+  .title,
+  .subtitle,
+  .wallet,
+  .button,
+  .tab,
+  .cardLabel,
+  .cardValue,
+  .cardMeta,
+  .panelTitle,
+  .panelLine,
+  .listRow {
+    animation: none !important;
+  }
+}

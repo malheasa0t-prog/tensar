@@ -2,131 +2,157 @@
 
 import { useEffect, useRef, useState } from "react";
 import AppIcon from "./AppIcon";
+import { useSiteRuntime } from "./SiteRuntimeProvider";
 import { normalizeSiteSettings } from "@/lib/contactChannels";
-import { loadSiteSettingsClient } from "@/lib/siteSettingsClient";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+import {
+  buildRevealClassName,
+  getStaggeredRevealDelay,
+  resolveRevealDelay,
+} from "@/lib/scrollRevealModel";
 
 const FALLBACK_STATS = normalizeSiteSettings().stats;
+const DEFAULT_LIMIT = 3;
+const DEFAULT_OFFSET = 1;
 
-function AnimatedNumber({ target, suffix }) {
+/**
+ * Animates a numeric value once its parent card becomes visible.
+ *
+ * @param {{ isVisible: boolean, suffix: string, target: number }} props
+ * @returns {JSX.Element}
+ */
+function AnimatedNumber({ isVisible, suffix, target }) {
   const [count, setCount] = useState(0);
-  const ref = useRef(null);
   const started = useRef(false);
 
   useEffect(() => {
-    const element = ref.current;
-    if (!element) return undefined;
+    if (!isVisible || started.current) {
+      return undefined;
+    }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || started.current) return;
+    started.current = true;
+    const duration = 1800;
+    const start = performance.now();
 
-        started.current = true;
-        const duration = 2000;
-        const start = performance.now();
+    /**
+     * Progresses the visible counter with an eased animation curve.
+     *
+     * @param {number} now
+     * @returns {void}
+     */
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 4);
+      setCount(Math.round(target * easedProgress));
 
-        function step(now) {
-          const progress = Math.min((now - start) / duration, 1);
-          const ease = 1 - Math.pow(1 - progress, 4);
-          setCount(Math.round(target * ease));
-
-          if (progress < 1) {
-            requestAnimationFrame(step);
-          }
-        }
-
+      if (progress < 1) {
         requestAnimationFrame(step);
-      },
-      { threshold: 0.3 }
-    );
+      }
+    }
 
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [target]);
+    requestAnimationFrame(step);
+    return undefined;
+  }, [isVisible, target]);
 
   return (
-    <span ref={ref}>
+    <span>
       {count.toLocaleString("ar-JO")}
       {suffix}
     </span>
   );
 }
 
-function StatsSkeleton() {
+/**
+ * Renders a single counter-stat card with the shared scroll reveal treatment.
+ *
+ * @param {{
+ *   compact: boolean,
+ *   delayMs: number,
+ *   stat: { accent?: string, glow?: string, hint?: string, icon?: string, label: string, suffix?: string, value?: number }
+ * }} props
+ * @returns {JSX.Element}
+ */
+function CounterStatCard({ compact, delayMs, stat }) {
+  const { ref, isVisible } = useScrollReveal({ threshold: 0.25 });
+  const cardClassName = compact ? "stat-card stat-card-compact" : "stat-card";
+
   return (
-    <div className="stats-row" aria-busy="true">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={`stat-skeleton-${index}`} className="stat-card" aria-hidden="true">
+    <div
+      ref={ref}
+      className={buildRevealClassName(cardClassName, "fade-up", isVisible)}
+      style={{
+        "--stat-accent": stat.accent,
+        "--stat-glow": stat.glow,
+        "--reveal-delay": resolveRevealDelay(delayMs),
+      }}
+    >
+      <div className="stat-card-head">
+        <span className="stat-card-icon">
+          <AppIcon name={stat.icon} size={compact ? 15 : 18} />
+        </span>
+      </div>
+
+      <strong>
+        <AnimatedNumber
+          isVisible={isVisible}
+          target={Number(stat.value) || 0}
+          suffix={stat.suffix || ""}
+        />
+      </strong>
+      <span>{stat.label}</span>
+      <small>{stat.hint}</small>
+    </div>
+  );
+}
+
+function StatsSkeleton({ compact, count }) {
+  const rowClassName = compact ? "stats-row stats-row-compact" : "stats-row";
+  const cardClassName = compact ? "stat-card stat-card-compact" : "stat-card";
+
+  return (
+    <div className={rowClassName} aria-busy="true">
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={`stat-skeleton-${index}`} className={cardClassName} aria-hidden="true">
           <div className="stat-card-head">
             <span className="stat-card-icon skeleton-block" />
-            <span className="skeleton-block" style={{ width: "6rem", height: "0.85rem" }} />
           </div>
-          <span className="skeleton-block" style={{ width: "7rem", height: "1.9rem" }} />
-          <span className="skeleton-block" style={{ width: "5.5rem", height: "0.95rem" }} />
-          <span className="skeleton-block" style={{ width: "100%", height: "0.85rem" }} />
-          <span className="skeleton-block" style={{ width: "80%", height: "0.85rem" }} />
+          <span className="skeleton-block" style={{ width: "5.5rem", height: "1.6rem" }} />
+          <span className="skeleton-block" style={{ width: "5rem", height: "0.9rem" }} />
+          <span className="skeleton-block" style={{ width: "100%", height: "0.8rem" }} />
         </div>
       ))}
     </div>
   );
 }
 
-export default function CounterStats() {
-  const [stats, setStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+function sliceStats(stats, offset, limit) {
+  if (!Array.isArray(stats)) return [];
+  return stats.slice(offset, offset + limit);
+}
 
-  useEffect(() => {
-    let mounted = true;
+export default function CounterStats({
+  compact = false,
+  limit = DEFAULT_LIMIT,
+  offset = DEFAULT_OFFSET,
+}) {
+  const { siteSettings } = useSiteRuntime();
+  const stats = Array.isArray(siteSettings?.stats) ? siteSettings.stats : FALLBACK_STATS;
+  const visibleStats = sliceStats(stats, offset, limit);
+  const rowClassName = compact ? "stats-row stats-row-compact" : "stats-row";
 
-    async function loadStats() {
-      try {
-        const siteSettings = await loadSiteSettingsClient();
-        if (!mounted) return;
-        setStats(siteSettings.stats);
-      } catch {
-        if (!mounted) return;
-        setStats(FALLBACK_STATS);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadStats();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (loading) {
-    return <StatsSkeleton />;
+  if (visibleStats.length === 0) {
+    return <StatsSkeleton compact={compact} count={limit} />;
   }
 
   return (
-    <div className="stats-row">
-      {stats.map((stat) => (
-        <div
+    <div className={rowClassName}>
+      {visibleStats.map((stat, index) => (
+        <CounterStatCard
           key={stat.label}
-          className="stat-card"
-          style={{
-            "--stat-accent": stat.accent,
-            "--stat-glow": stat.glow,
-          }}
-        >
-          <div className="stat-card-head">
-            <span className="stat-card-icon">
-              <AppIcon name={stat.icon} size={18} />
-            </span>
-            <span className="stat-card-kicker">مؤشر مباشر</span>
-          </div>
-
-          <strong>
-            <AnimatedNumber target={Number(stat.value) || 0} suffix={stat.suffix || ""} />
-          </strong>
-          <span>{stat.label}</span>
-          <small>{stat.hint}</small>
-        </div>
+          compact={compact}
+          delayMs={getStaggeredRevealDelay(index)}
+          stat={stat}
+        />
       ))}
     </div>
   );

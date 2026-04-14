@@ -22,7 +22,7 @@ import {
  *   saving: boolean,
  *   success: string,
  *   error: string,
- *   passwordForm: { new_password: string, confirm_password: string },
+ *   passwordForm: { current_password: string, new_password: string, confirm_password: string },
  *   passwordLoading: boolean,
  *   passwordMessage: string,
  *   updateFormField: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void,

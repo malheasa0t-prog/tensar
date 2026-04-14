@@ -1,9 +1,13 @@
 import {
   ArrowLeft,
   BadgeCheck,
+  Bell,
   Boxes,
   Camera,
+  CircleAlert,
+  Compass,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   CreditCard,
   Flame,
@@ -11,9 +15,12 @@ import {
   Folder,
   FolderOpen,
   Gamepad2,
+  GitCompareArrows,
+  Heart,
   Headphones,
   Home,
   House,
+  Info,
   Instagram,
   Laptop,
   LayoutDashboard,
@@ -29,6 +36,7 @@ import {
   Palette,
   PhoneCall,
   RefreshCw,
+  Search,
   Send,
   Settings2,
   ShieldCheck,
@@ -37,30 +45,40 @@ import {
   Sparkles,
   Store,
   SunMedium,
+  TriangleAlert,
   Truck,
   UserRound,
   Wallet,
   Wrench,
+  X,
   Youtube,
   Zap,
 } from "lucide-react";
+import { getSocialBrandIcon } from "@/lib/socialBrandIcons";
 
 const ICONS = {
   "arrow-left": ArrowLeft,
   "badge-check": BadgeCheck,
+  bell: Bell,
   boxes: Boxes,
   camera: Camera,
+  "circle-alert": CircleAlert,
+  compass: Compass,
   "chevron-left": ChevronLeft,
+  "chevron-right": ChevronRight,
   clock: Clock3,
+  compare: GitCompareArrows,
   "credit-card": CreditCard,
   flame: Flame,
   facebook: Facebook,
   folder: Folder,
   "folder-open": FolderOpen,
   gamepad: Gamepad2,
+  heart: Heart,
   headphones: Headphones,
   home: Home,
   house: House,
+  info: Info,
   instagram: Instagram,
   laptop: Laptop,
   dashboard: LayoutDashboard,
@@ -76,6 +94,7 @@ const ICONS = {
   palette: Palette,
   phone: PhoneCall,
   refresh: RefreshCw,
+  search: Search,
   send: Send,
   settings: Settings2,
   shield: ShieldCheck,
@@ -84,10 +103,12 @@ const ICONS = {
   sparkles: Sparkles,
   store: Store,
   sun: SunMedium,
+  "triangle-alert": TriangleAlert,
   truck: Truck,
   user: UserRound,
   wallet: Wallet,
   wrench: Wrench,
+  x: X,
   youtube: Youtube,
   zap: Zap,
   "shopping-bag": ShoppingBag,
@@ -128,6 +149,30 @@ const ICONS = {
   "💰": Wallet,
 };
 
+function SocialBrandIcon({ name, size = 18, className, ...props }) {
+  const icon = getSocialBrandIcon(name);
+  const resolvedSize = Number.isFinite(size) && size > 0 ? size : 18;
+
+  if (!icon) {
+    return null;
+  }
+
+  return (
+    <svg
+      width={resolvedSize}
+      height={resolvedSize}
+      viewBox={icon.viewBox}
+      fill="none"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <path d={icon.path} fill="currentColor" />
+    </svg>
+  );
+}
+
 function resolveHeuristicIcon(name = "") {
   const value = String(name).trim().toLowerCase();
 
@@ -151,6 +196,12 @@ export default function AppIcon({
   ...props
 }) {
   const key = String(name || "").trim();
+  const brandIcon = getSocialBrandIcon(key);
+
+  if (brandIcon) {
+    return <SocialBrandIcon name={key} size={size} className={className} {...props} />;
+  }
+
   const Icon =
     ICONS[key] ||
     ICONS[key.toLowerCase()] ||

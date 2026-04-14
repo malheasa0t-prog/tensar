@@ -3,110 +3,80 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import GlobalSearchOverlay from "./GlobalSearchOverlay";
+import MobileBottomNav from "./MobileBottomNav";
 import MobileMenu from "./MobileMenu";
-import { useTheme } from "./ThemeProvider";
 import { useCart } from "./CartProvider";
-import { supabase } from "@/lib/supabaseClient";
+import { useComparison } from "./ComparisonProvider";
+import { useFavorites } from "./FavoritesProvider";
+import { useSiteRuntime } from "./SiteRuntimeProvider";
+import { useTheme } from "./ThemeProvider";
 import AppIcon from "./AppIcon";
-import { getBrandMark, normalizeSiteSettings } from "@/lib/contactChannels";
+import HeaderNotificationBell from "./HeaderNotificationBell";
+import { getBrandMark, getSocialLinks, normalizeSiteSettings } from "@/lib/contactChannels";
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
 
+/**
+ * Main public site header with dynamic navigation and quick actions.
+ *
+ * @returns {JSX.Element | null}
+ */
 export default function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dynamicLinks, setDynamicLinks] = useState([]);
-  const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
-  const [marqueeSettings, setMarqueeSettings] = useState(DEFAULT_SITE_SETTINGS.homepage.marquee);
-  const [user, setUser] = useState(null);
-  const [userLabel, setUserLabel] = useState("لوحتي");
-  const [authLoading, setAuthLoading] = useState(true);
-  const { theme, toggleTheme } = useTheme();
-  const { cartCount, openSidebar } = useCart();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const {
+    authLoading,
+    dynamicLinks,
+    siteSettings = DEFAULT_SITE_SETTINGS,
+    unreadNotifications,
+    user,
+    userLabel,
+    walletBalance,
+  } = useSiteRuntime();
+  const { cartCount, openSidebar, sidebarOpen } = useCart();
+  const { comparisonCount } = useComparison();
+  const { favoriteCount } = useFavorites();
+  const { themeLabel, toggleTheme } = useTheme();
   const pathname = usePathname();
 
   useEffect(() => {
-    async function fetchHeaderData() {
-      const [{ data, error }, { data: settingsData }] = await Promise.all([
-        supabase
-          .from("categories")
-          .select("*")
-          .is("parent_id", null)
-          .order("sort_order", { ascending: true }),
-        supabase.from("settings").select("data").limit(1).maybeSingle(),
-      ]);
-
-      const normalizedSettings = normalizeSiteSettings(settingsData?.data || {});
-      setSiteSettings(normalizedSettings);
-      setMarqueeSettings(normalizedSettings.homepage.marquee);
-
-      if (!error && data) {
-        const navMap = normalizedSettings.categoryNavVisibility || {};
-        const mappedLinks = data
-          .filter((category) => {
-            const isActive = (category.status || "active") === "active";
-            const bySettings = Object.prototype.hasOwnProperty.call(navMap, category.id)
-              ? navMap[category.id] !== false
-              : true;
-            const byCategory =
-              category.show_in_navbar !== false &&
-              category.show_in_nav !== false &&
-              category.showInNavbar !== false;
-
-            return isActive && bySettings && byCategory;
-          })
-          .map((category) => ({
-            href: `/category/${category.slug || category.id}`,
-            label: category.name,
-            id: category.id,
-          }));
-
-        setDynamicLinks(mappedLinks);
-      }
+    function handleHeaderScroll() {
+      setScrolled(window.scrollY > 60);
     }
 
-    async function checkAuth() {
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-
-      if (currentUser) {
-        const metadataName =
-          currentUser.user_metadata?.full_name ||
-          currentUser.user_metadata?.name ||
-          currentUser.user_metadata?.display_name ||
-          "";
-
-        const { data: profileData } = await supabase
-          .from("user_profiles")
-          .select("full_name")
-          .eq("user_id", currentUser.id)
-          .maybeSingle();
-
-        const fallbackName = currentUser.email ? currentUser.email.split("@")[0] : "حسابي";
-        setUserLabel((profileData?.full_name || metadataName || fallbackName).trim() || "حسابي");
-      } else {
-        setUserLabel("لوحتي");
-      }
-
-      setUser(currentUser || null);
-      setAuthLoading(false);
-    }
-
-    fetchHeaderData();
-    checkAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkAuth();
-    });
-
-    return () => subscription.unsubscribe();
+    handleHeaderScroll();
+    window.addEventListener("scroll", handleHeaderScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleHeaderScroll);
   }, []);
+
+  useEffect(() => {
+    function handleOpenSearch() {
+      setSearchOpen(true);
+    }
+
+    function handleCloseOverlays() {
+      setMenuOpen(false);
+      setSearchOpen(false);
+    }
+
+    window.addEventListener("tz-open-global-search", handleOpenSearch);
+    window.addEventListener("tz-close-overlays", handleCloseOverlays);
+
+    return () => {
+      window.removeEventListener("tz-open-global-search", handleOpenSearch);
+      window.removeEventListener("tz-close-overlays", handleCloseOverlays);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const desktopLinks = [
     ...siteSettings.navigation.headerBefore,
-    ...dynamicLinks.slice(0, 3),
+    ...dynamicLinks.slice(0, 2),
     ...siteSettings.navigation.headerAfter,
   ];
   const mobileBaseLinks =
@@ -119,26 +89,32 @@ export default function SiteHeader() {
       (link) => !mobileBaseLinks.some((existingLink) => existingLink.href === link.href)
     ),
   ];
-  const marqueeItems = marqueeSettings?.items || [];
-  const renderedMarqueeItems = marqueeItems.length > 0 ? [...marqueeItems, ...marqueeItems] : [];
-  const showMarquee = pathname === "/" && marqueeSettings?.enabled !== false && marqueeItems.length > 0;
   const brandName = siteSettings.company.name || "TechZone";
   const brandMark = getBrandMark(brandName);
+  const socialLinks = getSocialLinks(siteSettings);
+  const favoritesHref = authLoading ? "/auth/login" : user ? "/dashboard/favorites" : "/auth/login";
+  const shouldShowBottomNav = Boolean(
+    pathname &&
+      !pathname.startsWith("/admin") &&
+      !pathname.startsWith("/dashboard") &&
+      !pathname.startsWith("/auth") &&
+      pathname !== "/checkout"
+  );
 
-  const isPublicActive = (href) => {
+  function isPublicActive(href) {
     if (!href || href.includes("#")) return false;
     if (href === "/") return pathname === "/";
     if (href === "/products" && pathname?.startsWith("/category/")) return true;
     return pathname === href || pathname.startsWith(`${href}/`);
-  };
+  }
 
-  if (pathname && (pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin"))) {
+  if (pathname && pathname.startsWith("/admin")) {
     return null;
   }
 
   return (
     <>
-      <header className="site-header">
+      <header className={`site-header${scrolled ? " is-scrolled" : ""}`}>
         <div className="container nav-shell">
           <Link href="/" className="brand">
             <span className="brand-mark">{brandMark}</span>
@@ -158,47 +134,58 @@ export default function SiteHeader() {
           </nav>
 
           <div className="nav-actions">
-            <button className="nav-icon-btn" onClick={openSidebar} aria-label="سلة التسوق">
-              <AppIcon name="cart" size={18} />
-              {cartCount > 0 ? <span className="cart-badge">{cartCount}</span> : null}
+            <button
+              type="button"
+              className="nav-search-trigger"
+              onClick={() => setSearchOpen(true)}
+              aria-keyshortcuts="Control+K /"
+              aria-label="فتح البحث العام"
+            >
+              <AppIcon name="search" size={18} />
+              <span>ابحث في الموقع</span>
+              <small>Ctrl + K</small>
             </button>
 
             <button
-              className="nav-icon-btn"
-              onClick={toggleTheme}
-              aria-label="تبديل الوضع"
-              title={theme === "dark" ? "الوضع الفاتح" : "الوضع الداكن"}
+              className="nav-icon-btn nav-cart-btn"
+              onClick={openSidebar}
+              aria-label="سلة التسوق"
             >
-              <AppIcon name={theme === "dark" ? "sun" : "moon"} size={18} />
+              <AppIcon name="cart" size={18} />
+              {cartCount > 0 ? <span className="cart-badge is-bouncing">{cartCount}</span> : null}
             </button>
+
+            <Link
+              href={favoritesHref}
+              className="nav-icon-btn nav-favorites-btn"
+              aria-label="المفضلة"
+              title="المفضلة"
+            >
+              <AppIcon name="heart" size={18} />
+              {favoriteCount > 0 ? <span className="cart-badge">{favoriteCount}</span> : null}
+            </Link>
+
+            <HeaderNotificationBell user={user} authLoading={authLoading} />
 
             {!authLoading
               ? user
                 ? (
-                  <Link
-                    href="/dashboard"
-                    className="cta-link"
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
+                  <Link href="/dashboard" className="cta-link">
                     <AppIcon name="dashboard" size={16} />
-                    {userLabel}
+                    <span className="cta-link-label">{userLabel}</span>
                   </Link>
                 )
                 : (
-                  <Link
-                    href="/auth/login"
-                    className="cta-link"
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                  >
+                  <Link href="/auth/login" className="cta-link">
                     <AppIcon name="lock" size={16} />
-                    دخول
+                    <span className="cta-link-label">{userLabel}</span>
                   </Link>
                 )
               : null}
 
             <button
               className="mobile-toggle"
-              onClick={() => setMenuOpen((prev) => !prev)}
+              onClick={() => setMenuOpen((previousState) => !previousState)}
               aria-label="فتح القائمة"
               aria-expanded={menuOpen}
             >
@@ -210,17 +197,22 @@ export default function SiteHeader() {
         </div>
       </header>
 
-      <MobileMenu links={mobileLinks} open={menuOpen} onClose={() => setMenuOpen(false)} />
-
-      {showMarquee ? (
-        <div className="marquee-banner">
-          <div className="marquee-content">
-            {renderedMarqueeItems.map((item, index) => (
-              <span key={`${item}-${index}`}>{item}</span>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <MobileMenu
+        compareCount={comparisonCount}
+        favoriteCount={favoriteCount}
+        links={mobileLinks}
+        onClose={() => setMenuOpen(false)}
+        onToggleTheme={toggleTheme}
+        open={menuOpen}
+        pathname={pathname || ""}
+        socialLinks={socialLinks}
+        themeLabel={themeLabel}
+        unreadNotifications={unreadNotifications}
+        user={user}
+        userLabel={userLabel}
+        walletBalance={walletBalance}
+      />
+      <GlobalSearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

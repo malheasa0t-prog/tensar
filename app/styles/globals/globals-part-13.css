@@ -1,0 +1,232 @@
+
+.section-header p {
+  max-width: 55ch;
+  margin-inline: auto;
+  font-size: 1rem;
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   TRUST BAR
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.trust-bar {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 0;
+}
+
+.trust-items {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  justify-content: center;
+}
+
+.trust-icon {
+  font-size: 1.6rem;
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.1);
+  flex-shrink: 0;
+}
+
+.trust-item strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trust-item span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FEATURE / SERVICE ICON WRAPS
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.feature-icon-wrap,
+.service-icon-wrap {
+  width: 56px; height: 56px;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  margin-bottom: 1.2rem;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.12);
+  transition: all var(--dur) var(--ease);
+}
+
+.feature-card:hover .feature-icon-wrap,
+.service-card:hover .service-icon-wrap {
+  background: var(--grad-brand);
+  border-color: transparent;
+  box-shadow: 0 4px 20px var(--tz-emerald-glow);
+  transform: translateY(-2px);
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.section-head h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.section-head a {
+  color: var(--tz-emerald);
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: color var(--dur) var(--ease);
+}
+
+.section-head a:hover {
+  color: var(--tz-cyan);
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   WHY US / FEATURES
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-lg);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  transition: all var(--dur) var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--grad-brand);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.feature-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-glow);
+}
+
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  margin: 0 auto 1.2rem;
+  background: rgba(16,185,129,0.1);
+  color: var(--tz-emerald);
+  border: 1px solid rgba(16,185,129,0.15);
+  transition: all var(--dur) var(--ease);
+}
+
+.feature-card:hover .feature-icon {
+  background: var(--grad-brand);
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 0 20px var(--tz-emerald-glow);
+}
+
+.feature-card h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.feature-card p {
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   HOME CATEGORIES (MAIN CATEGORIES CARDS)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.home-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.home-categories-showcase {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.8rem;
+}
+
+.home-categories-overview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 1.4rem 1.5rem;
+  border-radius: 28px;
+  border: 1px solid rgba(16,185,129,0.16);
+  background:
+    radial-gradient(circle at top right, rgba(6,182,212,0.14), transparent 32%),
+    linear-gradient(135deg, rgba(16,185,129,0.12), rgba(12,18,32,0.92));
+  overflow: hidden;
+}
+
+.home-categories-overview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.05) 38%, transparent 60%);
+  pointer-events: none;
+}
+
+.home-categories-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 58ch;
+}
+
+.home-categories-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.82);
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 0.9rem;
+}

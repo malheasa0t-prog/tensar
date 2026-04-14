@@ -1,0 +1,74 @@
+.pageStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.summaryCard,
+.cardShell {
+  overflow: hidden;
+}
+
+.summaryBody,
+.summaryMeta,
+.summaryActions {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.summaryBody {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 1rem;
+}
+
+.summaryNote {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.errorBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.24);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fecaca;
+}
+
+.emptyActions {
+  margin-top: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.cardActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .summaryBody {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid,
+  .cardActions {
+    grid-template-columns: 1fr;
+  }
+}

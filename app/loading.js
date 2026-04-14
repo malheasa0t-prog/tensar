@@ -1,5 +1,11 @@
-import HomePageSkeleton from "@/components/HomePageSkeleton";
+import RouteLoadingScreen from "@/components/RouteLoadingScreen";
 
 export default function Loading() {
-  return <HomePageSkeleton />;
+  return (
+    <RouteLoadingScreen
+      eyebrow="انتقال الصفحة"
+      title="نحضّر الصفحة التالية"
+      description="يتم الآن تحميل المحتوى مع حركة دخول أكثر هدوءاً وسلاسة."
+    />
+  );
 }

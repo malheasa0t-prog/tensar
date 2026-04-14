@@ -26,7 +26,7 @@ function shouldRetryWithoutUserId(error) {
 /**
  * Loads the authenticated account snapshot used to prefill the repair form.
  *
- * @returns {Promise<{ userId: string, name: string, phone: string, email: string, isAccountPrefilled: boolean }>}
+ * @returns {Promise<{ userId: string, name: string, phone: string, isAccountPrefilled: boolean }>}
  */
 export async function getRepairBookingAccountSnapshot() {
   const {
@@ -38,7 +38,6 @@ export async function getRepairBookingAccountSnapshot() {
       userId: "",
       name: "",
       phone: "",
-      email: "",
       isAccountPrefilled: false,
     };
   }
@@ -53,7 +52,6 @@ export async function getRepairBookingAccountSnapshot() {
     userId: user.id || "",
     name: profileResponse.data?.full_name || "",
     phone: profileResponse.data?.phone || "",
-    email: user.email || "",
     isAccountPrefilled: true,
   };
 }

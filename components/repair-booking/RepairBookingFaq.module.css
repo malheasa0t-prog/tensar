@@ -1,0 +1,236 @@
+.section {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.introCard,
+.faqItem {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 22px 42px rgba(3, 6, 18, 0.22);
+}
+
+.introCard {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+  background:
+    radial-gradient(circle at top right, rgba(255, 0, 110, 0.14), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(0, 217, 255, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(21, 26, 58, 0.97), rgba(9, 12, 31, 0.99));
+}
+
+.introCard::before,
+.faqItem::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #ff006e, #8338ec, #00d9ff);
+}
+
+.introHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.badge,
+.inlineCount,
+.summaryHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fbff;
+}
+
+.inlineCount {
+  color: #7fe4ff;
+  background: rgba(0, 217, 255, 0.08);
+  border: 1px solid rgba(0, 217, 255, 0.14);
+}
+
+.introCopy {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.introCopy h2,
+.summaryText strong {
+  margin: 0;
+  color: #f8fbff;
+}
+
+.introCopy h2 {
+  font-size: clamp(1.16rem, 1.55vw, 1.46rem);
+  line-height: 1.45;
+}
+
+.introCopy p,
+.answer p,
+.stat span {
+  margin: 0;
+  color: #cfdbf3;
+  line-height: 1.9;
+}
+
+.introCopy p {
+  font-size: 0.9rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat {
+  display: grid;
+  gap: 0.22rem;
+  min-height: 92px;
+  align-content: center;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat strong {
+  color: #76d7ff;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.faqItem {
+  background: linear-gradient(180deg, rgba(15, 19, 46, 0.95), rgba(9, 12, 29, 0.98));
+}
+
+.faqItem[open] {
+  border-color: rgba(131, 56, 236, 0.26);
+  box-shadow: 0 24px 48px rgba(131, 56, 236, 0.14);
+}
+
+.summary {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.05rem;
+  cursor: pointer;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summaryMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.summaryHint {
+  color: #9fb1d6;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-weight: 700;
+}
+
+.summaryText {
+  display: block;
+  min-width: 0;
+}
+
+.summaryText strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.summaryAside {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.index {
+  min-width: 48px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.18), rgba(131, 56, 236, 0.22));
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.iconWrap {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cfe2ff;
+  transition: transform var(--transition-base), background var(--transition-base), color var(--transition-base);
+}
+
+.faqItem[open] .iconWrap {
+  transform: rotate(-90deg);
+  background: rgba(131, 56, 236, 0.12);
+  color: #ffffff;
+}
+
+.answer {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0 1.05rem 1.05rem;
+}
+
+.answer p {
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryMeta {
+    align-items: stretch;
+  }
+
+  .summaryHint {
+    width: 100%;
+    justify-content: center;
+  }
+}

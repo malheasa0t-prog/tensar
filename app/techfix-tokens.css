@@ -1,0 +1,8 @@
+/*
+ * Deprecated legacy theme file.
+ *
+ * This stylesheet used to ship a second light design system that conflicted
+ * with the active dark theme in globals.css. It is intentionally kept empty so
+ * any accidental future import does not reintroduce competing tokens,
+ * duplicated .btn rules, or mismatched surface colors.
+ */

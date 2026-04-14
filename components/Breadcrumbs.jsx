@@ -1,37 +1,82 @@
-import Link from "next/link";
-import AppIcon from "./AppIcon";
+"use client";
 
-export default function Breadcrumbs({ items = [] }) {
-  if (!Array.isArray(items) || items.length < 2) return null;
+import Link from "next/link";
+
+import AppIcon from "@/components/AppIcon";
+import styles from "@/components/Breadcrumbs.module.css";
+import {
+  buildBreadcrumbStructuredData,
+  normalizeBreadcrumbItems,
+} from "@/lib/breadcrumbModel";
+
+/**
+ * Renders a structured breadcrumb trail with optional JSON-LD support.
+ *
+ * @param {{
+ *   items?: Array<{ href?: string, label?: string }>,
+ *   currentPath?: string,
+ *   className?: string,
+ * }} props
+ * @returns {JSX.Element | null}
+ */
+export default function Breadcrumbs({ items = [], currentPath = "", className = "" }) {
+  const normalizedItems = normalizeBreadcrumbItems(items);
+  const schema = buildBreadcrumbStructuredData({
+    items: normalizedItems,
+    currentPath,
+  });
+
+  if (normalizedItems.length < 2) {
+    return null;
+  }
 
   return (
-    <nav className="breadcrumbs" aria-label="Breadcrumb">
-      {items.map((item, index) => {
-        const isLast = index === items.length - 1;
+    <>
+      {schema ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ) : null}
 
-        return (
-          <span key={`${item.href || item.label}-${index}`} className="breadcrumbs-item">
-            {item.href && !isLast ? (
-              <Link href={item.href} className="breadcrumbs-link">
-                {item.label}
-              </Link>
-            ) : (
-              <span className="breadcrumbs-current" aria-current="page">
-                {item.label}
-              </span>
-            )}
+      <nav className={`${styles.breadcrumbs} ${className}`.trim()} aria-label="التنقل الهرمي">
+        <ol className={styles.list}>
+          {normalizedItems.map((item, index) => {
+            const isLast = index === normalizedItems.length - 1;
+            const isHome = item.href === "/";
 
-            {!isLast && (
-              <AppIcon
-                name="chevron-left"
-                size={14}
-                className="breadcrumbs-separator"
-                aria-hidden="true"
-              />
-            )}
-          </span>
-        );
-      })}
-    </nav>
+            return (
+              <li key={`${item.href || item.label}-${index}`} className={styles.item}>
+                {item.href && !isLast ? (
+                  <Link href={item.href} className={styles.link}>
+                    {isHome ? (
+                      <span className={styles.homePill}>
+                        <AppIcon name="home" size={14} />
+                        <span>{item.label}</span>
+                      </span>
+                    ) : (
+                      item.label
+                    )}
+                  </Link>
+                ) : (
+                  <span className={styles.current} aria-current="page">
+                    {isHome ? (
+                      <span className={styles.homePill}>
+                        <AppIcon name="home" size={14} />
+                        <span>{item.label}</span>
+                      </span>
+                    ) : (
+                      item.label
+                    )}
+                  </span>
+                )}
+
+                {!isLast ? <span className={styles.separator}>/</span> : null}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+    </>
   );
 }

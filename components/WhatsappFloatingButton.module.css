@@ -1,0 +1,110 @@
+.shell {
+  position: fixed;
+  left: 24px;
+  bottom: 170px;
+  z-index: 121;
+}
+
+.button {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #ffffff;
+  box-shadow: 0 24px 55px rgba(18, 140, 126, 0.26);
+  display: grid;
+  place-items: center;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 30px 62px rgba(18, 140, 126, 0.32);
+  filter: saturate(1.08);
+}
+
+.note,
+.welcomeBubble {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(10, 17, 34, 0.94);
+  box-shadow: var(--shadow-lg);
+}
+
+.note {
+  position: absolute;
+  left: calc(100% + 0.75rem);
+  top: 50%;
+  transform: translateY(-50%) translateX(-8px);
+  white-space: nowrap;
+  min-width: 174px;
+  padding: 0.72rem 0.95rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.shell:hover .note {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.welcomeBubble {
+  position: absolute;
+  left: calc(100% + 0.75rem);
+  bottom: 0;
+  width: min(290px, calc(100vw - 2rem));
+  padding: 0.95rem 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+  animation: whatsappBubbleIn 220ms ease;
+}
+
+.welcomeBubble p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.9;
+}
+
+.dismissButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  display: grid;
+  place-items: center;
+}
+
+@keyframes whatsappBubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .shell {
+    left: 16px;
+    bottom: 85px;
+  }
+
+  .note {
+    display: none;
+  }
+
+  .welcomeBubble {
+    width: min(260px, calc(100vw - 1.7rem));
+  }
+}

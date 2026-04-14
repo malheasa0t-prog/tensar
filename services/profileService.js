@@ -73,7 +73,7 @@ export async function saveProfileSnapshot(form) {
 /**
  * Updates the current user's password through the account API.
  *
- * @param {{ new_password: string, confirm_password: string }} form
+ * @param {{ current_password: string, new_password: string, confirm_password: string }} form
  * @returns {Promise<string>}
  */
 export async function saveProfilePassword(form) {

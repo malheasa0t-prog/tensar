@@ -1,0 +1,22 @@
+﻿@media (max-width: 900px) {
+    .admin-edit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .promo-banner-grid,
+    .admin-quick-grid,
+    .admin-polish-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .admin-form-actions,
+    .admin-actions-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+

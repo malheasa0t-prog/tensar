@@ -1,5 +1,7 @@
+import styles from "./RepairBookingForm.module.css";
+
 /**
- * Renders the customer identity fields for the repair booking form.
+ * Renders the customer contact fields using filled inputs.
  *
  * @param {{
  *   form: { name: string, phone: string },
@@ -9,16 +11,33 @@
  */
 export default function RepairBookingCustomerFields({ form, onChange }) {
   return (
-    <>
-      <label>
-        الاسم الكامل *
-        <input name="name" value={form.name} onChange={onChange} required />
+    <div className={styles.fieldsGrid}>
+      <label className={styles.field}>
+        <span className={styles.fieldLabel}>الاسم الكامل *</span>
+        <input
+          className={`form-input ${styles.input}`}
+          name="name"
+          value={form.name}
+          onChange={onChange}
+          required
+          autoComplete="name"
+          placeholder="أدخل الاسم الكامل"
+        />
       </label>
 
-      <label>
-        رقم الهاتف *
-        <input name="phone" value={form.phone} onChange={onChange} required dir="ltr" />
+      <label className={styles.field}>
+        <span className={styles.fieldLabel}>رقم الهاتف *</span>
+        <input
+          className={`form-input ${styles.input}`}
+          name="phone"
+          value={form.phone}
+          onChange={onChange}
+          required
+          autoComplete="tel"
+          dir="ltr"
+          placeholder="07XXXXXXXX"
+        />
       </label>
-    </>
+    </div>
   );
 }

@@ -1,0 +1,256 @@
+.admin-dashboard-status-bar,
+.admin-dashboard-actions,
+.admin-dashboard-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-dashboard-status-bar {
+    justify-content: space-between;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.admin-dashboard-queue-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.admin-dashboard-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-bottom: 20px;
+}
+
+.admin-dashboard-health,
+.admin-dashboard-alerts,
+.admin-dashboard-timeline {
+    display: grid;
+    gap: 14px;
+}
+
+.admin-dashboard-health {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    margin-bottom: 18px;
+}
+
+.admin-dashboard-health-card,
+.admin-dashboard-alert {
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+        rgba(10, 14, 26, 0.72);
+}
+
+.admin-dashboard-health-card {
+    display: grid;
+    gap: 10px;
+}
+
+.admin-dashboard-health-card small {
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.admin-dashboard-alerts {
+    margin-bottom: 20px;
+}
+
+.admin-dashboard-alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.admin-dashboard-alert i {
+    width: 20px;
+    text-align: center;
+}
+
+.admin-dashboard-alert--warning {
+    border-color: rgba(253, 203, 110, 0.32);
+    background-color: rgba(253, 203, 110, 0.08);
+}
+
+.admin-dashboard-alert--orange {
+    border-color: rgba(225, 112, 85, 0.34);
+    background-color: rgba(225, 112, 85, 0.08);
+}
+
+.admin-dashboard-alert--danger {
+    border-color: rgba(214, 48, 49, 0.34);
+    background-color: rgba(214, 48, 49, 0.08);
+}
+
+.admin-dashboard-alert--info {
+    border-color: rgba(108, 92, 231, 0.34);
+    background-color: rgba(108, 92, 231, 0.08);
+}
+
+.admin-dashboard-alert--success {
+    border-color: rgba(0, 184, 148, 0.34);
+    background-color: rgba(0, 184, 148, 0.08);
+}
+
+.admin-dashboard-chart-grid,
+.admin-dashboard-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.admin-dashboard-chart-grid {
+    margin-bottom: 20px;
+}
+
+.admin-chart-wrap {
+    position: relative;
+    min-height: 300px;
+}
+
+.admin-dashboard-list {
+    display: grid;
+    gap: 12px;
+}
+
+.admin-dashboard-timeline-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+}
+
+.admin-dashboard-timeline-item strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.admin-dashboard-timeline-item p,
+.admin-dashboard-timeline-item small {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.admin-dashboard-timeline-item p {
+    margin-bottom: 6px;
+    line-height: 1.7;
+}
+
+.admin-dashboard-timeline-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: inline-grid;
+    place-items: center;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.admin-dashboard-list-item,
+.admin-dashboard-empty {
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+}
+
+.admin-dashboard-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.admin-dashboard-list-item strong {
+    color: var(--text-primary);
+    font-size: 0.96rem;
+}
+
+.admin-dashboard-list-item span,
+.admin-dashboard-list-item small,
+.admin-dashboard-empty p {
+    color: var(--text-secondary);
+}
+
+.admin-dashboard-empty {
+    display: grid;
+    place-items: center;
+    min-height: 180px;
+    text-align: center;
+    gap: 8px;
+}
+
+.admin-dashboard-empty i {
+    font-size: 2rem;
+    color: var(--text-muted);
+}
+
+.admin-dashboard-modal-card {
+    width: min(680px, 100%);
+    max-width: 680px;
+    text-align: right;
+    display: grid;
+    gap: 0;
+    padding: 0;
+}
+
+.admin-dashboard-modal-head,
+.admin-dashboard-modal-footer {
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.admin-dashboard-modal-head {
+    border-bottom: 1px solid var(--border-light);
+    background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.admin-dashboard-modal-body {
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+}
+
+.admin-dashboard-modal-footer {
+    border-top: 1px solid var(--border-light);
+    background: rgba(255, 255, 255, 0.02);
+    justify-content: flex-end;
+}
+
+@media (max-width: 980px) {
+    .admin-dashboard-chart-grid,
+    .admin-dashboard-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-dashboard-status-bar {
+        align-items: stretch;
+    }
+
+    .admin-chart-wrap {
+        min-height: 260px;
+    }
+}

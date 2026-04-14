@@ -11,18 +11,7 @@ export default function RepairBookingFormFeedback({ error, message }) {
 
   return (
     <>
-      {error ? (
-        <p
-          className="form-message"
-          style={{
-            color: "#ef4444",
-            background: "rgba(239,68,68,0.12)",
-            borderColor: "rgba(239,68,68,0.25)",
-          }}
-        >
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="form-message is-error">{error}</p> : null}
 
       {message ? <p className="form-message">{message}</p> : null}
     </>

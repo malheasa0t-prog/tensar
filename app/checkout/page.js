@@ -1,8 +1,11 @@
 'use client';
 
+import "../techfix-pages.css";
+import "../techfix-checkout.css";
 import CheckoutFormCard from '@/components/checkout/CheckoutFormCard';
 import CheckoutHero from '@/components/checkout/CheckoutHero';
 import CheckoutSummaryCard from '@/components/checkout/CheckoutSummaryCard';
+import CheckoutTrustBadges from '@/components/checkout/CheckoutTrustBadges';
 import { useCheckoutPage } from '@/hooks/useCheckoutPage';
 
 /**
@@ -14,12 +17,18 @@ export default function CheckoutPage() {
   const {
     items,
     cartTotal,
+    shippingFee,
+    checkoutTotal,
     checkoutOptions,
     form,
     loading,
     error,
     success,
     canSubmit,
+    walletTransferInstructions,
+    isWalletTransferModalOpen,
+    isWalletTransferUnavailable,
+    closeWalletTransferModal,
     updateField,
     submitCheckout,
   } = useCheckoutPage();
@@ -37,10 +46,24 @@ export default function CheckoutPage() {
             error={error}
             success={success}
             canSubmit={canSubmit}
+            checkoutTotal={checkoutTotal}
+            walletTransferInstructions={walletTransferInstructions}
+            isWalletTransferModalOpen={isWalletTransferModalOpen}
+            isWalletTransferUnavailable={isWalletTransferUnavailable}
+            onCloseWalletTransferModal={closeWalletTransferModal}
             onSubmit={submitCheckout}
             onFieldChange={updateField}
           />
-          <CheckoutSummaryCard items={items} cartTotal={cartTotal} />
+          <CheckoutSummaryCard
+            items={items}
+            cartTotal={cartTotal}
+            shippingFee={shippingFee}
+            checkoutTotal={checkoutTotal}
+          />
+        </div>
+
+        <div className="container" style={{ marginTop: '1.4rem' }}>
+          <CheckoutTrustBadges />
         </div>
       </section>
     </>

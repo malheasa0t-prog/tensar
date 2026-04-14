@@ -1,0 +1,24 @@
+.track {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 1400;
+  height: 3px;
+  pointer-events: none;
+}
+
+.bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: right center;
+  background: linear-gradient(90deg, #8338ec, #ff4fd8, #00d9ff);
+  box-shadow: 0 0 12px rgba(131, 56, 236, 0.45);
+  transition: transform 100ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

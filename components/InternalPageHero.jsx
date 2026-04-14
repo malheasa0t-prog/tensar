@@ -3,6 +3,7 @@ import AppIcon from "./AppIcon";
 
 export default function InternalPageHero({
   items = [],
+  currentPath = "",
   badgeIcon = "sparkles",
   badgeLabel,
   title,
@@ -17,7 +18,7 @@ export default function InternalPageHero({
         <div className={`internal-hero-shell surface-panel${summary ? " has-summary" : ""}`}>
           <div className="internal-hero-main">
             <div className="section-topbar">
-              <Breadcrumbs items={items} />
+              <Breadcrumbs items={items} currentPath={currentPath} />
 
               {badgeLabel ? (
                 <span className="section-badge">

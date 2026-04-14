@@ -1,21 +1,15 @@
 'use client';
 
+import "../../techfix-pages.css";
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
+import PageSectionBreadcrumbs from '@/components/PageSectionBreadcrumbs';
 import CategoryEmptyState from '@/components/category-page/CategoryEmptyState';
-import CategoryHeroSummary from '@/components/category-page/CategoryHeroSummary';
 import CategoryProductsSection from '@/components/category-page/CategoryProductsSection';
 import CategorySubcategoriesSection from '@/components/category-page/CategorySubcategoriesSection';
-import InternalPageHero from '@/components/InternalPageHero';
 import StatusPanel from '@/components/StatusPanel';
 import { useCategoryPage } from '@/hooks/useCategoryPage';
-import {
-  buildCategoryHeroStats,
-  getCategoryHeroDescription,
-  getCategoryHref,
-  getTotalNestedProducts,
-} from '@/lib/categoryPageModel';
 
 /**
  * Product category explorer page with optional nested subcategories.
@@ -42,7 +36,7 @@ export default function CategoryPage() {
             icon="folder-open"
             eyebrow="الفئة غير متاحة"
             title="لم نتمكن من العثور على هذه الفئة"
-            description="قد يكون الرابط غير صحيح أو أن هذه الفئة لم تعد منشورة حاليًا."
+            description="قد يكون الرابط غير صحيح أو أن هذه الفئة لم تعد منشورة حالياً."
             actions={
               <>
                 <Link href="/" className="btn btn-primary">
@@ -59,63 +53,32 @@ export default function CategoryPage() {
     );
   }
 
-  const isMainCategory = !category.parent_id;
-  const hasSubCategories = isMainCategory && subCategories.length > 0;
-  const totalNestedProducts = getTotalNestedProducts(subCategoryProductsCount);
+  const hasSubCategories = !category.parent_id && subCategories.length > 0;
 
   return (
-    <>
-      <InternalPageHero
-        items={[
-          { href: '/', label: 'الرئيسية' },
-          { href: '/products', label: 'الفئات' },
-          mainCategory && mainCategory.id !== category.id
-            ? { href: getCategoryHref(mainCategory), label: mainCategory.name }
-            : null,
-          { label: category.name },
-        ].filter(Boolean)}
-        badgeIcon={hasSubCategories ? 'folder-open' : 'folder'}
-        badgeLabel={hasSubCategories ? 'فئة رئيسية' : 'فئة منتجات'}
-        title={category.name}
-        description={getCategoryHeroDescription(category, hasSubCategories)}
-        stats={buildCategoryHeroStats({
-          hasSubCategories,
-          subCategories,
-          totalNestedProducts,
-          products,
-          mainCategory,
-          category,
-        })}
-        summary={<CategoryHeroSummary hasSubCategories={hasSubCategories} />}
-        actions={
-          !hasSubCategories && !isMainCategory && mainCategory ? (
-            <Link href={getCategoryHref(mainCategory)} className="btn btn-outline">
-              العودة إلى {mainCategory.name}
-            </Link>
-          ) : null
-        }
-      />
-
-      <section className="section" style={{ paddingTop: 0, paddingBottom: '4rem' }}>
-        <div className="container" style={{ display: 'grid', gap: '1.5rem' }}>
-          {hasSubCategories ? (
-            <CategorySubcategoriesSection
-              subCategories={subCategories}
-              subCategoryProductsCount={subCategoryProductsCount}
-            />
-          ) : null}
-
-          <CategoryProductsSection
-            products={products}
-            categoryName={category.name}
-            hasSubCategories={hasSubCategories}
-          />
-
-          {products.length === 0 && !hasSubCategories ? (
-            <CategoryEmptyState mainCategory={mainCategory} category={category} />
-          ) : null}
+    <section className="section page-top" style={{ paddingBottom: '4rem' }}>
+      <div className="container" style={{ display: 'grid', gap: '1.5rem' }}>
+        <div className="section-topbar">
+          <PageSectionBreadcrumbs currentLabel={category.name} />
         </div>
-      </section>
-    </>
+
+        {hasSubCategories ? (
+          <CategorySubcategoriesSection
+            subCategories={subCategories}
+            subCategoryProductsCount={subCategoryProductsCount}
+          />
+        ) : null}
+
+        <CategoryProductsSection
+          products={products}
+          categoryName={category.name}
+          hasSubCategories={hasSubCategories}
+        />
+
+        {products.length === 0 && !hasSubCategories ? (
+          <CategoryEmptyState mainCategory={mainCategory} category={category} />
+        ) : null}
+      </div>
+    </section>
   );
 }

@@ -1,0 +1,149 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(16px);
+}
+
+.modal {
+  position: relative;
+  width: min(100%, 42rem);
+  display: grid;
+  gap: 1rem;
+  padding: 1.35rem;
+  border-radius: 1.7rem;
+  border: 1px solid rgba(177, 92, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(14, 11, 35, 0.98), rgba(6, 10, 26, 0.98)),
+    radial-gradient(circle at top, rgba(131, 56, 236, 0.16), transparent 46%);
+  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.42);
+}
+
+.closeButton {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dbe3ff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.eyebrow,
+.featureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eyebrow {
+  gap: 0.35rem;
+  width: fit-content;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  color: #f8f4ff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: rgba(131, 56, 236, 0.16);
+}
+
+.modal h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+}
+
+.description {
+  margin: 0;
+  color: #c7d0f4;
+  font-size: 0.98rem;
+  line-height: 1.9;
+}
+
+.features {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.featureCard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  align-items: start;
+  padding: 0.95rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.featureIcon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 1rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(131, 56, 236, 0.42), rgba(0, 217, 255, 0.18));
+}
+
+.featureCard strong {
+  color: #ffffff;
+}
+
+.featureCard p {
+  margin: 0.2rem 0 0;
+  color: #b5c0df;
+  font-size: 0.88rem;
+  line-height: 1.8;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10rem;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.primaryButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d28d9, #8338ec 55%, #ff4fd8);
+}
+
+.secondaryButton {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 1rem;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}

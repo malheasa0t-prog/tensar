@@ -1,13 +1,45 @@
+# Dependencies
 node_modules
+
+# Next.js build
 .next
 out
+
+# Environment variables (SECRETS - never commit!)
 .env
 .env.*
 !.env.example
+
+# Admin config (contains credentials)
 admin-config.js
 public/admin-config.js
+
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+site-3000.err.log
+site-3000.out.log
+site-live.log
+admin-static.err.log
+admin-static.out.log
+.next-start.err.log
+.next-start.out.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Temporary files
+tmp-*.png
+tmp-*.html
+homepage-*.png
+test-results/
+audit-screenshots/
+audit-shots/
+
+# IDE
+.vscode
+.edge-headless
+.sixth

@@ -1,0 +1,114 @@
+.admin-table-pagination {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-table-pagination-summary {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.admin-table-page-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.admin-table-page-size select {
+    min-width: 86px;
+    border-radius: 12px;
+}
+
+.admin-table-pagination-buttons .btn.is-current {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .table-wrap {
+        overflow: visible;
+    }
+
+    .data-table.admin-mobile-cards,
+    .data-table.admin-mobile-cards tbody,
+    .data-table.admin-mobile-cards tr,
+    .data-table.admin-mobile-cards td {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table.admin-mobile-cards {
+        min-width: 0;
+    }
+
+    .data-table.admin-mobile-cards thead {
+        display: none;
+    }
+
+    .data-table.admin-mobile-cards tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .data-table.admin-mobile-cards tr {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+    }
+
+    .data-table.admin-mobile-cards td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 0;
+        border: none;
+    }
+
+    .data-table.admin-mobile-cards td::before {
+        content: attr(data-label);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        min-width: 88px;
+    }
+
+    .data-table.admin-mobile-cards td.bulk-check-cell {
+        justify-content: flex-start;
+        margin-bottom: 6px;
+    }
+
+    .data-table.admin-mobile-cards .actions-cell {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .data-table.admin-mobile-cards .actions-cell::before {
+        content: 'إجراءات';
+        grid-column: 1 / -1;
+    }
+
+    .data-table.admin-mobile-cards .actions-cell .btn,
+    .data-table.admin-mobile-cards .actions-cell .action-btn {
+        min-height: 48px;
+    }
+
+    .admin-table-pagination,
+    .admin-table-pagination-controls,
+    .admin-table-pagination-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}

@@ -1,0 +1,297 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: rgba(11, 18, 32, 0.7);
+  backdrop-filter: blur(18px);
+}
+.panel {
+  width: min(1120px, 100%);
+  max-height: calc(100vh - 2rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 38%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(10, 15, 28, 0.98));
+  color: #f8fafc;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.48);
+  overflow: auto;
+}
+.header,
+.searchBar,
+.filterRow,
+.resultsMeta,
+.resultHead,
+.resultMetaRow,
+.suggestionsList,
+.feedbackCard {
+  display: flex;
+  align-items: center;
+}
+.header {
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.eyebrow,
+.suggestionsLabel {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.55rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #67e8f9;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.header h2 {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 2.45rem);
+  line-height: 1.18;
+}
+.header p {
+  margin: 0.45rem 0 0;
+  max-width: 42rem;
+  color: rgba(226, 232, 240, 0.78);
+}
+.closeButton,
+.utilityButton,
+.retryButton,
+.filterChip,
+.filterChipActive,
+.suggestionChip {
+  border: 1px solid transparent;
+  transition: transform var(--transition-base), border-color var(--transition-base), background var(--transition-base);
+}
+.closeButton,
+.utilityButton,
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #f8fafc;
+}
+.closeButton {
+  width: 46px;
+  padding: 0;
+}
+.closeButton:hover,
+.utilityButton:hover,
+.retryButton:hover,
+.filterChip:hover,
+.suggestionChip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(103, 232, 249, 0.28);
+}
+.searchBar {
+  gap: 0.75rem;
+  min-height: 74px;
+  padding: 0.9rem 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(103, 232, 249, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+}
+.searchIcon {
+  color: #67e8f9;
+}
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #f8fafc;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+}
+.searchInput::placeholder {
+  color: rgba(203, 213, 225, 0.48);
+}
+.shortcutHint {
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.12);
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.8rem;
+}
+.filterRow,
+.suggestionsList {
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.filterRow {
+  margin-top: 1rem;
+}
+.filterChip,
+.filterChipActive,
+.suggestionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.08);
+  color: #e2e8f0;
+  font-weight: 700;
+}
+.filterChip span {
+  color: rgba(226, 232, 240, 0.64);
+  font-size: 0.82rem;
+}
+.filterChipActive {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(34, 211, 238, 0.18));
+  color: #fff;
+  border-color: rgba(103, 232, 249, 0.28);
+}
+.suggestions {
+  margin-top: 1rem;
+}
+.resultsMeta {
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.2rem 0 0.9rem;
+  color: rgba(226, 232, 240, 0.82);
+}
+.feedbackCard,
+.emptyState,
+.loadingGrid {
+  margin-top: 0.9rem;
+}
+.feedbackCard {
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  background: rgba(127, 29, 29, 0.14);
+}
+.feedbackCard p,
+.emptyState p {
+  margin: 0.35rem 0 0;
+  color: rgba(226, 232, 240, 0.72);
+}
+.retryButton {
+  background: rgba(14, 165, 233, 0.22);
+}
+.loadingGrid {
+  display: grid;
+  gap: 0.9rem;
+}
+.loadingCard {
+  min-height: 108px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.7), rgba(51, 65, 85, 0.9), rgba(30, 41, 59, 0.7));
+  background-size: 200% 100%;
+  animation: searchShimmer 1.6s linear infinite;
+}
+.emptyState {
+  display: grid;
+  place-items: center;
+  gap: 0.6rem;
+  min-height: 220px;
+  padding: 1.5rem;
+  border-radius: 24px;
+  border: 1px dashed rgba(148, 163, 184, 0.2);
+  text-align: center;
+}
+.resultsList {
+  display: grid;
+  gap: 0.85rem;
+}
+.resultCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.52);
+  color: inherit;
+}
+.resultCard:hover {
+  border-color: rgba(103, 232, 249, 0.26);
+  background: rgba(15, 23, 42, 0.74);
+}
+.resultIcon,
+.resultArrow {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+}
+.resultIcon {
+  background: rgba(34, 211, 238, 0.12);
+  color: #67e8f9;
+}
+.resultArrow {
+  background: rgba(148, 163, 184, 0.08);
+  color: rgba(226, 232, 240, 0.86);
+}
+.resultBody {
+  min-width: 0;
+}
+.resultHead {
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.resultHead strong,
+.resultsMeta strong {
+  font-size: 1.02rem;
+}
+.typeBadge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.16);
+  color: #86efac;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.resultBody p {
+  margin: 0.45rem 0 0;
+  color: rgba(226, 232, 240, 0.72);
+}
+.resultMetaRow {
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+  color: rgba(148, 163, 184, 0.96);
+  font-size: 0.88rem;
+}
+@keyframes searchShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (max-width: 768px) {
+  .overlay { padding: 0; }
+  .panel {
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+  .header,
+  .resultsMeta,
+  .feedbackCard,
+  .resultHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .searchBar,
+  .resultCard { grid-template-columns: 1fr; }
+  .searchBar { flex-wrap: wrap; }
+  .searchInput { width: 100%; }
+  .shortcutHint,
+  .resultArrow {
+    display: none;
+  }
+}

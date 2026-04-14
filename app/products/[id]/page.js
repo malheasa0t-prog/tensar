@@ -1,52 +1,86 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import ProductPurchaseActions from "@/components/ProductPurchaseActions";
 import AppIcon from "@/components/AppIcon";
 import InternalPageHero from "@/components/InternalPageHero";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { supabase } from "@/lib/supabaseClient";
 import {
   ACCESSORY_PRODUCTS_SECTION_HREF,
   ACCESSORY_SECTION_NAME,
   isAccessoryProductCategoryId,
 } from "@/lib/accessoryCatalog";
+import { isOptimizableImageSrc } from "@/lib/imageUtils";
+import { buildProductStructuredData } from "@/lib/seo";
+import { getPageMetadata } from "@/lib/siteMetadata";
 
 export const revalidate = 60;
 
-export async function generateMetadata({ params }) {
-  const { id } = await params;
-
+/**
+ * Attempts to find a product or digital service by id.
+ *
+ * @param {string} id
+ * @param {string} selectClause
+ * @returns {Promise<{ data: Record<string, unknown> | null, isService: boolean }>}
+ */
+async function findItem(id, selectClause = '*') {
   const { data: product } = await supabase
-    .from("products")
-    .select("id,name,description")
-    .eq("id", id)
-    .eq("status", "active")
+    .from('products')
+    .select(selectClause)
+    .eq('id', id)
+    .eq('status', 'active')
     .maybeSingle();
 
-  if (!product) {
-    return {
-      title: "منتج غير موجود | TechZone",
-      description: "المنتج المطلوب غير متاح حالياً.",
-    };
+  if (product) return { data: product, isService: false };
+
+  const { data: service } = await supabase
+    .from('services')
+    .select(selectClause)
+    .eq('id', id)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  return { data: service || null, isService: true };
+}
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const { data: item } = await findItem(id, 'id,name,description,images,image');
+
+  if (!item) {
+    return getPageMetadata({
+      title: "منتج غير موجود",
+      description: "المنتج المطلوب غير متاح حاليًا.",
+      pathname: `/products/${id}`,
+    });
   }
 
-  return {
-    title: `${product.name} | TechZone`,
-    description: product.description || "تفاصيل المنتج والسعر والتوفر.",
-  };
+  return getPageMetadata({
+    title: item.name,
+    description: item.description || "تفاصيل المنتج والسعر والتوفر.",
+    pathname: `/products/${id}`,
+    images: item.images || (item.image ? [item.image] : []),
+  });
 }
 
 export default async function ProductDetailsPage({ params }) {
   const { id } = await params;
+  const { data: item, isService } = await findItem(id);
 
-  const { data: product, error: productError } = await supabase
-    .from("products")
-    .select("*")
-    .eq("id", id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (productError || !product) {
+  if (!item) {
     notFound();
   }
+
+  const product = isService ? {
+    ...item,
+    images: item.image ? [item.image] : [],
+    quantity: item.max_qty || 999,
+    discount_price: null,
+    brand: null,
+    specs: [],
+    variants: [],
+    product_type: 'digital',
+  } : item;
 
   const isAccessoryProduct = isAccessoryProductCategoryId(product.category_id);
   let category = null;
@@ -65,22 +99,32 @@ export default async function ProductDetailsPage({ params }) {
   const originalPrice = Number(product.price || 0);
   const hasDiscount = Number(product.discount_price || 0) > 0 && finalPrice < originalPrice;
   const image = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "";
-  const stockLabel = Number(product.quantity || 0) > 0 ? "متوفر" : "حسب الطلب";
+  const stockLabel = isService ? "خدمة رقمية فورية" : (Number(product.quantity || 0) > 0 ? "متوفر" : "حسب الطلب");
   const specs = Array.isArray(product.specs) ? product.specs.filter(Boolean) : [];
   const brandLabel = product.brand || "بدون علامة محددة";
   const categoryLabel = isAccessoryProduct ? ACCESSORY_SECTION_NAME : category?.name || "منتج تقني";
+  const structuredData = buildProductStructuredData({
+    pathname: `/products/${id}`,
+    categoryName: categoryLabel,
+    product,
+  });
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <InternalPageHero
+        currentPath={`/products/${id}`}
         items={[
           { href: "/", label: "الرئيسية" },
           { href: "/products", label: "المنتجات" },
           isAccessoryProduct
             ? { href: ACCESSORY_PRODUCTS_SECTION_HREF, label: ACCESSORY_SECTION_NAME }
             : category?.name
-            ? { href: `/category/${category.slug || product.category_id}`, label: category.name }
-            : null,
+              ? { href: `/category/${category.slug || product.category_id}`, label: category.name }
+              : null,
           { label: product.name },
         ].filter(Boolean)}
         badgeIcon="shopping-bag"
@@ -91,7 +135,7 @@ export default async function ProductDetailsPage({ params }) {
           "واجهة تفاصيل أوضح تعرض المواصفات، حالة التوفر، ومسار الشراء بدون فراغات أو كتل معزولة."
         }
         stats={[
-          { label: "السعر الحالي", value: `${finalPrice.toFixed(2)} د.أ`, tone: "success" },
+          { label: "السعر الحالي", value: formatCurrency(finalPrice), tone: "success" },
           { label: "التوفر", value: stockLabel },
           { label: "الفئة", value: categoryLabel, tone: "accent" },
         ]}
@@ -128,7 +172,15 @@ export default async function ProductDetailsPage({ params }) {
             <div className="surface-card detail-media-card">
               <div className="detail-media-frame">
                 {image ? (
-                  <img src={image} alt={product.name} />
+                  <Image
+                    src={image}
+                    alt={product.name}
+                    fill
+                    loading="lazy"
+                    quality={80}
+                    sizes="(max-width: 900px) 100vw, 540px"
+                    unoptimized={!isOptimizableImageSrc(image)}
+                  />
                 ) : (
                   <div className="detail-media-placeholder">
                     <AppIcon name={categoryLabel || product.name || "package"} size={46} />
@@ -159,9 +211,9 @@ export default async function ProductDetailsPage({ params }) {
 
               <div className="detail-price-row">
                 <div className="detail-price">
-                  {finalPrice.toFixed(2)} <span>د.أ</span>
+                  {formatCurrency(finalPrice)}
                 </div>
-                {hasDiscount ? <span className="detail-price-old">{originalPrice.toFixed(2)} د.أ</span> : null}
+                {hasDiscount ? <span className="detail-price-old">{formatCurrency(originalPrice)}</span> : null}
               </div>
 
               <p>
@@ -184,7 +236,7 @@ export default async function ProductDetailsPage({ params }) {
                 </div>
                 <div className="detail-meta-card">
                   <strong>التحديث</strong>
-                  <span>{hasDiscount ? "سعر محدث مع خصم" : "متاح الآن للطلب"}</span>
+                  <span>{hasDiscount ? "سعر محدّث مع خصم" : "متاح الآن للطلب"}</span>
                 </div>
               </div>
 
@@ -211,7 +263,7 @@ export default async function ProductDetailsPage({ params }) {
                     <AppIcon name="sparkles" size={18} />
                   </span>
                   <div>
-                    <strong>بطاقة أكثر اكتمالاً</strong>
+                    <strong>بطاقة أكثر اكتمالًا</strong>
                     <span>الصفحة تعرض الآن المعلومات الأساسية، المواصفات، والإجراء الرئيسي بدون أن تبدو كمساحة فارغة.</span>
                   </div>
                 </div>
