@@ -3,17 +3,25 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
+    "dev": "next dev",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --test lib/adminRuntimeConfig.test.mjs lib/analyticsModel.test.mjs lib/breadcrumbModel.test.mjs lib/comparisonModel.test.mjs lib/dynamicFaviconModel.test.mjs lib/formatCurrency.test.mjs lib/imageUtils.test.mjs lib/interactiveEffectsModel.test.mjs lib/keyboardShortcutsModel.test.mjs lib/mobileMenuModel.test.mjs lib/servicePricingModel.test.mjs lib/themeModel.test.mjs lib/toastModel.test.mjs lib/techfixModel.test.mjs lib/repairBookingModel.test.mjs lib/dashboardOrdersModel.test.mjs lib/checkoutModel.test.mjs lib/favoritesModel.test.mjs lib/profileModel.test.mjs lib/profilePasswordModel.test.mjs lib/registerModel.test.mjs lib/loginPageModel.test.mjs lib/headerNotificationsModel.test.mjs lib/homeHeroVisualModel.test.mjs lib/homePromoBanner.test.mjs lib/globalSearchModel.test.mjs lib/pageTransitionModel.test.mjs lib/productCardModel.test.mjs lib/productsExplorerModel.test.mjs lib/scrollRevealModel.test.mjs lib/physicalOrderRoutingModel.test.mjs lib/cartAvailabilityModel.test.mjs lib/cartSyncModel.test.mjs lib/depositPageModel.test.mjs lib/liveChatModel.test.mjs lib/seo.test.mjs lib/socialBrandIcons.test.mjs lib/subscriptionsModel.test.mjs lib/whatsappWidgetModel.test.mjs lib/contactChannels/deliveryMethods.test.mjs lib/contactChannels/content.test.mjs lib/contactChannels/depositTransfer.test.mjs public/js/admin/chats.test.mjs public/js/admin/deposits.test.mjs public/js/admin/notifications.test.mjs services/globalSearchService.test.mjs services/headerService.test.mjs services/cartService.test.mjs services/favoritesService.test.mjs services/liveChatService.test.mjs services/userAccessService.test.mjs services/checkoutInventoryService.test.mjs services/checkoutRollbackService.test.mjs services/serviceOrderSyncService.test.mjs services/serviceOrderNotificationService.test.mjs services/adminOrderStatusService.test.mjs services/depositProofService.test.mjs services/depositProofUploadService.test.mjs services/depositPageService.test.mjs services/orderLookupService.test.mjs services/orderSyncAccessService.test.mjs"
+    "test": "node --test lib/adminRuntimeConfig.test.mjs lib/analyticsModel.test.mjs lib/breadcrumbModel.test.mjs lib/comparisonModel.test.mjs lib/dynamicFaviconModel.test.mjs lib/formatCurrency.test.mjs lib/imageUtils.test.mjs lib/interactiveEffectsModel.test.mjs lib/keyboardShortcutsModel.test.mjs lib/mobileMenuModel.test.mjs lib/servicePricingModel.test.mjs lib/themeModel.test.mjs lib/toastModel.test.mjs lib/techfixModel.test.mjs lib/repairBookingModel.test.mjs lib/dashboardOrdersModel.test.mjs lib/checkoutModel.test.mjs lib/favoritesModel.test.mjs lib/profileModel.test.mjs lib/profilePasswordModel.test.mjs lib/registerModel.test.mjs lib/loginPageModel.test.mjs lib/headerNotificationsModel.test.mjs lib/homeHeroVisualModel.test.mjs lib/homePromoBanner.test.mjs lib/globalSearchModel.test.mjs lib/pageTransitionModel.test.mjs lib/productCardModel.test.mjs lib/productsExplorerModel.test.mjs lib/scrollRevealModel.test.mjs lib/physicalOrderRoutingModel.test.mjs lib/cartAvailabilityModel.test.mjs lib/cartSyncModel.test.mjs lib/depositPageModel.test.mjs lib/liveChatModel.test.mjs lib/seo.test.mjs lib/socialBrandIcons.test.mjs lib/subscriptionsModel.test.mjs lib/whatsappWidgetModel.test.mjs lib/contactChannels/deliveryMethods.test.mjs lib/contactChannels/content.test.mjs lib/contactChannels/depositTransfer.test.mjs public/js/admin/chats.test.mjs public/js/admin/deposits.test.mjs public/js/admin/notifications.test.mjs services/globalSearchService.test.mjs services/headerService.test.mjs services/cartService.test.mjs services/favoritesService.test.mjs services/liveChatService.test.mjs services/userAccessService.test.mjs services/checkoutInventoryService.test.mjs services/checkoutRollbackService.test.mjs services/serviceOrderSyncService.test.mjs services/serviceOrderNotificationService.test.mjs services/adminOrderStatusService.test.mjs services/depositProofService.test.mjs services/depositProofUploadService.test.mjs services/depositPageService.test.mjs services/orderLookupService.test.mjs services/orderSyncAccessService.test.mjs",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.19.1",
     "@supabase/supabase-js": "^2.99.2",
     "lucide-react": "^0.577.0",
     "next": "^16.1.6",
     "react": "18.3.1",
     "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.82.2"
   }
 }
