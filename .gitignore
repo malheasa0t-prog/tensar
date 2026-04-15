@@ -1,7 +1,7 @@
 # Dependencies
 node_modules
 
-# Next.js build
+# Framework build
 .next
 out
 

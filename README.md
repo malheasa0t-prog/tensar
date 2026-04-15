@@ -1,16 +1,13 @@
-# TechZone Next.js
+# TechZone Web Platform
 
-تم ترقية الموقع ليعمل على:
-
-- Node.js
-- Next.js (App Router)
+منصة تجارة وخدمات رقمية تعتمد على Supabase في البيانات والمصادقة، مع واجهة موقع حديثة ولوحة إدارة مستقلة.
 
 ## المتطلبات
 
-- Node.js 20+
+- JavaScript runtime 20+
 - npm 10+
 
-## الإعدادات (Environment Variables)
+## الإعدادات
 
 1. انسخ ملف البيئة:
 
@@ -22,152 +19,81 @@ cp .env.example .env.local
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (لعمليات الخادم الآمنة)
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `PROVIDER_API_BASE_URL` (اختياري)
 - `PROVIDER_API_KEY` (اختياري)
 - `PROVIDER_API_TIMEOUT_MS` (اختياري)
-- `CRON_SECRET` (مطلوب لتشغيل `/api/orders/sync` بشكل آمن)
+- `CRON_SECRET` (مطلوب لمسار المزامنة الآمن)
 
-3. إعداد لوحة الإدارة القديمة (Static Admin):
+3. لإعداد لوحة الإدارة القديمة:
 
 - انسخ `admin-config.example.js` إلى `admin-config.js`.
 - انسخ `public/admin-config.example.js` إلى `public/admin-config.js`.
-- عبّئ القيم داخل الملفات:
-	- `window.__TZ_SUPABASE_URL`
-	- `window.__TZ_SUPABASE_ANON_KEY`
+- عبّئ:
+  - `window.__TZ_SUPABASE_URL`
+  - `window.__TZ_SUPABASE_ANON_KEY`
 
 ## التشغيل المحلي
 
-1. تثبيت الاعتماديات:
-
 ```bash
 npm install
-```
-
-2. تشغيل بيئة التطوير:
-
-```bash
 npm run dev
 ```
 
-3. افتح المتصفح على:
+ثم افتح:
 
 ```text
 http://localhost:3000
 ```
 
-## صفحات المشروع
+## الصفحات والمسارات المهمة
 
-- `/` الصفحة الرئيسية بتصميم احترافي جديد
+- `/` الصفحة الرئيسية
 - `/products` صفحة المنتجات
 - `/services` صفحة الخدمات
-- `/api/health` فحص حالة API
-- `/api/quote` استقبال نموذج طلب الخدمة (POST)
+- `/api/health` فحص الحالة
+- `/api/orders/create` إنشاء الطلب
+- `/api/orders/sync` مزامنة الطلبات
 
-## بنية الخادم (Node.js داخل Next.js)
+## بنية التطبيق
 
-- `lib/supabaseClient.js`: عميل Supabase للواجهة/الاستخدام العام عبر متغيرات البيئة.
-- `lib/supabaseServer.js`: عميل Supabase للخادم فقط (`server-only`) مع دعم `service role`.
-- `lib/serverAuth.js`: استخراج وتحقق Bearer token + Helpers للأدمن/الملف الشخصي.
-- `app/api/orders/create/route.js`: إنشاء الطلب مع تحقق مدخلات واستجابات موحدة.
+- `lib/supabaseClient.js`: عميل Supabase للواجهة العامة.
+- `lib/supabaseServer.js`: عميل Supabase لطبقة الخادم.
+- `lib/serverAuth.js`: التحقق من Bearer token ومساعدات الصلاحيات.
+- `app/api/orders/create/route.js`: إنشاء الطلب مع تحقق موحد للمدخلات.
 - `app/api/orders/sync/route.js`: مزامنة حالات الطلبات مع مزود خارجي.
-- `app/api/health/route.js`: فحص الصحة مع `uptime` و`version` و`timestamp`.
-- `app/api/account/profile/route.js`: جلب وتحديث الملف الشخصي للمستخدم الحالي.
-- `app/api/account/password/route.js`: تغيير كلمة المرور للمستخدم الحالي.
-- `app/api/account/wallet/route.js`: جلب المحفظة وسجل الحركات.
-- `app/api/admin/users/route.js`: جلب المستخدمين مع المحافظ (للأدمن فقط).
-- `app/api/admin/wallet-adjust/route.js`: إضافة/خصم رصيد ذري عبر RPC (للأدمن فقط).
+- `app/api/account/*`: إدارة الملف الشخصي، كلمة المرور، والمحفظة.
+- `app/api/admin/*`: عمليات الإدارة المحمية.
 
-## النظام الهرمي الديناميكي (فئات ← فئات فرعية ← خدمات)
+## النظام الهرمي الديناميكي
 
-تم تفعيل إدارة المحتوى بالكامل من لوحة التحكم بحيث لا تبقى الفئات أو الخدمات ثابتة داخل الكود:
+إدارة الفئات والخدمات ديناميكية بالكامل من لوحة التحكم:
 
-- إضافة/تعديل/حذف فئة رئيسية.
-- إضافة/تعديل/حذف فئة فرعية وربطها بفئة رئيسية.
-- إضافة/تعديل/حذف خدمات داخل الفئة الفرعية.
-- دعم: الصورة، الوصف، السعر، الحالة، الترتيب، وslug تلقائي.
-- دعم عرض ديناميكي في الواجهة:
-	- الرئيسية تعرض الفئات الرئيسية.
-	- صفحة الفئة الرئيسية تعرض الفئات الفرعية.
-	- صفحة الفئة الفرعية تعرض الخدمات.
-	- صفحة تفاصيل خدمة مستقلة.
+- إضافة وتعديل وحذف الفئات الرئيسية.
+- إضافة وتعديل وحذف الفئات الفرعية وربطها بالفئة الرئيسية.
+- إضافة وتعديل وحذف الخدمات داخل الفئات الفرعية.
+- دعم الصور، الوصف، السعر، الحالة، الترتيب، و`slug` التلقائي.
 
-### تشغيل Migration الخاص بالهيكل الهرمي
-
-نفّذ ملف SQL التالي داخل Supabase SQL Editor:
+## ملفات الترحيل
 
 - `hierarchy_migration.sql`
-
-### تشغيل Migration الخاص بالحسابات والمحفظة
-
-نفّذ ملف SQL التالي داخل Supabase SQL Editor:
-
 - `account_system_migration.sql`
 
-هذا الملف يضيف:
-
-- حقول ملف شخصي إضافية (الدولة/النبذة/اللغة/العملة).
-- سياسات RLS أقوى.
-- دوال ذرية:
-	- `create_service_order_tx` لإنشاء الطلب وخصم الرصيد داخل معاملة واحدة.
-	- `admin_adjust_wallet_balance` لتعديل الرصيد من الأدمن بشكل آمن.
-
-### خطة التنفيذ على مراحل
-
-المرحلة 1 (مكتملة):
-
-- APIs الحساب والمحفظة:
-	- `GET/PATCH /api/account/profile`
-	- `POST /api/account/password`
-	- `GET /api/account/wallet`
-
-المرحلة 2 (مكتملة):
-
-- APIs الإدارة:
-	- `GET /api/admin/users`
-	- `POST /api/admin/wallet-adjust`
-- صفحة إدارة المستخدمين: `/dashboard/admin-users`
-
-المرحلة 3 (مكتملة):
-
-- ربط شراء الخدمة بمعاملة ذرية عبر `create_service_order_tx`.
-- توحيد المصادقة عبر Bearer token في APIs الحساسة.
-
-المرحلة 4 (مكتملة):
-
-- إزالة المفاتيح الصلبة من صفحات Next.js (auth/dashboard).
-
-المرحلة 5 (مكتملة):
-
-- إزالة المفاتيح الصلبة من `data-engine.js` و`public/data-engine.js`.
-- نقل إعداد Supabase إلى `admin-config.js` (غير مرفوع للمستودع).
-
-ثم أعد تشغيل التطبيق:
-
-```bash
-npm run dev
-```
-
-### ملاحظات API احترافية
-
-- `POST /api/orders/create` يدعم الآن:
-	- `Authorization: Bearer <token>` (مفضل)
-	- أو `user_token` داخل الـ body للتوافق مع الكود القديم.
-	- يستخدم دالة قاعدة البيانات `create_service_order_tx` لضمان خصم الرصيد وإنشاء الطلب بمعاملة واحدة.
-- `GET/POST /api/orders/sync`:
-	- يجب تعريف `CRON_SECRET` في البيئة.
-	- يجب إرسال الهيدر `x-cron-secret` بنفس القيمة.
-	- إذا لم يكن السر مضبوطًا فالمسار يرجع `503` بدل السماح بالمزامنة العامة.
-
-## حماية الإنتاج
+## الحماية
 
 - Security headers مفعلة في `next.config.mjs`.
 - تعطيل `x-powered-by`.
 - منع الكاش في endpoint الصحة.
 
-## البناء للإنتاج
+## البناء والتشغيل للإنتاج
 
 ```bash
 npm run build
 npm run start
+```
+
+## النشر إلى Cloudflare
+
+```bash
+npm run deploy
 ```

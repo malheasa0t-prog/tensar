@@ -1,6 +1,6 @@
 ﻿-- ============================================================
 -- TechZone - Complete Supabase schema
--- Dynamic-first Supabase schema compatible with the current Next.js codebase
+-- Dynamic-first Supabase schema compatible with the current web application codebase
 -- ============================================================
 
 begin;

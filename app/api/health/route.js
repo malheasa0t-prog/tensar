@@ -5,8 +5,8 @@ export async function GET() {
 
   return Response.json({
     status: 'ok',
-    runtime: 'nodejs',
-    framework: 'nextjs',
+    runtime: 'server',
+    platform: 'web',
     version: process.env.npm_package_version || 'unknown',
     uptime_seconds: Math.floor(process.uptime()),
     timestamp: now.toISOString(),
