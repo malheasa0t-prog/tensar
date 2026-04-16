@@ -48,12 +48,16 @@
 }
 
 .mediaImage {
-  object-fit: contain;
-  padding: 1.5rem;
+  object-fit: cover;
+  padding: 0;
   transform: none;
-  filter: none;
-  /* Add a stylish background for the transparent logos */
-  background: radial-gradient(ellipse at center, rgba(30, 41, 59, 0.4), transparent);
+  filter: brightness(0.85) saturate(1.15);
+  transition: filter 0.35s ease, transform 0.35s ease;
+}
+
+.card:hover .mediaImage {
+  filter: brightness(1) saturate(1.2);
+  transform: scale(1.05);
 }
 
 .iconFallback {
