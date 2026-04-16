@@ -19,8 +19,13 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Failed to resolve admin runtime config.', error);
+    const safeErrorMessage =
+      error instanceof Error && error.message
+        ? error.message
+        : 'Legacy admin runtime config is unavailable.';
+
     return NextResponse.json(
-      { success: false, error: 'Legacy admin runtime config is unavailable.' },
+      { success: false, error: safeErrorMessage },
       { status: 500 }
     );
   }

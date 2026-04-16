@@ -1,0 +1,25 @@
+{
+  "name": "tensar-no-next",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node ./scripts/generate-static-assets.mjs",
+    "preview": "vite preview",
+    "test": "node --test ./lib/staticSiteAssets.test.mjs ./worker/lib/env.test.mjs ./worker/lib/provider.test.mjs ./worker/lib/profile.test.mjs ./worker/lib/orderSync.test.mjs ./worker/lib/checkout.test.mjs",
+    "worker:deploy": "npx wrangler deploy -c ./wrangler.jsonc",
+    "worker:dev": "npx wrangler dev -c ./wrangler.jsonc"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.2",
+    "lucide-react": "^0.577.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "^7.6.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "vite": "^6.3.5"
+  }
+}
