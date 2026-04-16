@@ -163,7 +163,7 @@
         const notice = document.createElement('div');
         notice.id = 'legacyReadOnlyNotice';
         notice.style.cssText = 'margin:12px 16px 0;padding:12px 14px;border:1px solid rgba(241,196,15,.45);background:rgba(241,196,15,.12);border-radius:10px;color:#f5c542;font-size:.92rem;line-height:1.7';
-        notice.innerHTML = 'وضع آمن: لوحة الإدارة القديمة تعمل حاليًا بصلاحية قراءة فقط لمنع الكتابة المباشرة من المتصفح. لإجراء تعديلات فعلية استخدم لوحة Next.js الحديثة.';
+        notice.innerHTML = 'وضع آمن: لوحة الإدارة القديمة تعمل حاليًا بصلاحية قراءة فقط لمنع الكتابة المباشرة من المتصفح. لإجراء تعديلات فعلية استخدم الواجهة الإدارية الحديثة.';
 
         const content = document.getElementById('adminContent');
         if (content && content.parentNode) {

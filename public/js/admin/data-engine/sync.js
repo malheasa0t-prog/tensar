@@ -297,7 +297,7 @@ export function commitDb(action, actorId, details, resource) {
     assertAdminRuntimeAccess();
     commitLog(action, actorId, details);
     if (!legacyAdminWriteEnabled) {
-        console.warn('Legacy admin write skipped (read-only mode). Migrate this action to Next.js API routes.', action);
+        console.warn('Legacy admin write skipped (read-only mode). Migrate this action to the modern API routes.', action);
         return Promise.resolve();
     }
     if (!resource) return Promise.resolve();
