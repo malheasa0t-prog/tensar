@@ -140,3 +140,27 @@ test("bootstrap should surface a generic runtime error instead of leaving the sc
   assert.equal(harness.loginOverlay.style.display, "flex");
   assert.equal(harness.loginError.textContent, "Failed to load admin runtime config (503).");
 });
+
+test("bootstrap should use preloaded admin config without calling the runtime route", async () => {
+  const harness = createBootstrapHarness();
+  let fetchCalls = 0;
+
+  harness.context.window.__TZ_SUPABASE_URL = "https://demo.supabase.co";
+  harness.context.window.__TZ_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_demo";
+  harness.context.window.__TZ_LEGACY_ADMIN_WRITE_ENABLED = true;
+  harness.context.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("fetch should not run when static admin config exists");
+  };
+
+  vm.runInContext(SCRIPT_SOURCE, harness.context, {
+    filename: "public/js/admin/bootstrap.js",
+  });
+  await flushBootstrapTasks();
+
+  assert.equal(fetchCalls, 0);
+  assert.equal(harness.context.window.__TZ_SUPABASE_URL, "https://demo.supabase.co");
+  assert.equal(harness.context.window.__TZ_SUPABASE_PUBLISHABLE_KEY, "sb_publishable_demo");
+  assert.equal(harness.context.window.__TZ_SUPABASE_ANON_KEY, "sb_publishable_demo");
+  assert.equal(harness.context.window.__TZ_LEGACY_ADMIN_WRITE_ENABLED, true);
+});

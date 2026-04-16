@@ -1,5 +1,5 @@
-import HomeHeroSection from "@/components/home/HomeHeroSection";
 import HomeShowcaseSections from "@/components/home/HomeShowcaseSections";
+import HomeHeroSection from "../components/home/HomeHeroSection.jsx";
 import { useAsyncPageData } from "../hooks/useAsyncPageData.js";
 import { loadHomePageSnapshot } from "../data/publicPageData.js";
 

@@ -66,6 +66,13 @@ npm run dev
 npm run build
 ```
 
+بعد البناء، يتم توليد الملفات التالية داخل `dist` تلقائيًا:
+
+- `admin-config.js`
+- `robots.txt`
+- `sitemap.xml`
+- `_redirects`
+
 ## متغيرات البيئة
 
 استخدم القيم التالية داخل `.env`:
@@ -75,6 +82,7 @@ npm run build
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_SITE_URL`
 - `SITE_URL`
+- `ENABLE_LEGACY_ADMIN_WRITE`
 - `VITE_BACKEND_ORIGIN`
 
 ## ملاحظات مهمة
@@ -82,3 +90,4 @@ npm run build
 - هذه النسخة لا تنشر تلقائيًا إلى `tensr.systems`.
 - الموقع الحي الحالي ما زال يعمل من مشروع `Next.js` الأصلي.
 - الهدف الحالي هو إنشاء بديل آمن ومتدرج، وليس استبدال النشر الحالي مباشرة.
+- لوحة الأدمن في هذه النسخة يمكنها الإقلاع من `admin-config.js` الثابت دون الاعتماد على `/api/admin/runtime`.

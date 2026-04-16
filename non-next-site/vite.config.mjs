@@ -88,14 +88,29 @@ export default defineConfig(({ mode }) => {
     plugins: [appJsxProxyPlugin(), jsxInJsFilesPlugin(), react()],
     publicDir: path.resolve(repoRoot, "public"),
     resolve: {
-      alias: {
-        "@": repoRoot,
-        "next/link": path.resolve(currentDir, "src/compat/next-link.jsx"),
-        "next/image": path.resolve(currentDir, "src/compat/next-image.jsx"),
-        "next/navigation": path.resolve(currentDir, "src/compat/next-navigation.js"),
-        "next/script": path.resolve(currentDir, "src/compat/next-script.jsx"),
-        "next/dynamic": path.resolve(currentDir, "src/compat/next-dynamic.jsx")
-      }
+      alias: [
+        { find: "@", replacement: repoRoot },
+        {
+          find: "next/link",
+          replacement: path.resolve(currentDir, "src/compat/next-link.jsx")
+        },
+        {
+          find: "next/image",
+          replacement: path.resolve(currentDir, "src/compat/next-image.jsx")
+        },
+        {
+          find: "next/navigation",
+          replacement: path.resolve(currentDir, "src/compat/next-navigation.js")
+        },
+        {
+          find: "next/script",
+          replacement: path.resolve(currentDir, "src/compat/next-script.jsx")
+        },
+        {
+          find: "next/dynamic",
+          replacement: path.resolve(currentDir, "src/compat/next-dynamic.jsx")
+        }
+      ]
     },
     server: {
       fs: {

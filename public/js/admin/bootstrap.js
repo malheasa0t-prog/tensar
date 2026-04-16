@@ -82,12 +82,62 @@
     }
 
     /**
+     * Reads any runtime config that was already injected into the page.
+     *
+     * @returns {{ supabasePublishableKey: string, supabaseUrl: string, writeEnabled: boolean }}
+     */
+    function readPreloadedRuntimeConfig() {
+        const publishableKey = String(
+            window.__TZ_SUPABASE_PUBLISHABLE_KEY || window.__TZ_SUPABASE_ANON_KEY || ''
+        ).trim();
+
+        return {
+            supabasePublishableKey: publishableKey,
+            supabaseUrl: String(window.__TZ_SUPABASE_URL || '').trim(),
+            writeEnabled: window.__TZ_LEGACY_ADMIN_WRITE_ENABLED === true
+        };
+    }
+
+    /**
+     * Checks whether one runtime config object is complete enough to bootstrap the admin.
+     *
+     * @param {{ supabasePublishableKey?: string, supabaseUrl?: string }} config
+     * @returns {boolean}
+     */
+    function hasCompleteRuntimeConfig(config) {
+        return Boolean(
+            String(config?.supabaseUrl || '').trim()
+            && String(config?.supabasePublishableKey || '').trim()
+        );
+    }
+
+    /**
+     * Tries the static runtime config before falling back to the server runtime route.
+     *
+     * @returns {boolean}
+     */
+    function applyPreloadedRuntimeConfigIfAvailable() {
+        const preloadedConfig = readPreloadedRuntimeConfig();
+
+        if (!hasCompleteRuntimeConfig(preloadedConfig)) {
+            return false;
+        }
+
+        applyRuntimeConfig(preloadedConfig);
+        return true;
+    }
+
+    /**
      * Loads the legacy admin runtime config from the server.
      *
      * @returns {Promise<void>}
      * @throws {Error}
      */
     async function loadRuntimeConfig() {
+        if (applyPreloadedRuntimeConfigIfAvailable()) {
+            return;
+        }
+
         const response = await fetch(ADMIN_RUNTIME_ROUTE, {
             cache: 'no-store',
             headers: { accept: 'application/json' }
