@@ -48,10 +48,12 @@
 }
 
 .mediaImage {
-  object-fit: cover;
-  padding: 0;
+  object-fit: contain;
+  padding: 1.5rem;
   transform: none;
   filter: none;
+  /* Add a stylish background for the transparent logos */
+  background: radial-gradient(ellipse at center, rgba(30, 41, 59, 0.4), transparent);
 }
 
 .iconFallback {
