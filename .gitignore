@@ -1,9 +1,10 @@
 # Dependencies
 node_modules
 
-# Next.js build
+# Framework build
 .next
 out
+dist
 
 # Environment variables (SECRETS - never commit!)
 .env
@@ -43,3 +44,5 @@ audit-shots/
 .vscode
 .edge-headless
 .sixth
+.open-next
+.wrangler

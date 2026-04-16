@@ -1,27 +1,56 @@
-import "../techfix-pages.css";
-import Link from "next/link";
-import AppIcon from "@/components/AppIcon";
-import {
-  getContactMethods,
-  getSocialLinks,
-} from "@/lib/contactChannels";
-import { getPageMetadata } from "@/lib/siteMetadata";
-import { getSiteSettings } from "@/lib/siteSettings";
+/**
+ * Contact Page — Client-side version.
+ *
+ * Loads site settings on mount, then renders contact methods,
+ * working hours, and social links.
+ */
 
-export const revalidate = 60;
+'use client';
 
-export async function generateMetadata() {
-  return getPageMetadata({
-    title: "تواصل معنا",
-    description: "طرق التواصل المباشرة مع المتجر في صفحة بسيطة وواضحة.",
-  });
-}
+import { useState, useEffect } from 'react';
+import '@/app/techfix-pages.css';
+import Link from 'next/link';
+import AppIcon from '@/components/AppIcon';
+import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
+import { getContactMethods, getSocialLinks } from '@/lib/contactChannels';
+import { getSiteSettings } from '@/lib/siteSettings';
 
-export default async function ContactPage() {
-  const siteSettings = await getSiteSettings();
+/**
+ * Renders the contact page.
+ *
+ * @returns {JSX.Element}
+ */
+export default function ContactPage() {
+  const [siteSettings, setSiteSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadData() {
+      try {
+        const settings = await getSiteSettings();
+        if (!cancelled) setSiteSettings(settings);
+      } catch (error) {
+        console.error('ContactPage: failed to load', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading || !siteSettings) {
+    return <CatalogPageSkeleton productCount={3} />;
+  }
+
   const { company } = siteSettings;
   const contactMethods = getContactMethods(siteSettings);
-  const workingHours = siteSettings.content?.workingHours || [];
+  const workingHours = Array.isArray(siteSettings.content?.workingHours)
+    ? siteSettings.content.workingHours
+    : [];
   const socialLinks = getSocialLinks(siteSettings);
 
   return (
@@ -46,13 +75,12 @@ export default async function ContactPage() {
                       key={item.key}
                       href={item.href}
                       className="contact-detail-card"
-                      target={item.external ? "_blank" : undefined}
-                      rel={item.external ? "noopener noreferrer" : undefined}
+                      target={item.external ? '_blank' : undefined}
+                      rel={item.external ? 'noopener noreferrer' : undefined}
                     >
                       <span className="contact-detail-icon">
                         <AppIcon name={item.icon} size={18} />
                       </span>
-
                       <div>
                         <h3>{item.label}</h3>
                         <p>{item.value}</p>
@@ -87,7 +115,7 @@ export default async function ContactPage() {
                 </span>
                 <div>
                   <h3>عنوان الفرع</h3>
-                  <p>{company?.address || "سيتم تزويدك بالموقع الدقيق عند التواصل المباشر مع فريقنا."}</p>
+                  <p>{company?.address || 'سيتم تزويدك بالموقع الدقيق عند التواصل المباشر مع فريقنا.'}</p>
                 </div>
               </div>
 
