@@ -1,8 +1,9 @@
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "tensar-static",
+  "name": "tensar",
   "main": "./worker/index.mjs",
   "compatibility_date": "2026-04-16",
+  "keep_vars": true,
   "observability": {
     "enabled": true
   },
