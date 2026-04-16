@@ -5,7 +5,7 @@
  * notFound, redirect, and ReadonlyURLSearchParams.
  */
 
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams as useSearchParamsRRD } from 'react-router-dom';
 
 /**
  * Returns the current pathname string.
@@ -55,7 +55,19 @@ export function redirect(url) {
   window.location.href = url;
 }
 
-export { useParams, useSearchParams };
+export { useParams };
+
+/**
+ * Returns the current URL search params object (Next.js compatible).
+ *
+ * React Router returns [params, setter] but Next.js returns params directly.
+ *
+ * @returns {URLSearchParams}
+ */
+export function useSearchParams() {
+  const [params] = useSearchParamsRRD();
+  return params;
+}
 
 /**
  * Re-export ReadonlyURLSearchParams as a no-op class for compatibility.
