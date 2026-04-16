@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build && node ./scripts/generate-static-assets.mjs",
     "preview": "vite preview",
-    "test": "node --test ./lib/staticSiteAssets.test.mjs"
+    "test": "node --test ./lib/staticSiteAssets.test.mjs ./worker/lib/env.test.mjs ./worker/lib/provider.test.mjs ./worker/lib/profile.test.mjs ./worker/lib/orderSync.test.mjs ./worker/lib/checkout.test.mjs",
+    "worker:deploy": "npx wrangler deploy -c ./wrangler.jsonc",
+    "worker:dev": "npx wrangler dev -c ./wrangler.jsonc"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.2",
