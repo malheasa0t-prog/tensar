@@ -1,174 +1,228 @@
 /**
- * Cloudflare Pages Function — Orders Create API.
- *
- * Handles POST /api/orders/create — creates digital service orders
- * with wallet deduction and optional provider API forwarding.
+ * Cloudflare Pages Function for creating digital service orders.
  */
 
-import { createSupabaseAdmin, extractBearerToken, errorResponse, successResponse } from '../../_lib/supabase.js';
+import { createProviderOrder } from "../../_lib/providerApi.js";
+import { createSupabaseAdmin, extractBearerToken, errorResponse, successResponse } from "../../_lib/supabase.js";
 
-/* ─── Constants ─── */
-
-const PROVIDER_API_URL = 'https://serva-s.com/api/v2/order';
-
-/* ─── Utility Functions ─── */
+const ORDER_MESSAGES = Object.freeze({
+  BANNED: "حسابك محظور. تواصل مع الإدارة.",
+  INACTIVE_SERVICE: "هذه الخدمة غير متوفرة حاليًا",
+  INSUFFICIENT_BALANCE: "رصيدك غير كافٍ. يرجى شحن المحفظة أولًا.",
+  INVALID_REQUEST: "البيانات غير مكتملة: service_id, quantity, user_token مطلوبة",
+  SERVICE_NOT_FOUND: "الخدمة غير موجودة",
+  SUCCESS: "تم إنشاء الطلب بنجاح!",
+  SUCCESS_TITLE: "تم إنشاء طلبك بنجاح",
+  UNAUTHORIZED: "غير مصرح - يجب تسجيل الدخول",
+  UNEXPECTED: "حدث خطأ غير متوقع",
+});
 
 /**
- * Validates a positive number.
+ * Validates that a value is a positive number.
  *
- * @param {unknown} value
- * @returns {number | null}
+ * @param {unknown} value - Raw quantity value.
+ * @returns {number | null} Normalized number or null for invalid input.
  */
 function asPositiveNumber(value) {
-  const num = Number(value);
-  return Number.isFinite(num) && num > 0 ? num : null;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
 }
 
 /**
- * Extracts auth token from header or body.
+ * Returns the bearer token from the request or request body.
  *
- * @param {Request} request
- * @param {Record<string, unknown>} body
- * @returns {string}
+ * @param {Request} request - Incoming HTTP request.
+ * @param {Record<string, unknown>} body - Parsed request body.
+ * @returns {string} Auth token or an empty string.
  */
 function getAuthToken(request, body) {
-  const token = extractBearerToken(request);
-  return token || body?.user_token || '';
+  return extractBearerToken(request) || body?.user_token || "";
 }
 
 /**
- * Calls the Serva-S provider API to create an external order.
+ * Builds the localized quantity validation message.
  *
- * @param {string} apiKey
- * @param {string} serviceId
- * @param {string | null} link
- * @param {number} quantity
- * @returns {Promise<{ success: boolean, orderId?: string, error?: string }>}
+ * @param {number} minQuantity - Minimum allowed quantity.
+ * @param {number} maxQuantity - Maximum allowed quantity.
+ * @returns {string} Localized quantity-range message.
  */
-async function createProviderOrder(apiKey, serviceId, link, quantity) {
-  if (!apiKey) return { success: false, error: 'Provider API key not configured' };
-
-  try {
-    const params = new URLSearchParams({
-      key: apiKey,
-      action: 'add',
-      service: serviceId,
-      quantity: String(quantity),
-    });
-    if (link) params.set('link', link);
-
-    const response = await fetch(`${PROVIDER_API_URL}?${params.toString()}`);
-    const data = await response.json();
-
-    if (data?.order) {
-      return { success: true, orderId: String(data.order) };
-    }
-    return { success: false, error: data?.error || 'Unknown provider error' };
-  } catch (err) {
-    return { success: false, error: err.message || 'Provider request failed' };
-  }
+function buildQuantityRangeMessage(minQuantity, maxQuantity) {
+  return `الكمية يجب أن تكون بين ${minQuantity} و ${maxQuantity}`;
 }
 
-/* ─── Main Handler ─── */
+/**
+ * Maps transactional RPC errors to stable public responses.
+ *
+ * @param {string} message - Raw RPC error message.
+ * @param {{ min_qty: number, max_qty: number }} service - Selected service row.
+ * @returns {{ error: string, status: number }} Public-safe error details.
+ */
+function mapTransactionError(message, service) {
+  if (message.includes("Insufficient wallet balance")) {
+    return { error: ORDER_MESSAGES.INSUFFICIENT_BALANCE, status: 400 };
+  }
+
+  if (message.includes("Service not found")) {
+    return { error: ORDER_MESSAGES.SERVICE_NOT_FOUND, status: 404 };
+  }
+
+  if (message.includes("Service is not active")) {
+    return { error: ORDER_MESSAGES.INACTIVE_SERVICE, status: 400 };
+  }
+
+  if (message.includes("Quantity out of range")) {
+    return {
+      error: buildQuantityRangeMessage(service.min_qty, service.max_qty),
+      status: 400,
+    };
+  }
+
+  return { error: message || "تعذر إنشاء الطلب", status: 400 };
+}
 
 /**
- * POST /api/orders/create — creates a digital service order.
+ * Creates the notification body for a newly created order.
  *
- * @param {EventContext} context
- * @returns {Promise<Response>}
+ * @param {string} serviceName - Display name of the ordered service.
+ * @param {number} quantity - Ordered quantity.
+ * @param {number} total - Charged wallet amount.
+ * @returns {string} Human-readable notification body.
+ */
+function buildOrderNotificationBody(serviceName, quantity, total) {
+  return `طلب ${serviceName} بكمية ${quantity} — المبلغ: ${total.toFixed(2)} د.أ`;
+}
+
+/**
+ * Creates a digital service order and optionally forwards it to Serva-S.
+ *
+ * @param {EventContext} context - Cloudflare Pages function context.
+ * @returns {Promise<Response>} API response.
  */
 export async function onRequestPost(context) {
   const { env, request } = context;
 
   try {
     const body = await request.json();
-    const { service_id, quantity, link } = body || {};
+    const { service_id: serviceId, quantity, link } = body || {};
     const userToken = getAuthToken(request, body);
+    const normalizedQuantity = asPositiveNumber(quantity);
 
-    const normalizedQty = asPositiveNumber(quantity);
-    if (!service_id || !normalizedQty || !userToken) {
-      return errorResponse('البيانات غير مكتملة: service_id, quantity, user_token مطلوبة', 400);
+    if (!serviceId || !normalizedQuantity || !userToken) {
+      return errorResponse(ORDER_MESSAGES.INVALID_REQUEST, 400);
     }
 
     const admin = createSupabaseAdmin(env);
-
-    /* ── Verify user session ── */
     const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
     const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY;
-    const { createClient } = await import('@supabase/supabase-js');
+    const { createClient } = await import("@supabase/supabase-js");
     const userClient = createClient(supabaseUrl, anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: { user }, error: authErr } = await userClient.auth.getUser(userToken);
-    if (authErr || !user) return errorResponse('غير مصرح — يجب تسجيل الدخول', 401);
-
-    /* ── Check user status ── */
-    const { data: profile } = await admin.from('user_profiles').select('status').eq('user_id', user.id).single();
-    if (profile?.status === 'banned') return errorResponse('حسابك محظور. تواصل مع الإدارة.', 403);
-
-    /* ── Fetch service ── */
-    const { data: service, error: srvErr } = await admin.from('services').select('*').eq('id', service_id).single();
-    if (srvErr || !service) return errorResponse('الخدمة غير موجودة', 404);
-    if (service.status !== 'active') return errorResponse('هذه الخدمة غير متوفرة حالياً', 400);
-
-    /* ── Validate quantity ── */
-    if (normalizedQty < service.min_qty || normalizedQty > service.max_qty) {
-      return errorResponse(`الكمية يجب أن تكون بين ${service.min_qty} و ${service.max_qty}`, 400);
+    const {
+      data: { user },
+      error: authError,
+    } = await userClient.auth.getUser(userToken);
+    if (authError || !user) {
+      return errorResponse(ORDER_MESSAGES.UNAUTHORIZED, 401);
     }
 
-    /* ── Execute atomic order+wallet transaction ── */
-    const { data: txResult, error: txError } = await admin.rpc('create_service_order_tx', {
+    const { data: profile } = await admin
+      .from("user_profiles")
+      .select("status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile?.status === "banned") {
+      return errorResponse(ORDER_MESSAGES.BANNED, 403);
+    }
+
+    const { data: service, error: serviceError } = await admin
+      .from("services")
+      .select("*")
+      .eq("id", serviceId)
+      .single();
+
+    if (serviceError || !service) {
+      return errorResponse(ORDER_MESSAGES.SERVICE_NOT_FOUND, 404);
+    }
+
+    if (service.status !== "active") {
+      return errorResponse(ORDER_MESSAGES.INACTIVE_SERVICE, 400);
+    }
+
+    if (normalizedQuantity < service.min_qty || normalizedQuantity > service.max_qty) {
+      return errorResponse(buildQuantityRangeMessage(service.min_qty, service.max_qty), 400);
+    }
+
+    const { data: transactionResult, error: transactionError } = await admin.rpc("create_service_order_tx", {
       p_user_id: user.id,
-      p_service_id: service_id,
-      p_quantity: normalizedQty,
+      p_service_id: serviceId,
+      p_quantity: normalizedQuantity,
       p_link: link || null,
     });
 
-    if (txError) {
-      const msg = txError.message || 'تعذر إنشاء الطلب';
-      if (msg.includes('Insufficient wallet balance')) return errorResponse('رصيدك غير كافٍ. يرجى شحن المحفظة أولاً.', 400);
-      if (msg.includes('Service not found')) return errorResponse('الخدمة غير موجودة', 404);
-      if (msg.includes('Service is not active')) return errorResponse('هذه الخدمة غير متوفرة حالياً', 400);
-      if (msg.includes('Quantity out of range')) return errorResponse(`الكمية يجب أن تكون بين ${service.min_qty} و ${service.max_qty}`, 400);
-      return errorResponse(msg, 400);
+    if (transactionError) {
+      const transactionFailure = mapTransactionError(transactionError.message || "", service);
+      return errorResponse(transactionFailure.error, transactionFailure.status);
     }
 
-    const txData = Array.isArray(txResult) ? txResult[0] : txResult;
-    const orderId = txData?.order_id;
-    const total = Number(txData?.total || 0);
-    const newBalance = Number(txData?.new_balance || 0);
+    const transactionData = Array.isArray(transactionResult) ? transactionResult[0] : transactionResult;
+    const orderId = transactionData?.order_id;
+    const total = Number(transactionData?.total || 0);
+    const newBalance = Number(transactionData?.new_balance || 0);
 
-    if (!orderId) return errorResponse('فشل إنشاء الطلب', 500);
+    if (!orderId) {
+      return errorResponse("فشل إنشاء الطلب", 500);
+    }
 
-    /* ── Notify user ── */
-    await admin.from('notifications').insert([{
-      user_id: user.id,
-      title: 'تم إنشاء طلبك بنجاح',
-      body: `طلب ${service.name} بكمية ${normalizedQty} — المبلغ: ${total.toFixed(2)} د.أ`,
-      type: 'success',
-      reference_type: 'order',
-      reference_id: orderId,
-    }]);
+    await admin.from("notifications").insert([
+      {
+        user_id: user.id,
+        title: ORDER_MESSAGES.SUCCESS_TITLE,
+        body: buildOrderNotificationBody(service.name, normalizedQuantity, total),
+        type: "success",
+        reference_type: "order",
+        reference_id: orderId,
+      },
+    ]);
 
-    /* ── Forward to provider API ── */
     if (service.provider_service_id) {
-      const providerApiKey = env.SERVAS_API_KEY || env.PROVIDER_API_KEY;
-      const providerResult = await createProviderOrder(providerApiKey, service.provider_service_id, link || null, normalizedQty);
+      const providerResult = await createProviderOrder(env, {
+        serviceId: service.provider_service_id,
+        quantity: normalizedQuantity,
+        link: link || null,
+      });
 
       if (providerResult.success && providerResult.orderId) {
-        await admin.from('service_orders').update({ external_order_id: providerResult.orderId, status: 'processing' }).eq('id', orderId);
+        await admin
+          .from("service_orders")
+          .update({ external_order_id: providerResult.orderId, status: "processing" })
+          .eq("id", orderId);
       } else {
-        await admin.from('service_orders').update({
-          metadata: { provider_error: providerResult.error, provider_attempted_at: new Date().toISOString() },
-        }).eq('id', orderId);
+        await admin
+          .from("service_orders")
+          .update({
+            metadata: {
+              provider_error: providerResult.error,
+              provider_attempted_at: new Date().toISOString(),
+            },
+          })
+          .eq("id", orderId);
       }
     }
 
-    return successResponse({ order_id: orderId, total, new_balance: newBalance, message: 'تم إنشاء الطلب بنجاح!' }, 201);
-
-  } catch (err) {
-    console.error('Order creation error:', err);
-    return errorResponse('حدث خطأ غير متوقع', 500);
+    return successResponse(
+      {
+        order_id: orderId,
+        total,
+        new_balance: newBalance,
+        message: ORDER_MESSAGES.SUCCESS,
+      },
+      201
+    );
+  } catch (error) {
+    console.error("Order creation error:", error);
+    return errorResponse(ORDER_MESSAGES.UNEXPECTED, 500);
   }
 }

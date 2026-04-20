@@ -4,6 +4,7 @@
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const PROVIDER_MISSING_CONFIG_STATUS = 500;
+const PROVIDER_INVALID_PAYLOAD_STATUS = 400;
 const PROVIDER_UPSTREAM_FAILURE_STATUS = 502;
 
 const SERVA_ERROR_MESSAGES = Object.freeze({
@@ -25,7 +26,7 @@ const SERVA_ERROR_MESSAGES = Object.freeze({
  */
 export function readProviderConfig(env) {
   return {
-    apiKey: String(env?.PROVIDER_API_KEY ?? "").trim(),
+    apiKey: String(env?.PROVIDER_API_KEY ?? env?.SERVAS_API_KEY ?? "").trim(),
     baseUrl: String(env?.PROVIDER_API_BASE_URL ?? "").trim(),
     timeoutMs: Number(env?.PROVIDER_API_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS,
   };
@@ -163,4 +164,57 @@ export async function getProviderServices(env, options = {}) {
   }
 
   return { success: true, services: Array.isArray(result.data) ? result.data : [] };
+}
+
+/**
+ * Creates a Serva-S order using the shared provider transport.
+ *
+ * @param {Record<string, string | undefined>} env - Environment bindings.
+ * @param {{ serviceId: string | number, quantity: number, link?: string | null, fields?: Record<string, unknown> | null }} payload - Provider order payload.
+ * @param {{ fetchImpl?: typeof fetch }} [options={}] - Optional dependencies for tests.
+ * @returns {Promise<{ success: boolean, orderId?: string, error?: string, status?: number }>} Order result.
+ */
+export async function createProviderOrder(env, payload, options = {}) {
+  const serviceId = String(payload?.serviceId ?? "").trim();
+  const quantity = Number(payload?.quantity);
+  const link = typeof payload?.link === "string" ? payload.link.trim() : "";
+  const fields = payload?.fields;
+
+  if (!serviceId || !Number.isFinite(quantity) || quantity <= 0) {
+    return {
+      success: false,
+      error: "Provider order payload is invalid.",
+      status: PROVIDER_INVALID_PAYLOAD_STATUS,
+    };
+  }
+
+  const providerPayload = {
+    action: "add",
+    service: serviceId,
+    quantity,
+  };
+
+  if (link) {
+    providerPayload.link = link;
+  }
+
+  if (fields && typeof fields === "object" && Object.keys(fields).length > 0) {
+    providerPayload.fields = JSON.stringify(fields);
+  }
+
+  const result = await postProviderAction(env, providerPayload, options);
+  if (!result.success) {
+    return result;
+  }
+
+  const data = /** @type {{ order?: string | number }} */ (result.data ?? {});
+  if (!data.order) {
+    return {
+      success: false,
+      error: "Provider order response did not include an order id.",
+      status: PROVIDER_UPSTREAM_FAILURE_STATUS,
+    };
+  }
+
+  return { success: true, orderId: String(data.order) };
 }
