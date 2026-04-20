@@ -30,9 +30,10 @@
   pointer-events: none;
 }
 
-.card:hover {
+.card:hover,
+.card:focus-within {
   transform: translate3d(0, calc(var(--card-motion-hover-lift, 7px) * -1), 0)
-    scale(var(--card-motion-hover-scale, 1.012));
+    scale(var(--card-motion-hover-scale, 1.02));
   border-color: rgba(177, 92, 255, 0.34);
   box-shadow:
     0 0 20px rgba(131, 56, 236, 0.3),
@@ -66,6 +67,9 @@
 }
 
 .image {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: inherit;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -301,9 +305,22 @@
   box-shadow: 0 0 20px rgba(131, 56, 236, 0.28), 0 12px 22px rgba(131, 56, 236, 0.16);
 }
 
+.stockAlertButton {
+  background: linear-gradient(135deg, #0f766e 0%, #0ea5a4 48%, #22c55e 100%);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.24), 0 12px 22px rgba(14, 165, 164, 0.14);
+}
+
+.stockAlertButtonActive {
+  background: linear-gradient(135deg, #166534, #22c55e);
+}
+
 .addCartButtonSuccess {
   background: linear-gradient(135deg, #16a34a, #22c55e);
   animation: cart-pulse 0.6s ease-out;
+}
+
+.buttonSpinner {
+  animation: button-spin 0.9s linear infinite;
 }
 
 .ghostLink:hover,
@@ -402,6 +419,11 @@
   0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
   70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
   100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+@keyframes button-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes heart-pop {

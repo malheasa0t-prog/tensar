@@ -71,11 +71,11 @@ export default function LiveChatWidget() {
     const nextError = await sendDraft();
 
     if (nextError) {
-      showToast(nextError);
+      showToast(nextError, { type: "error", title: "تعذر الإرسال" });
       return;
     }
 
-    showToast("تم إرسال رسالتك إلى فريق الدعم.");
+    showToast("تم إرسال رسالتك إلى فريق الدعم.", { type: "success", title: "تم الإرسال" });
   }
 
   return (
@@ -115,8 +115,8 @@ export default function LiveChatWidget() {
           {!authLoading && !user ? (
             <div className={styles.signinPrompt}>
               <AppIcon name="lock" size={34} />
-              <h4>الدردشة المباشرة تحتاج حساباً مسجلاً</h4>
-              <p>سجل الدخول أولاً ليتم حفظ المحادثة داخل حسابك وتستقبل الردود والإشعارات مباشرة.</p>
+              <h4>الدردشة المباشرة تحتاج حسابًا مسجلًا</h4>
+              <p>سجل الدخول أولًا ليتم حفظ المحادثة داخل حسابك وتستقبل الردود والإشعارات مباشرة.</p>
               <Link href="/auth/login" className={styles.signinButton}>
                 <AppIcon name="lock" size={15} />
                 تسجيل الدخول
@@ -125,7 +125,7 @@ export default function LiveChatWidget() {
           ) : loading || authLoading ? (
             <div className={styles.emptyState}>
               <AppIcon name="refresh" size={30} />
-              <h4>جاري تحميل المحادثة</h4>
+              <h4>جارٍ تحميل المحادثة</h4>
               <p>نجهز لك سجل الرسائل الحالي والاتصال المباشر مع فريق الدعم.</p>
             </div>
           ) : (
@@ -175,8 +175,12 @@ export default function LiveChatWidget() {
                     </p>
 
                     <button type="submit" className={styles.composerButton} disabled={sending || !user}>
-                      <AppIcon name="send" size={15} />
-                      {sending ? "جاري الإرسال..." : "إرسال"}
+                      {sending ? (
+                        <span className={styles.composerSpinner} aria-hidden="true" />
+                      ) : (
+                        <AppIcon name="send" size={15} />
+                      )}
+                      {sending ? "جارٍ الإرسال..." : "إرسال"}
                     </button>
                   </div>
                 </form>

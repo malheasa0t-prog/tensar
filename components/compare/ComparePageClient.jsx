@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import AppIcon from "@/components/AppIcon";
+import Button from "@/components/Button";
 import { useCart } from "@/components/CartProvider";
 import { useComparison } from "@/components/ComparisonProvider";
+import FriendlyEmptyState from "@/components/FriendlyEmptyState";
 import { useToast } from "@/components/ToastProvider";
 import styles from "./ComparePageClient.module.css";
 
@@ -56,7 +58,7 @@ export default function ComparePageClient() {
     });
 
     if (!result?.ok) {
-      showToast(result?.message || "تعذر إضافة المنتج حالياً", { type: "error" });
+      showToast(result?.message || "تعذر إضافة المنتج حاليًا", { type: "error" });
       return;
     }
 
@@ -66,15 +68,19 @@ export default function ComparePageClient() {
 
   if (comparisonCount === 0) {
     return (
-      <section className={styles.emptyState}>
-        <div className={styles.emptyIcon}>
-          <AppIcon name="compare" size={34} />
-        </div>
-        <h2>لا توجد منتجات للمقارنة حالياً</h2>
-        <p>ابدأ من الكتالوج وأضف منتجين أو أكثر عبر زر المقارنة داخل البطاقة.</p>
-        <Link href="/products" className={styles.primaryButton}>
-          تصفح المنتجات
-        </Link>
+      <section className={styles.shell}>
+        <FriendlyEmptyState
+          tone="contrast"
+          icon="compare"
+          eyebrow="المقارنة جاهزة متى أردت"
+          title="لا توجد منتجات في لوحة المقارنة حاليًا"
+          description="أضف منتجين أو أكثر من الكتالوج عبر زر المقارنة داخل البطاقة، وسنرتب لك الفروقات هنا بشكل واضح."
+          actions={
+            <Button href="/products" variant="secondary">
+              تصفح المنتجات
+            </Button>
+          }
+        />
       </section>
     );
   }
@@ -84,7 +90,7 @@ export default function ComparePageClient() {
       <div className={styles.header}>
         <div>
           <span className={styles.eyebrow}>جدول المقارنة</span>
-          <h2>قارن بين المنتجات جنباً إلى جنب</h2>
+          <h2>قارن بين المنتجات جنبًا إلى جنب</h2>
           <p>راجع الأسعار والتقييمات والوصف قبل اتخاذ قرار الشراء.</p>
         </div>
 

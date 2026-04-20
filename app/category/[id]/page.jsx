@@ -9,6 +9,7 @@ import CategoryEmptyState from '@/components/category-page/CategoryEmptyState';
 import CategoryProductsSection from '@/components/category-page/CategoryProductsSection';
 import CategorySubcategoriesSection from '@/components/category-page/CategorySubcategoriesSection';
 import StatusPanel from '@/components/StatusPanel';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { useCategoryPage } from '@/hooks/useCategoryPage';
 
 /**
@@ -54,6 +55,16 @@ export default function CategoryPage() {
   }
 
   const hasSubCategories = !category.parent_id && subCategories.length > 0;
+
+  usePageSeo({
+    title: category.name,
+    description:
+      category.description ||
+      `تصفح فئة ${category.name} واكتشف المنتجات أو الأقسام الفرعية المتاحة لدى TechZone.`,
+    image: category.image,
+    canonicalPath: `/category/${category.slug || category.id || routeValue}`,
+    breadcrumbLabel: category.name,
+  });
 
   return (
     <section className="section page-top" style={{ paddingBottom: '4rem' }}>

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import AppIcon from "@/components/AppIcon";
 import ProductCard from "@/components/ProductCard";
+import { useToast } from "@/components/ToastProvider";
 import { useDashboardFavorites } from "@/hooks/useDashboardFavorites";
+import { buildFavoritesShareUrl } from "@/lib/favoritesShareModel";
 import styles from "./favoritesPage.module.css";
 
 /**
@@ -12,16 +14,66 @@ import styles from "./favoritesPage.module.css";
  * @returns {import("react").JSX.Element}
  */
 export default function DashboardFavoritesPage() {
+  const { showToast } = useToast();
   const {
     clearAllFavorites,
     error,
     favoriteCount,
+    favoriteIds,
     favoriteProducts,
     hasHydratedFavorites,
     loading,
     moveFavoriteToCart,
     removeFromFavorites,
   } = useDashboardFavorites();
+
+  /**
+   * Shares the current favorites list using native share or clipboard.
+   *
+   * @returns {Promise<void>}
+   */
+  async function handleShareFavorites() {
+    const shareUrl = buildFavoritesShareUrl({
+      favoriteIds,
+      origin: window.location.origin,
+    });
+
+    if (!shareUrl) {
+      showToast("أضف منتجات إلى المفضلة أولاً حتى تتمكن من مشاركتها.", { type: "info" });
+      return;
+    }
+
+    const sharePayload = {
+      title: "مفضلة TechZone",
+      text: "هذه قائمة المنتجات التي أعجبتني في TechZone.",
+      url: shareUrl,
+    };
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share(sharePayload);
+        showToast("تم تجهيز رابط مشاركة المفضلة.", { type: "success" });
+        return;
+      } catch (shareError) {
+        if (shareError?.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast("تم نسخ رابط المفضلة للمشاركة.", { type: "success" });
+        return;
+      } catch {
+        showToast("تعذر النسخ التلقائي على هذا المتصفح حالياً.", { type: "warning" });
+        return;
+      }
+    }
+
+    showToast("تعذر النسخ التلقائي على هذا المتصفح حالياً.", { type: "warning" });
+  }
 
   if (loading || !hasHydratedFavorites) {
     return (
@@ -51,11 +103,16 @@ export default function DashboardFavoritesPage() {
               {favoriteCount} منتج
             </span>
             <p className={styles.summaryNote}>
-              المنتجات المحفوظة هنا مرتبطة بهذا الجهاز، ويمكنك نقل أي منتج إلى السلة مباشرة من نفس الصفحة.
+              المنتجات المحفوظة هنا مرتبطة بهذا الجهاز، ويمكنك مشاركتها مع الأصدقاء أو نقل أي عنصر منها إلى السلة مباشرة.
             </p>
           </div>
 
           <div className={styles.summaryActions}>
+            <button type="button" className="btn btn-outline" onClick={handleShareFavorites}>
+              <AppIcon name="send" size={15} />
+              مشاركة المفضلة
+            </button>
+
             <Link href="/products" className="btn btn-primary">
               <AppIcon name="shopping-bag" size={15} />
               تصفح المنتجات

@@ -1,0 +1,95 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.piece,
+.pieceDot,
+.burst {
+  position: absolute;
+  opacity: 0;
+}
+
+.piece,
+.pieceDot {
+  inset-inline-start: var(--confetti-left);
+  inset-block-start: -8vh;
+  background: var(--confetti-color);
+  animation: confetti-fall var(--confetti-duration) cubic-bezier(0.2, 0.8, 0.2, 1) var(--confetti-delay) forwards;
+}
+
+.piece {
+  width: var(--confetti-size);
+  height: calc(var(--confetti-size) * 1.6);
+  border-radius: 4px;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--confetti-color) 40%, transparent);
+}
+
+.pieceDot {
+  width: calc(var(--confetti-size) * 0.85);
+  height: calc(var(--confetti-size) * 0.85);
+  border-radius: 999px;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--confetti-color) 46%, transparent);
+}
+
+.burst {
+  inset-inline-start: 50%;
+  inset-block-start: 24%;
+  width: min(26rem, 48vw);
+  height: min(26rem, 48vw);
+  border-radius: 999px;
+  transform: translate(-50%, -50%) scale(0.55);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 58%);
+  animation: confetti-burst 680ms ease-out forwards;
+}
+
+.burstAlt {
+  width: min(34rem, 60vw);
+  height: min(34rem, 60vw);
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.22), rgba(34, 211, 238, 0) 60%);
+  animation-duration: 940ms;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.72);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate3d(calc((50vw - var(--confetti-left)) * 0.08), 112vh, 0)
+      rotate(calc(var(--confetti-rotation) * 8))
+      scale(1);
+  }
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+
+  35% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    display: none;
+  }
+}

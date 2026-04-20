@@ -15,6 +15,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { loadSupabaseClient } from '../lib/loadSupabaseClient';
 import styles from './AiChatbot.module.css';
 
 /* ─────────────── الإعدادات الثابتة ─────────────── */
@@ -67,6 +68,12 @@ export default function AiChatbot() {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isOpen) {
+      void loadSupabaseClient();
+    }
+  }, [isOpen]);
+
   /**
    * يُرسل رسالة إلى الـ API ويعرض الرد.
    *
@@ -88,10 +95,24 @@ export default function AiChatbot() {
         .filter((msg) => msg !== WELCOME_MESSAGE)
         .map((msg) => ({ role: msg.role, content: msg.content }));
 
-      // إرسال الطلب إلى API Route
+      // الحصول على توكن المصادقة
+      const supabase = await loadSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setMessages((prev) => [...prev, {
+          role: 'assistant',
+          content: 'يجب تسجيل الدخول أولاً لاستخدام المحادثة الذكية. 🔐',
+        }]);
+        return;
+      }
+
+      // إرسال الطلب إلى API Route مع التوكن
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           message: trimmed,
           history,

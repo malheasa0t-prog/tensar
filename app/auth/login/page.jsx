@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AppIcon from '@/components/AppIcon';
+import Button from '@/components/Button';
+import { useToast } from '@/components/ToastProvider';
 import AuthProviderButton from '@/components/auth/AuthProviderButton';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
@@ -19,6 +21,7 @@ import {
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,6 +44,7 @@ export default function LoginPage() {
 
     if (validationError) {
       setError(validationError);
+      showToast(validationError, { type: 'warning', title: 'تحقق من البيانات' });
       return;
     }
 
@@ -49,7 +53,9 @@ export default function LoginPage() {
 
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
-      setError(mapLoginAuthError(authError));
+      const nextError = mapLoginAuthError(authError);
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر تسجيل الدخول' });
       setLoading(false);
       return;
     }
@@ -74,8 +80,11 @@ export default function LoginPage() {
     });
 
     if (providerError) {
-      const providerLabel = AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() || provider;
-      setError(mapOAuthProviderError({ provider: providerLabel, error: providerError }));
+      const providerLabel =
+        AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() || provider;
+      const nextError = mapOAuthProviderError({ provider: providerLabel, error: providerError });
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر المتابعة' });
       setActiveProvider('');
     }
   }
@@ -141,14 +150,15 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={loading || Boolean(activeProvider)}
-              className={loading ? 'btn btn-primary btn-block is-loading' : 'btn btn-primary btn-block'}
+              disabled={Boolean(activeProvider)}
+              loading={loading}
+              fullWidth
+              loadingLabel="جارٍ تسجيل الدخول..."
             >
-              <AppIcon name="arrow-left" size={16} />
-              {loading ? 'جارٍ تسجيل الدخول...' : 'دخول إلى الحساب'}
-            </button>
+              دخول إلى الحساب
+            </Button>
           </form>
 
           <div className="auth-divider">أو</div>

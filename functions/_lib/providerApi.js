@@ -1,0 +1,166 @@
+/**
+ * Serva-S provider helpers for Cloudflare Pages Functions.
+ */
+
+const DEFAULT_TIMEOUT_MS = 15000;
+const PROVIDER_MISSING_CONFIG_STATUS = 500;
+const PROVIDER_UPSTREAM_FAILURE_STATUS = 502;
+
+const SERVA_ERROR_MESSAGES = Object.freeze({
+  INVALID_API_KEY: "مفتاح API غير صالح.",
+  API_KEY_REVOKED: "مفتاح API تم إلغاؤه.",
+  API_ACCESS_NOT_ALLOWED: "الحساب غير مفعّل لاستخدام API.",
+  ACCOUNT_BANNED: "الحساب محظور من استخدام API.",
+  SERVICE_NOT_FOUND: "الخدمة غير موجودة عند المزود.",
+  INSUFFICIENT_BALANCE: "رصيد المزود غير كافٍ.",
+  DUPLICATE_ORDER: "الطلب مكرر وتم رفضه من المزود.",
+  ACTIVE_ORDER_EXISTS: "يوجد طلب نشط لنفس الرابط.",
+});
+
+/**
+ * Reads the provider configuration from environment bindings.
+ *
+ * @param {Record<string, string | undefined> | undefined} env - Environment bindings.
+ * @returns {{ apiKey: string, baseUrl: string, timeoutMs: number }} Provider config.
+ */
+export function readProviderConfig(env) {
+  return {
+    apiKey: String(env?.PROVIDER_API_KEY ?? "").trim(),
+    baseUrl: String(env?.PROVIDER_API_BASE_URL ?? "").trim(),
+    timeoutMs: Number(env?.PROVIDER_API_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS,
+  };
+}
+
+/**
+ * Maps raw provider errors into localized operator-facing messages.
+ *
+ * @param {string} errorText - Raw upstream error text.
+ * @returns {string} Localized error message.
+ */
+export function translateProviderError(errorText) {
+  const normalized = String(errorText ?? "").trim();
+  const errorCode = normalized.toUpperCase().replace(/[\s-]+/g, "_");
+
+  return SERVA_ERROR_MESSAGES[errorCode] || normalized || "خطأ غير معروف من المزود";
+}
+
+/**
+ * Parses an upstream JSON response without throwing opaque syntax errors.
+ *
+ * @param {Response} response - Upstream fetch response.
+ * @returns {Promise<{ data: unknown, rawBody: string }>} Parsed data and raw text.
+ * @throws {Error} When the upstream body is not valid JSON.
+ */
+export async function parseProviderJson(response) {
+  const rawBody = await response.text();
+
+  try {
+    return { data: JSON.parse(rawBody), rawBody };
+  } catch (error) {
+    throw new Error(`استجابة غير صالحة من المزود: ${rawBody.slice(0, 120)}`);
+  }
+}
+
+/**
+ * Executes a Serva-S action using form-urlencoded POST.
+ *
+ * @param {Record<string, string | undefined>} env - Environment bindings.
+ * @param {Record<string, string | number>} payload - Provider action payload.
+ * @param {{ fetchImpl?: typeof fetch }} [options={}] - Optional dependencies for tests.
+ * @returns {Promise<{ success: boolean, data?: unknown, error?: string, status?: number }>} Provider result.
+ */
+export async function postProviderAction(env, payload, options = {}) {
+  const config = readProviderConfig(env);
+  if (!config.baseUrl || !config.apiKey) {
+    return {
+      success: false,
+      error: "Provider API is not configured. Set PROVIDER_API_BASE_URL and PROVIDER_API_KEY.",
+      status: PROVIDER_MISSING_CONFIG_STATUS,
+    };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const body = new URLSearchParams({ key: config.apiKey });
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      body.set(key, String(value));
+    }
+  });
+
+  try {
+    const response = await fetchImpl(config.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "x-api-key": config.apiKey,
+      },
+      body: body.toString(),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `Provider API responded with status ${response.status}`,
+        status: PROVIDER_UPSTREAM_FAILURE_STATUS,
+      };
+    }
+
+    const { data } = await parseProviderJson(response);
+    if (data && typeof data === "object" && "error" in data && data.error) {
+      return {
+        success: false,
+        error: translateProviderError(String(data.error)),
+        status: PROVIDER_UPSTREAM_FAILURE_STATUS,
+      };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    const isAbort = error instanceof Error && error.name === "AbortError";
+    return {
+      success: false,
+      error: isAbort ? "انتهت مهلة الاتصال بالمزوّد." : String(error?.message ?? "Provider request failed"),
+      status: PROVIDER_UPSTREAM_FAILURE_STATUS,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Retrieves the Serva-S account balance.
+ *
+ * @param {Record<string, string | undefined>} env - Environment bindings.
+ * @param {{ fetchImpl?: typeof fetch }} [options={}] - Optional dependencies for tests.
+ * @returns {Promise<{ success: boolean, balance?: string, currency?: string, error?: string, status?: number }>} Balance result.
+ */
+export async function getProviderBalance(env, options = {}) {
+  const result = await postProviderAction(env, { action: "balance" }, options);
+  if (!result.success) {
+    return result;
+  }
+
+  const data = /** @type {{ balance?: string, currency?: string }} */ (result.data ?? {});
+  return { success: true, balance: data.balance, currency: data.currency };
+}
+
+/**
+ * Retrieves the full Serva-S services catalog.
+ *
+ * @param {Record<string, string | undefined>} env - Environment bindings.
+ * @param {{ fetchImpl?: typeof fetch }} [options={}] - Optional dependencies for tests.
+ * @returns {Promise<{ success: boolean, services?: Array<Record<string, unknown>>, error?: string, status?: number }>} Services result.
+ */
+export async function getProviderServices(env, options = {}) {
+  const result = await postProviderAction(env, { action: "services" }, options);
+  if (!result.success) {
+    return result;
+  }
+
+  return { success: true, services: Array.isArray(result.data) ? result.data : [] };
+}

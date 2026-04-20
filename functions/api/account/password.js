@@ -6,14 +6,11 @@
  */
 
 import { createSupabaseAdmin, createSupabaseClient, extractBearerToken, errorResponse, successResponse } from '../../_lib/supabase.js';
+import { handlePreflight, withCors } from '../../_lib/cors.js';
 
 /* ─── Constants ─── */
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+/* CORS handled by shared _lib/cors.js module */
 
 const INVALID_CURRENT_PASSWORD = 'كلمة المرور الحالية غير صحيحة';
 const MISSING_CURRENT_PASSWORD = 'أدخل كلمة المرور الحالية';
@@ -74,7 +71,7 @@ async function verifyCurrentPassword(env, email, currentPassword) {
 
 export async function onRequest(context) {
   if (context.request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return handlePreflight(context.request);
   }
 
   if (context.request.method !== 'POST') {
@@ -112,9 +109,7 @@ export async function onRequest(context) {
   /* Verify current password */
   const verifyResponse = await verifyCurrentPassword(env, user.email, body.current_password.trim());
   if (verifyResponse) {
-    const headers = new Headers(verifyResponse.headers);
-    Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
-    return new Response(verifyResponse.body, { status: verifyResponse.status, headers });
+    return withCors(verifyResponse, request);
   }
 
   /* Update password */
@@ -127,9 +122,5 @@ export async function onRequest(context) {
     return errorResponse('تعذر تغيير كلمة المرور', 500);
   }
 
-  const response = successResponse({ message: 'تم تغيير كلمة المرور بنجاح' });
-  const headers = new Headers(response.headers);
-  Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
-
-  return new Response(response.body, { status: response.status, headers });
+  return withCors(successResponse({ message: 'تم تغيير كلمة المرور بنجاح' }), request);
 }

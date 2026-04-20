@@ -1,38 +1,42 @@
 # TechZone Web Platform
 
-منصة تجارة وخدمات رقمية تعتمد على Supabase في البيانات والمصادقة، مع واجهة موقع حديثة ولوحة إدارة مستقلة.
+منصة تجارة إلكترونية وخدمات تقنية عربية مبنية كواجهة `Vite + React` أحادية الصفحة، مع نشر على `Cloudflare Pages` ووظائف خادمية داخل `functions/`.
 
 ## المتطلبات
 
-- JavaScript runtime 20+
+- Node.js 20+
 - npm 10+
 
-## الإعدادات
+## إعداد البيئة
 
-1. انسخ ملف البيئة:
+1. انسخ ملف التطوير المحلي:
 
 ```bash
 cp .env.example .env.local
 ```
 
-2. عبّئ القيم الحقيقية داخل `.env.local`:
+2. استخدم `.env.production.example` كمرجع placeholder فقط لقيم البناء العامة.
+القيم الحقيقية يجب أن تبقى داخل GitHub Secrets وCloudflare Pages Variables/Secrets فقط.
+
+3. عبّئ القيم المطلوبة داخل `.env.local`:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GROQ_API_KEY`
-- `PROVIDER_API_BASE_URL` (اختياري)
-- `PROVIDER_API_KEY` (اختياري)
-- `PROVIDER_API_TIMEOUT_MS` (اختياري)
-- `CRON_SECRET` (مطلوب لمسار المزامنة الآمن)
+- `PROVIDER_API_BASE_URL`
+- `PROVIDER_API_KEY`
+- `PROVIDER_API_TIMEOUT_MS`
+- `CRON_SECRET`
 
-3. لإعداد لوحة الإدارة القديمة:
+4. لوحة الإدارة القديمة أصبحت تولّد ملف `admin-config.js` تلقائيًا أثناء `vite build`
+   وأثناء تشغيل `vite dev` من القيم العامة التالية:
 
-- انسخ `admin-config.example.js` إلى `admin-config.js`.
-- انسخ `public/admin-config.example.js` إلى `public/admin-config.js`.
-- عبّئ:
-  - `window.__TZ_SUPABASE_URL`
-  - `window.__TZ_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` أو `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_SITE_URL`
+- `ENABLE_LEGACY_ADMIN_WRITE` اختياري لتفعيل عمليات الكتابة
 
 ## التشغيل المحلي
 
@@ -44,77 +48,75 @@ npm run dev
 ثم افتح:
 
 ```text
-http://localhost:3000
+http://localhost:5173
 ```
 
-## الصفحات والمسارات المهمة
+## البنية الحالية
+
+- `src/`: نقطة دخول Vite وReact Router.
+- `app/`: صفحات الواجهة بأسلوب قريب من هيكلة Next.js ولكنها تعمل داخل SPA.
+- `components/`: المكوّنات المشتركة.
+- `functions/`: Cloudflare Pages Functions لمسارات API.
+- `lib/`: أدوات Supabase والمنطق المساعد القابل لإعادة الاستخدام.
+- `public/`: ملفات ثابتة مثل `admin.html` و`_headers` و`_redirects`.
+- `.github/workflows/deploy.yml`: بناء ونشر تلقائي إلى Cloudflare Pages.
+
+## المسارات المهمة
 
 - `/` الصفحة الرئيسية
 - `/products` صفحة المنتجات
 - `/services` صفحة الخدمات
+- `/dashboard` لوحة المستخدم
 - `/api/health` فحص الحالة
-- `/api/orders/create` إنشاء الطلب
-- `/api/orders/sync` مزامنة الطلبات
+- `/api/chat` وكيل الدردشة
+- `/api/checkout` إنشاء طلب منتج
+- `/api/orders/create` إنشاء طلب مباشر
+- `/api/deposits/proof` رفع إثبات التحويل
+- `/api/account/profile` تحديث الملف الشخصي
+- `/api/account/password` تحديث كلمة المرور
+- `/api/img` وسيط الصور
 
-## بنية التطبيق
+## البناء والنشر
 
-- `lib/supabaseClient.js`: عميل Supabase للواجهة العامة.
-- `lib/supabaseServer.js`: عميل Supabase لطبقة الخادم.
-- `lib/serverAuth.js`: التحقق من Bearer token ومساعدات الصلاحيات.
-- `app/api/orders/create/route.js`: إنشاء الطلب مع تحقق موحد للمدخلات.
-- `app/api/orders/sync/route.js`: مزامنة حالات الطلبات مع مزود خارجي.
-- `app/api/account/*`: إدارة الملف الشخصي، كلمة المرور، والمحفظة.
-- `app/api/admin/*`: عمليات الإدارة المحمية.
-
-## النظام الهرمي الديناميكي
-
-إدارة الفئات والخدمات ديناميكية بالكامل من لوحة التحكم:
-
-- إضافة وتعديل وحذف الفئات الرئيسية.
-- إضافة وتعديل وحذف الفئات الفرعية وربطها بالفئة الرئيسية.
-- إضافة وتعديل وحذف الخدمات داخل الفئات الفرعية.
-- دعم الصور، الوصف، السعر، الحالة، الترتيب، و`slug` التلقائي.
-
-## ملفات الترحيل
-
-- `hierarchy_migration.sql`
-- `account_system_migration.sql`
-
-## الحماية
-
-- Security headers مفعلة في `next.config.mjs`.
-- تعطيل `x-powered-by`.
-- منع الكاش في endpoint الصحة.
-
-## البناء والتشغيل للإنتاج
+للبناء المحلي:
 
 ```bash
 npm run build
-npm run start
 ```
 
-## النشر إلى Cloudflare Workers
+لمعاينة Cloudflare Pages محليًا:
 
-### نشر مباشر
+```bash
+npm run preview:cloudflare
+```
+
+للنشر اليدوي:
 
 ```bash
 npm run deploy:cloudflare
 ```
 
-### نشر عبر GitHub
+### النشر عبر GitHub Actions
 
-تم تجهيز workflow تلقائي داخل:
+الـ workflow المستخدم هو:
 
 ```text
-.github/workflows/deploy-cloudflare.yml
+.github/workflows/deploy.yml
 ```
 
-ولتشغيله على `main` أضف Secrets التالية في GitHub:
+ويحتاج في GitHub إلى:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL`
+
+كما يجب ضبط القيم التشغيلية في Cloudflare Pages:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` أو `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GROQ_API_KEY`
 - `PROVIDER_API_BASE_URL`
@@ -122,3 +124,10 @@ npm run deploy:cloudflare
 - `PROVIDER_API_TIMEOUT_MS`
 - `ENABLE_LEGACY_ADMIN_WRITE`
 - `CRON_SECRET`
+
+## ملاحظات أمنية
+
+- `vite build` سيفشل الآن إذا لم تكن `NEXT_PUBLIC_SUPABASE_URL` و`NEXT_PUBLIC_SUPABASE_ANON_KEY` موجودتين.
+- لا تحفظ أي قيم حقيقية داخل ملفات `.env.production` أو أي ملف متتبع في Git.
+- سياسة الكاش للملفات الثابتة موجودة في `public/_headers`.
+- مسار الصحة `/api/health` يعيد `Cache-Control: no-store`.

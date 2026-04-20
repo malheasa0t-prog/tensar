@@ -1,27 +1,29 @@
 /**
- * Product Details Page — Client-side version.
- *
- * Fetches a single product by ID from the URL params,
- * loads category info, then renders the product details view.
+ * Product details page rendered on the client.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Image from 'next/image';
-import ProductPurchaseActions from '@/components/ProductPurchaseActions';
-import ProductDetailsSkeleton from '@/components/ProductDetailsSkeleton';
 import AppIcon from '@/components/AppIcon';
 import InternalPageHero from '@/components/InternalPageHero';
-import { formatCurrency } from '@/lib/formatCurrency';
-import { supabase } from '@/lib/supabaseClient';
+import ProductDetailsSkeleton from '@/components/ProductDetailsSkeleton';
+import ProductPurchaseActions from '@/components/ProductPurchaseActions';
 import {
   ACCESSORY_PRODUCTS_SECTION_HREF,
   ACCESSORY_SECTION_NAME,
   isAccessoryProductCategoryId,
 } from '@/lib/accessoryCatalog';
+import { formatCurrency } from '@/lib/formatCurrency';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
+import {
+  buildProductStructuredData,
+  buildServiceStructuredData,
+} from '@/lib/seo';
+import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Attempts to find a product or digital service by id.
@@ -37,7 +39,9 @@ async function findItem(id) {
     .eq('status', 'active')
     .maybeSingle();
 
-  if (product) return { data: product, isService: false };
+  if (product) {
+    return { data: product, isService: false };
+  }
 
   const { data: service } = await supabase
     .from('services')
@@ -47,6 +51,84 @@ async function findItem(id) {
     .maybeSingle();
 
   return { data: service || null, isService: true };
+}
+
+/**
+ * Normalizes digital service data into the product detail view model.
+ *
+ * @param {Record<string, unknown>} item
+ * @returns {Record<string, unknown>}
+ */
+function normalizeServiceAsProduct(item) {
+  return {
+    ...item,
+    images: item.image ? [item.image] : [],
+    quantity: item.max_qty || 999,
+    discount_price: null,
+    brand: null,
+    specs: [],
+    variants: [],
+    product_type: 'digital',
+  };
+}
+
+/**
+ * Builds the breadcrumb items for the detail page.
+ *
+ * @param {{
+ *   category: Record<string, unknown> | null,
+ *   categoryId: string,
+ *   isAccessoryProduct: boolean,
+ *   name: string,
+ * }} input
+ * @returns {Array<{ href?: string, label: string }>}
+ */
+function buildBreadcrumbItems({ category, categoryId, isAccessoryProduct, name }) {
+  return [
+    { href: '/', label: 'الرئيسية' },
+    { href: '/products', label: 'المنتجات' },
+    isAccessoryProduct
+      ? { href: ACCESSORY_PRODUCTS_SECTION_HREF, label: ACCESSORY_SECTION_NAME }
+      : category?.name
+        ? { href: `/category/${category.slug || categoryId}`, label: category.name }
+        : null,
+    { label: name },
+  ].filter(Boolean);
+}
+
+/**
+ * Builds JSON-LD for the current detail page.
+ *
+ * @param {{
+ *   categoryLabel: string,
+ *   id: string,
+ *   image: string,
+ *   isService: boolean,
+ *   product: Record<string, unknown>,
+ * }} input
+ * @returns {Array<Record<string, unknown>>}
+ */
+function buildDetailStructuredData({ categoryLabel, id, image, isService, product }) {
+  if (isService) {
+    return [
+      buildServiceStructuredData({
+        pathname: `/products/${id}`,
+        service: {
+          ...product,
+          category: categoryLabel,
+          image,
+        },
+      }),
+    ];
+  }
+
+  return [
+    buildProductStructuredData({
+      pathname: `/products/${id}`,
+      categoryName: categoryLabel,
+      product,
+    }),
+  ];
 }
 
 /**
@@ -76,50 +158,47 @@ export default function ProductDetailPage() {
           return;
         }
 
-        let item = result.data;
-
-        if (result.isService) {
-          item = {
-            ...item,
-            images: item.image ? [item.image] : [],
-            quantity: item.max_qty || 999,
-            discount_price: null,
-            brand: null,
-            specs: [],
-            variants: [],
-            product_type: 'digital',
-          };
-        }
+        const item = result.isService
+          ? normalizeServiceAsProduct(result.data)
+          : result.data;
 
         setProduct(item);
         setIsService(result.isService);
 
         const isAccessory = isAccessoryProductCategoryId(item.category_id);
         if (!isAccessory && item.category_id) {
-          const { data: catData } = await supabase
+          const { data: categoryData } = await supabase
             .from('categories')
             .select('name,slug')
             .eq('id', item.category_id)
             .maybeSingle();
 
-          if (!cancelled) setCategory(catData || null);
+          if (!cancelled) {
+            setCategory(categoryData || null);
+          }
         }
       } catch (error) {
         console.error('ProductDetailPage: failed to load', error);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadProduct();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [id, navigate]);
 
   if (loading) {
     return <ProductDetailsSkeleton />;
   }
 
-  if (!product) return null;
+  if (!product) {
+    return null;
+  }
 
   const isAccessoryProduct = isAccessoryProductCategoryId(product.category_id);
   const finalPrice = Number(product.discount_price || product.price || 0);
@@ -136,27 +215,43 @@ export default function ProductDetailPage() {
   const categoryLabel = isAccessoryProduct
     ? ACCESSORY_SECTION_NAME
     : category?.name || 'منتج تقني';
+  const breadcrumbItems = buildBreadcrumbItems({
+    category,
+    categoryId: product.category_id,
+    isAccessoryProduct,
+    name: product.name,
+  });
+
+  usePageSeo({
+    title: product.name,
+    description:
+      product.description ||
+      `اطلع على سعر ${product.name} ومواصفاته وحالة التوفر وخطوات الشراء لدى TechZone.`,
+    image,
+    type: isService ? 'website' : 'product',
+    canonicalPath: `/products/${id}`,
+    breadcrumbItems,
+    breadcrumbLabel: product.name,
+    structuredData: buildDetailStructuredData({
+      categoryLabel,
+      id,
+      image,
+      isService,
+      product,
+    }),
+  });
 
   return (
     <>
       <InternalPageHero
         currentPath={`/products/${id}`}
-        items={[
-          { href: '/', label: 'الرئيسية' },
-          { href: '/products', label: 'المنتجات' },
-          isAccessoryProduct
-            ? { href: ACCESSORY_PRODUCTS_SECTION_HREF, label: ACCESSORY_SECTION_NAME }
-            : category?.name
-              ? { href: `/category/${category.slug || product.category_id}`, label: category.name }
-              : null,
-          { label: product.name },
-        ].filter(Boolean)}
+        items={breadcrumbItems}
         badgeIcon="shopping-bag"
         badgeLabel="تفاصيل المنتج"
         title={product.name}
         description={
           product.description ||
-          'واجهة تفاصيل أوضح تعرض المواصفات، حالة التوفر، ومسار الشراء بدون فراغات أو كتل معزولة.'
+          'واجهة تفاصيل أوضح تعرض المواصفات وحالة التوفر ومسار الشراء دون فراغات أو كتل معزولة.'
         }
         stats={[
           { label: 'السعر الحالي', value: formatCurrency(finalPrice), tone: 'success' },
@@ -174,7 +269,8 @@ export default function ProductDetailPage() {
                   <Image
                     src={image}
                     alt={product.name}
-                    fill
+                    width={1080}
+                    height={1080}
                     loading="lazy"
                     quality={80}
                     sizes="(max-width: 900px) 100vw, 540px"
@@ -210,7 +306,9 @@ export default function ProductDetailPage() {
 
               <div className="detail-price-row">
                 <div className="detail-price">{formatCurrency(finalPrice)}</div>
-                {hasDiscount ? <span className="detail-price-old">{formatCurrency(originalPrice)}</span> : null}
+                {hasDiscount ? (
+                  <span className="detail-price-old">{formatCurrency(originalPrice)}</span>
+                ) : null}
               </div>
 
               <p>
@@ -260,7 +358,10 @@ export default function ProductDetailPage() {
                   </span>
                   <div>
                     <strong>بطاقة أكثر اكتمالًا</strong>
-                    <span>الصفحة تعرض الآن المعلومات الأساسية، المواصفات، والإجراء الرئيسي بدون أن تبدو كمساحة فارغة.</span>
+                    <span>
+                      الصفحة تعرض الآن المعلومات الأساسية والمواصفات والإجراء الرئيسي دون أن تبدو
+                      كمساحة فارغة.
+                    </span>
                   </div>
                 </div>
                 <div className="detail-note-item">
@@ -269,7 +370,9 @@ export default function ProductDetailPage() {
                   </span>
                   <div>
                     <strong>قرار أسرع للمستخدم</strong>
-                    <span>السعر، التوفر، والفئة أصبحت في نقاط واضحة تسهّل التقييم بدل البحث داخل الصفحة.</span>
+                    <span>
+                      السعر والتوفر والفئة أصبحت في نقاط واضحة تسهّل التقييم بدل البحث داخل الصفحة.
+                    </span>
                   </div>
                 </div>
               </div>

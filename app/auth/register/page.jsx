@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AppIcon from '@/components/AppIcon';
+import Button from '@/components/Button';
+import { useToast } from '@/components/ToastProvider';
 import { supabase } from '@/lib/supabaseClient';
 import {
   mapRegisterAuthError,
   normalizeRegisterProfileData,
   validateRegisterForm,
 } from '@/lib/registerModel';
-import AppIcon from '@/components/AppIcon';
 
 export default function RegisterPage() {
+  const { showToast } = useToast();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('');
@@ -21,6 +24,12 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  /**
+   * Creates a new auth account after validating the registration form.
+   *
+   * @param {import('react').FormEvent<HTMLFormElement>} event
+   * @returns {Promise<void>}
+   */
   async function handleRegister(event) {
     event.preventDefault();
     setLoading(true);
@@ -35,6 +44,7 @@ export default function RegisterPage() {
     });
     if (validationError) {
       setError(validationError);
+      showToast(validationError, { type: 'warning', title: 'تحقق من البيانات' });
       setLoading(false);
       return;
     }
@@ -50,17 +60,25 @@ export default function RegisterPage() {
       });
 
       if (authError) {
-        setError(mapRegisterAuthError(authError));
+        const nextError = mapRegisterAuthError(authError);
+        setError(nextError);
+        showToast(nextError, { type: 'error', title: 'تعذر إنشاء الحساب' });
         setLoading(false);
         return;
       }
     } catch (err) {
-      setError(mapRegisterAuthError(err));
+      const nextError = mapRegisterAuthError(err);
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر إنشاء الحساب' });
       setLoading(false);
       return;
     }
 
     setSuccess(true);
+    showToast('أرسلنا رسالة التفعيل إلى بريدك الإلكتروني.', {
+      type: 'success',
+      title: 'تم إنشاء الحساب',
+    });
     setLoading(false);
   }
 
@@ -196,14 +214,9 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className={loading ? 'btn btn-primary btn-block is-loading' : 'btn btn-primary btn-block'}
-          >
-            <AppIcon name="badge-check" size={16} />
-            {loading ? 'جاري التسجيل...' : 'إنشاء الحساب'}
-          </button>
+          <Button type="submit" loading={loading} fullWidth loadingLabel="جاري التسجيل...">
+            إنشاء الحساب
+          </Button>
         </form>
 
         <p className="auth-footer-copy">

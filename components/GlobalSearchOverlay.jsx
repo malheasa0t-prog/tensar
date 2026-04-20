@@ -3,6 +3,8 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AppIcon from "./AppIcon";
+import Button from "./Button";
+import FriendlyEmptyState from "./FriendlyEmptyState";
 import styles from "./GlobalSearchOverlay.module.css";
 import {
   GLOBAL_SEARCH_DEFAULT_CATEGORY,
@@ -77,7 +79,7 @@ export default function GlobalSearchOverlay({ isOpen, onClose }) {
       const nextSnapshot = await fetchGlobalSearchSnapshot();
       setSnapshot(nextSnapshot);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "تعذر تحميل البحث حالياً.");
+      setErrorMessage(error instanceof Error ? error.message : "تعذر تحميل البحث حاليًا.");
     } finally {
       setLoading(false);
     }
@@ -201,7 +203,7 @@ export default function GlobalSearchOverlay({ isOpen, onClose }) {
         ) : null}
 
         <div className={styles.resultsMeta}>
-          <strong>{deferredQuery ? `نتائج فورية لـ "${deferredQuery}"` : "ابدأ بالكتابة أو اختر اقتراحاً"}</strong>
+          <strong>{deferredQuery ? `نتائج فورية لـ "${deferredQuery}"` : "ابدأ بالكتابة أو اختر اقتراحًا"}</strong>
           <span>{loading ? "جارٍ تحميل الفهرس..." : `${results.length} نتائج جاهزة الآن`}</span>
         </div>
 
@@ -226,11 +228,40 @@ export default function GlobalSearchOverlay({ isOpen, onClose }) {
         ) : null}
 
         {!errorMessage && !loading && results.length === 0 ? (
-          <div className={styles.emptyState}>
-            <AppIcon name="search" size={34} />
-            <strong>لا توجد نتائج مطابقة حالياً</strong>
-            <p>جرّب كلمة أبسط أو أزل الفلتر السريع الحالي للعثور على نتائج أوسع.</p>
-          </div>
+          <FriendlyEmptyState
+            compact
+            tone="search"
+            icon="search"
+            eyebrow={deferredQuery ? "لا توجد نتائج مطابقة" : "لا توجد عناصر قابلة للعرض الآن"}
+            title={
+              deferredQuery
+                ? `لم نعثر على نتائج مطابقة لعبارة "${deferredQuery}"`
+                : "الفهرس فارغ حاليًا"
+            }
+            description={
+              deferredQuery
+                ? "جرّب عبارة أقصر أو أزل الفلتر السريع الحالي للوصول إلى نتائج أوسع."
+                : "سيظهر هنا أي منتج أو خدمة أو فئة بمجرد توفرها في فهرس البحث العام."
+            }
+            actions={
+              <>
+                {deferredQuery ? (
+                  <Button type="button" variant="secondary" onClick={() => setSearchQuery("")}>
+                    مسح البحث
+                  </Button>
+                ) : null}
+                {selectedCategory !== GLOBAL_SEARCH_DEFAULT_CATEGORY ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setSelectedCategory(GLOBAL_SEARCH_DEFAULT_CATEGORY)}
+                  >
+                    إزالة الفلتر
+                  </Button>
+                ) : null}
+              </>
+            }
+          />
         ) : null}
 
         {!errorMessage && results.length > 0 ? (

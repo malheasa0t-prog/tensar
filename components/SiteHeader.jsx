@@ -1,9 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import GlobalSearchOverlay from "./GlobalSearchOverlay";
 import MobileBottomNav from "./MobileBottomNav";
 import MobileMenu from "./MobileMenu";
 import { useCart } from "./CartProvider";
@@ -14,6 +14,11 @@ import { useTheme } from "./ThemeProvider";
 import AppIcon from "./AppIcon";
 import HeaderNotificationBell from "./HeaderNotificationBell";
 import { getBrandMark, getSocialLinks, normalizeSiteSettings } from "@/lib/contactChannels";
+
+const GlobalSearchOverlay = dynamic(() => import("./GlobalSearchOverlay"), {
+  loading: () => null,
+  ssr: false,
+});
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
 

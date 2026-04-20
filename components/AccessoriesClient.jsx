@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import AppIcon from "@/components/AppIcon";
+import Button from "@/components/Button";
+import FriendlyEmptyState from "@/components/FriendlyEmptyState";
 import ProductCard from "@/components/ProductCard";
 import ScrollReveal from "@/components/ScrollReveal";
-import StatusPanel from "@/components/StatusPanel";
 import { ACCESSORY_PUBLIC_LABEL, ACCESSORY_SECTION_NAME } from "@/lib/accessoryCatalog";
 import styles from "./AccessoriesClient.module.css";
 
@@ -106,7 +107,9 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
     return sortAccessoryProducts({ products: matchingProducts, sortOption });
   }, [deferredSearchQuery, products, selectedBrand, selectedCategory, sortOption]);
 
-  const hasActiveFilters = Boolean(searchQuery.trim() || selectedBrand || selectedCategory || sortOption !== DEFAULT_SORT_OPTION);
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() || selectedBrand || selectedCategory || sortOption !== DEFAULT_SORT_OPTION
+  );
 
   /**
    * Resets all filter state to defaults.
@@ -120,11 +123,12 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
 
   if (products.length === 0) {
     return (
-      <StatusPanel
+      <FriendlyEmptyState
+        tone="contrast"
         icon="headphones"
-        eyebrow="لا توجد إكسسوارات حاليًا"
-        title="لم يتم إضافة أي إكسسوارات بعد"
-        description="نقوم بتحديث متجرنا باستمرار. يرجى العودة لاحقًا لاستكشاف أحدث الإكسسوارات."
+        eyebrow="الإكسسوارات قيد التحديث"
+        title="لم تتم إضافة إكسسوارات متاحة بعد"
+        description="سنملأ هذا القسم تلقائيًا بمجرد إضافة منتجات الإكسسوارات النشطة في لوحة التحكم."
       />
     );
   }
@@ -133,7 +137,6 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
     <>
       <ScrollReveal variant="fade-up">
         <div className={styles.filterShell}>
-          {/* Row 1: Search + count + toggle */}
           <div className={styles.compactTopRow}>
             <div className={`techfix-search ${styles.searchField}`}>
               <AppIcon name="search" size={16} />
@@ -159,7 +162,9 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
 
             <button
               type="button"
-              className={`${styles.compactToggle}${isExpanded ? ` ${styles.compactToggleActive}` : ""}${hasActiveFilters ? ` ${styles.compactToggleHasFilters}` : ""}`}
+              className={`${styles.compactToggle}${isExpanded ? ` ${styles.compactToggleActive}` : ""}${
+                hasActiveFilters ? ` ${styles.compactToggleHasFilters}` : ""
+              }`}
               onClick={() => setIsExpanded((prev) => !prev)}
               aria-expanded={isExpanded}
             >
@@ -169,7 +174,6 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
             </button>
           </div>
 
-          {/* Row 2: Collapsible filters */}
           <div className={`${styles.compactFiltersPanel}${isExpanded ? ` ${styles.compactFiltersPanelOpen}` : ""}`}>
             <div className={styles.compactFiltersGrid}>
               {brands.length > 0 ? (
@@ -182,7 +186,9 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
                   >
                     <option value="">الكل</option>
                     {brands.map((brand) => (
-                      <option key={brand} value={brand}>{brand}</option>
+                      <option key={brand} value={brand}>
+                        {brand}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -198,7 +204,9 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
                   >
                     <option value="">الكل</option>
                     {availableCategories.map((category) => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -212,7 +220,9 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
                   onChange={(event) => setSortOption(event.target.value)}
                 >
                   {SORT_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -246,7 +256,10 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
           {filteredProducts.length > 0 ? (
             <div className="balanced-card-grid">
               {filteredProducts.map((product, index) => {
-                const categoryName = safeCategories.find((category) => category.id === product.category_id)?.name || ACCESSORY_PUBLIC_LABEL;
+                const categoryName =
+                  safeCategories.find((category) => category.id === product.category_id)?.name ||
+                  ACCESSORY_PUBLIC_LABEL;
+
                 return (
                   <ProductCard
                     key={product.id}
@@ -272,16 +285,19 @@ export default function AccessoriesClient({ initialProducts, categories = [] }) 
               })}
             </div>
           ) : (
-            <div className="techfix-empty">
-              <div>
-                <AppIcon name="search" size={48} />
-              </div>
-              <h3>لم يتم العثور على نتائج</h3>
-              <p>لا توجد إكسسوارات تطابق معايير البحث أو الفلاتر المحددة.</p>
-              <button type="button" className="btn btn-outline" onClick={clearFilters}>
-                إعادة ضبط الفلاتر
-              </button>
-            </div>
+            <FriendlyEmptyState
+              compact
+              tone="search"
+              icon="search"
+              eyebrow="لا توجد نتائج مطابقة"
+              title="هذه الفلاتر ضيقة أكثر من اللازم"
+              description="لم نجد إكسسوارات تطابق الشروط الحالية. جرّب حذف بعض الفلاتر أو استخدم عبارة بحث أبسط."
+              actions={
+                <Button type="button" variant="secondary" onClick={clearFilters}>
+                  إعادة ضبط الفلاتر
+                </Button>
+              }
+            />
           )}
         </div>
       </ScrollReveal>

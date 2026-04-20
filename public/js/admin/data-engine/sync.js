@@ -12,6 +12,7 @@ import {
 import { loadDataFromSupabaseByScope } from './loaders.js';
 import { isRetryableNetworkError, queueOfflineCommit, syncQueuedCommits } from './offline.js';
 import { fireDataUpdate } from './realtime.js';
+import { fetchExistingProductSnapshot, syncProductRestockAlerts } from './restockAlerts.js';
 
 function createSyncError(error, fallbackMessage) {
     const message = error?.message || error?.details || fallbackMessage;
@@ -42,6 +43,11 @@ function commitLog(action, actorId, details) {
 }
 
 async function syncProduct(product) {
+    const previousProduct = await fetchExistingProductSnapshot({
+        productId: product.id,
+        supabase: supabase
+    });
+
     await executeSync(
         supabase.from('products').upsert([{
             id: product.id,
@@ -64,6 +70,13 @@ async function syncProduct(product) {
         }]),
         'تعذر حفظ المنتج في قاعدة البيانات.'
     );
+
+    await syncProductRestockAlerts({
+        executeSync: executeSync,
+        previousProduct: previousProduct,
+        product: product,
+        supabase: supabase
+    });
 }
 
 async function syncOrder(order) {

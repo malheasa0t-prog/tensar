@@ -17,7 +17,7 @@ export default function PageTransitionShell({ children }) {
   const destinationLabel = pendingDestination ? pendingDestination.replace(/^\//, "") : "واجهة TechZone";
 
   return (
-    <main className={styles.shell} data-phase={phase}>
+    <div className={styles.shell} data-phase={phase}>
       {isTransitionVisible ? (
         <div className={styles.ambientBackdrop} aria-hidden="true">
           <span className={styles.glow} />
@@ -42,6 +42,6 @@ export default function PageTransitionShell({ children }) {
       <span className={styles.screenReaderStatus} aria-live="polite">
         {isTransitionVisible ? statusLabel : ""}
       </span>
-    </main>
+    </div>
   );
 }

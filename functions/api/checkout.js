@@ -2,8 +2,8 @@
  * Cloudflare Pages Function — Checkout API.
  *
  * Handles POST /api/checkout — creates physical product orders.
- * Converted from app/api/checkout/route.js into a self-contained
- * Cloudflare Function with inlined utility logic.
+ * Implemented as a self-contained Cloudflare Pages Function with
+ * inlined utility logic for checkout validation and order creation.
  */
 
 import { createSupabaseAdmin, extractBearerToken, errorResponse, successResponse } from '../_lib/supabase.js';

@@ -2,16 +2,31 @@
  * Cloudflare Pages Function — AI Chat API.
  *
  * Handles POST /api/chat requests by forwarding to Groq API.
- * Replaces the Next.js API route at app/api/chat/route.js.
+ * Requires authentication to prevent abuse and API key exhaustion.
  *
  * @param {EventContext} context
  */
+
+import { createSupabaseClient, extractBearerToken, errorResponse } from '../_lib/supabase.js';
+import { handlePreflight, withCors } from '../_lib/cors.js';
+
+/* ─── Constants ─── */
 
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_RESPONSE_TOKENS = 500;
 
+/* ─── Helpers ─── */
+
+/**
+ * Builds the system prompt with product/service context.
+ *
+ * @param {string} productsContext - Formatted products list.
+ * @param {string} servicesContext - Formatted services list.
+ * @param {string} categoriesContext - Formatted categories list.
+ * @returns {string} The system prompt.
+ */
 function buildSystemPrompt(productsContext, servicesContext, categoriesContext) {
   return `أنت "تيك" — مساعد الدعم الفني الذكي لمتجر TechZone للإلكترونيات.
 
@@ -41,53 +56,83 @@ ${categoriesContext}
 6. لا تجب على أسئلة خارج نطاق المتجر.`;
 }
 
+/**
+ * Fetches live data context from Supabase for the AI prompt.
+ *
+ * @param {string} supabaseUrl - The Supabase project URL.
+ * @param {string} supabaseKey - The anon key.
+ * @returns {Promise<{products: string, services: string, categories: string}>}
+ */
+async function fetchDataContext(supabaseUrl, supabaseKey) {
+  const headers = { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` };
+
+  const [productsRes, servicesRes, categoriesRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/products?status=eq.active&select=name,description,price,quantity,brand,category_id`, { headers })
+      .then((r) => r.json()).catch(() => []),
+    fetch(`${supabaseUrl}/rest/v1/repair_services?status=eq.active&select=name,description,price,category,duration`, { headers })
+      .then((r) => r.json()).catch(() => []),
+    fetch(`${supabaseUrl}/rest/v1/categories?status=eq.active&select=name,description`, { headers })
+      .then((r) => r.json()).catch(() => []),
+  ]);
+
+  const products = Array.isArray(productsRes) && productsRes.length > 0
+    ? productsRes.map((p) => `• ${p.name} | ${p.price} د.أ | ${p.quantity > 0 ? 'متوفر' : 'نفد'}`).join('\n')
+    : 'لا توجد منتجات.';
+
+  const services = Array.isArray(servicesRes) && servicesRes.length > 0
+    ? servicesRes.map((s) => `• ${s.name} | ${s.price} د.أ | ${s.category || 'عام'}`).join('\n')
+    : 'لا توجد خدمات.';
+
+  const categories = Array.isArray(categoriesRes) && categoriesRes.length > 0
+    ? categoriesRes.map((c) => `• ${c.name}`).join('\n')
+    : 'لا توجد فئات.';
+
+  return { products, services, categories };
+}
+
+/* ─── Handler ─── */
+
 export async function onRequestPost(context) {
   const { env, request } = context;
 
   try {
+    /* ── Authentication — prevent unauthenticated abuse ── */
+    const token = extractBearerToken(request);
+    if (!token) {
+      return withCors(errorResponse('يجب تسجيل الدخول لاستخدام المحادثة.', 401), request);
+    }
+
+    const supabase = createSupabaseClient(env);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return withCors(errorResponse('جلسة غير صالحة. أعد تسجيل الدخول.', 401), request);
+    }
+
+    /* ── Parse and validate input ── */
     const body = await request.json();
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     const history = Array.isArray(body?.history) ? body.history.slice(-MAX_HISTORY_MESSAGES) : [];
 
     if (!message) {
-      return Response.json({ error: 'الرجاء إدخال رسالة.' }, { status: 400 });
+      return withCors(errorResponse('الرجاء إدخال رسالة.', 400), request);
     }
 
     if (message.length > 500) {
-      return Response.json({ error: 'الرسالة طويلة جداً. الحد الأقصى 500 حرف.' }, { status: 400 });
+      return withCors(errorResponse('الرسالة طويلة جداً. الحد الأقصى 500 حرف.', 400), request);
     }
 
+    /* ── Groq API key ── */
     const apiKey = env.GROQ_API_KEY;
     if (!apiKey) {
-      return Response.json({ error: 'AI service not configured.' }, { status: 500 });
+      return withCors(errorResponse('AI service not configured.', 500), request);
     }
 
+    /* ── Build context and call Groq ── */
     const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
     const supabaseKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY;
 
-    const [productsRes, servicesRes, categoriesRes] = await Promise.all([
-      fetch(`${supabaseUrl}/rest/v1/products?status=eq.active&select=name,description,price,quantity,brand,category_id`, {
-        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
-      }).then((r) => r.json()).catch(() => []),
-      fetch(`${supabaseUrl}/rest/v1/repair_services?status=eq.active&select=name,description,price,category,duration`, {
-        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
-      }).then((r) => r.json()).catch(() => []),
-      fetch(`${supabaseUrl}/rest/v1/categories?status=eq.active&select=name,description`, {
-        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
-      }).then((r) => r.json()).catch(() => []),
-    ]);
-
-    const productsContext = Array.isArray(productsRes) && productsRes.length > 0
-      ? productsRes.map((p) => `• ${p.name} | ${p.price} د.أ | ${p.quantity > 0 ? 'متوفر' : 'نفد'}`).join('\n')
-      : 'لا توجد منتجات.';
-    const servicesContext = Array.isArray(servicesRes) && servicesRes.length > 0
-      ? servicesRes.map((s) => `• ${s.name} | ${s.price} د.أ | ${s.category || 'عام'}`).join('\n')
-      : 'لا توجد خدمات.';
-    const categoriesContext = Array.isArray(categoriesRes) && categoriesRes.length > 0
-      ? categoriesRes.map((c) => `• ${c.name}`).join('\n')
-      : 'لا توجد فئات.';
-
-    const systemPrompt = buildSystemPrompt(productsContext, servicesContext, categoriesContext);
+    const ctx = await fetchDataContext(supabaseUrl, supabaseKey);
+    const systemPrompt = buildSystemPrompt(ctx.products, ctx.services, ctx.categories);
 
     const allMessages = [
       { role: 'system', content: systemPrompt },
@@ -110,18 +155,28 @@ export async function onRequestPost(context) {
     });
 
     if (!groqResponse.ok) {
-      return Response.json({ error: 'AI service error.' }, { status: 502 });
+      return withCors(errorResponse('AI service error.', 502), request);
     }
 
     const data = await groqResponse.json();
     const reply = data?.choices?.[0]?.message?.content?.trim();
 
     if (!reply) {
-      return Response.json({ error: 'Empty AI response.' }, { status: 502 });
+      return withCors(errorResponse('Empty AI response.', 502), request);
     }
 
-    return Response.json({ reply });
+    return withCors(Response.json({ reply }), request);
   } catch (error) {
-    return Response.json({ error: 'عذراً، حدث خطأ في المعالجة.' }, { status: 500 });
+    return withCors(errorResponse('عذراً، حدث خطأ في المعالجة.', 500), request);
   }
+}
+
+/**
+ * Handles CORS preflight requests.
+ *
+ * @param {EventContext} context
+ * @returns {Response}
+ */
+export function onRequestOptions(context) {
+  return handlePreflight(context.request);
 }

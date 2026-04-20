@@ -6,6 +6,7 @@ import CheckoutFormCard from '@/components/checkout/CheckoutFormCard';
 import CheckoutHero from '@/components/checkout/CheckoutHero';
 import CheckoutSummaryCard from '@/components/checkout/CheckoutSummaryCard';
 import CheckoutTrustBadges from '@/components/checkout/CheckoutTrustBadges';
+import SuccessConfetti from '@/components/SuccessConfetti';
 import { useCheckoutPage } from '@/hooks/useCheckoutPage';
 
 /**
@@ -35,6 +36,7 @@ export default function CheckoutPage() {
 
   return (
     <>
+      <SuccessConfetti activeKey={success?.order_id || ''} />
       <CheckoutHero />
 
       <section className="section" style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>

@@ -2,10 +2,11 @@
 
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import AppIcon from "@/components/AppIcon";
+import Button from "@/components/Button";
+import FriendlyEmptyState from "@/components/FriendlyEmptyState";
 import ProductCard from "@/components/ProductCard";
 import ProductsExplorerFilters from "@/components/ProductsExplorerFilters";
 import ScrollReveal from "@/components/ScrollReveal";
-import StatusPanel from "@/components/StatusPanel";
 import styles from "./ProductsExplorerClient.module.css";
 import {
   PRODUCTS_EXPLORER_DEFAULT_SORT,
@@ -123,11 +124,12 @@ export default function ProductsExplorerClient({
 
   if (products.length === 0) {
     return (
-      <StatusPanel
+      <FriendlyEmptyState
+        tone="contrast"
         icon="shopping-bag"
-        eyebrow="لا توجد منتجات حالياً"
-        title="سيظهر الكتالوج هنا بمجرد إضافة المنتجات"
-        description="أضف منتجات مفعلة داخل لوحة التحكم ليبدأ عرضها هنا مع إمكانيات البحث والفلترة."
+        eyebrow="الكتالوج قيد التجهيز"
+        title="سيظهر كتالوج المنتجات هنا بمجرد إضافة المنتجات النشطة"
+        description="عند توفر منتجات مفعّلة في لوحة التحكم سنعرضها هنا مع البحث والفرز والفلاتر بشكل كامل."
       />
     );
   }
@@ -179,16 +181,19 @@ export default function ProductsExplorerClient({
               ))}
             </div>
           ) : (
-            <div className="techfix-empty">
-              <div>
-                <AppIcon name="search" size={48} />
-              </div>
-              <h3>لا توجد نتائج مطابقة</h3>
-              <p>جرّب تغيير كلمات البحث أو توسيع حدود السعر أو إعادة ضبط الفلاتر الحالية.</p>
-              <button type="button" className="btn btn-outline" onClick={clearFilters}>
-                إعادة ضبط الفلاتر
-              </button>
-            </div>
+            <FriendlyEmptyState
+              compact
+              tone="search"
+              icon="search"
+              eyebrow="لا توجد نتائج مطابقة"
+              title="جرّب توسيع البحث أو إعادة ضبط الفلاتر"
+              description="لم نعثر على منتجات تطابق العبارة الحالية. غيّر كلمات البحث أو وسّع حدود الفلاتر للوصول إلى خيارات أكثر."
+              actions={
+                <Button type="button" variant="secondary" onClick={clearFilters}>
+                  إعادة ضبط الفلاتر
+                </Button>
+              }
+            />
           )}
         </div>
       </ScrollReveal>

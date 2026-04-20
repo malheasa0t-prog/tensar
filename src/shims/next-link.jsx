@@ -1,51 +1,122 @@
 /**
- * Next.js Link Compatibility Shim for React Router DOM.
- *
- * Maps Next.js <Link href="..."> to React Router <Link to="...">.
- * Preserves all other props (className, children, etc.).
+ * Next.js Link compatibility shim for React Router DOM.
  */
 
 import { forwardRef } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { prefetchRouteModule, shouldPrefetchRoute } from '../routePrefetch';
 
 /**
- * Shim component that maps Next.js Link props to React Router Link.
+ * Resolves a Next.js-style href prop into a string path.
+ *
+ * @param {string | { hash?: string, pathname?: string, search?: string }} href
+ * @returns {string}
+ */
+function resolveHrefValue(href) {
+  if (typeof href === 'string') {
+    return href;
+  }
+
+  if (!href || typeof href !== 'object') {
+    return '';
+  }
+
+  return `${href.pathname || ''}${href.search || ''}${href.hash || ''}`;
+}
+
+/**
+ * Checks whether a URL should stay on a plain anchor element.
+ *
+ * @param {string} href
+ * @returns {boolean}
+ */
+function isPlainAnchorHref(href) {
+  return Boolean(
+    href &&
+      (href.startsWith('http') ||
+        href.startsWith('//') ||
+        href.startsWith('mailto:') ||
+        href.startsWith('tel:') ||
+        href.endsWith('.html') ||
+        href.startsWith('#'))
+  );
+}
+
+/**
+ * Triggers a background module prefetch for internal routes.
+ *
+ * @param {boolean} prefetch
+ * @param {string} href
+ * @returns {void}
+ */
+function triggerRoutePrefetch(prefetch, href) {
+  if (prefetch !== false && shouldPrefetchRoute(href)) {
+    void prefetchRouteModule(href);
+  }
+}
+
+/**
+ * Maps Next.js Link props to React Router's Link component.
  *
  * @param {object} props
- * @param {string} props.href - The destination URL (Next.js convention)
- * @param {boolean} [props.prefetch] - Ignored (Next.js only)
- * @param {boolean} [props.replace] - Use replace navigation
- * @param {boolean} [props.scroll] - Ignored (Next.js only)
+ * @param {string | { hash?: string, pathname?: string, search?: string }} props.href
+ * @param {boolean} [props.prefetch]
+ * @param {boolean} [props.replace]
  * @param {React.ReactNode} props.children
  * @param {React.Ref} ref
  * @returns {JSX.Element}
  */
 const Link = forwardRef(function Link(
-  { href, prefetch, scroll, replace, children, ...rest },
+  {
+    href,
+    prefetch = true,
+    replace,
+    children,
+    onFocus,
+    onMouseEnter,
+    onTouchStart,
+    scroll,
+    ...rest
+  },
   ref
 ) {
-  if (!href) {
-    return <a ref={ref} {...rest}>{children}</a>;
+  const resolvedHref = resolveHrefValue(href);
+  const anchorEvents = {
+    onFocus,
+    onMouseEnter,
+    onTouchStart,
+  };
+
+  if (!resolvedHref) {
+    return <a ref={ref} {...anchorEvents} {...rest}>{children}</a>;
   }
 
-  const isExternal = typeof href === 'string' && (
-    href.startsWith('http') ||
-    href.startsWith('//') ||
-    href.startsWith('mailto:') ||
-    href.startsWith('tel:')
-  );
+  if (isPlainAnchorHref(resolvedHref)) {
+    return <a ref={ref} href={resolvedHref} {...anchorEvents} {...rest}>{children}</a>;
+  }
 
-  const isHashOrHtml = typeof href === 'string' && (
-    href.endsWith('.html') ||
-    href.startsWith('#')
-  );
-
-  if (isExternal || isHashOrHtml) {
-    return <a ref={ref} href={href} {...rest}>{children}</a>;
+  /**
+   * Calls the original event handler and prefetches the route module once.
+   *
+   * @param {(event: import('react').SyntheticEvent) => void} handler
+   * @param {import('react').SyntheticEvent} event
+   * @returns {void}
+   */
+  function handleInteractivePrefetch(handler, event) {
+    handler?.(event);
+    triggerRoutePrefetch(prefetch, resolvedHref);
   }
 
   return (
-    <RouterLink ref={ref} to={href} replace={replace} {...rest}>
+    <RouterLink
+      ref={ref}
+      replace={replace}
+      to={resolvedHref}
+      onFocus={(event) => handleInteractivePrefetch(onFocus, event)}
+      onMouseEnter={(event) => handleInteractivePrefetch(onMouseEnter, event)}
+      onTouchStart={(event) => handleInteractivePrefetch(onTouchStart, event)}
+      {...rest}
+    >
       {children}
     </RouterLink>
   );

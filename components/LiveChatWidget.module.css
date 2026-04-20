@@ -280,6 +280,15 @@
   color: var(--color-white);
 }
 
+.composerSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.32);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: composerSpin 700ms linear infinite;
+}
+
 .signinButton {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
@@ -298,6 +307,16 @@
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.18);
   color: #fca5a5;
+}
+
+@keyframes composerSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 768px) {

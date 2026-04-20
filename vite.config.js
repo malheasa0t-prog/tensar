@@ -11,18 +11,49 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { buildAdminRuntimeAssetSource, resolveAdminRuntimeAssetConfig } from './lib/adminRuntimeAsset.js';
+import { resolvePublicBuildEnv } from './lib/requiredPublicEnv.js';
 
-export default defineConfig(({ mode }) => {
+/**
+ * Serves and emits the legacy admin runtime config asset from environment values.
+ *
+ * @param {string} assetSource
+ * @returns {import('vite').Plugin}
+ */
+function createLegacyAdminRuntimeAssetPlugin(assetSource) {
+  const responseBody = String(assetSource || '');
+
+  return {
+    name: 'legacy-admin-runtime-asset',
+    configureServer(server) {
+      server.middlewares.use('/admin-config.js', (_request, response) => {
+        response.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        response.end(responseBody);
+      });
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'admin-config.js',
+        source: responseBody,
+      });
+    },
+  };
+}
+
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY || 'dev-anon-key';
+  const { supabaseUrl, supabaseAnonKey } = resolvePublicBuildEnv(env, command);
+  const adminRuntimeAssetSource = buildAdminRuntimeAssetSource(
+    resolveAdminRuntimeAssetConfig(env, command)
+  );
 
   return {
     plugins: [
       react({
         include: /\.(js|jsx|ts|tsx)$/,
       }),
+      createLegacyAdminRuntimeAssetPlugin(adminRuntimeAssetSource),
     ],
     oxc: {
       include: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],

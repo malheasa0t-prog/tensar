@@ -6,14 +6,11 @@
  */
 
 import { createSupabaseAdmin, createSupabaseClient, extractBearerToken, errorResponse, successResponse } from '../../_lib/supabase.js';
+import { handlePreflight, withCors } from '../../_lib/cors.js';
 
 /* ─── Constants ─── */
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PATCH, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+/* CORS handled by shared _lib/cors.js module */
 
 /* ─── Helpers ─── */
 
@@ -172,7 +169,7 @@ async function handlePatch(request, env) {
 
 export async function onRequest(context) {
   if (context.request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return handlePreflight(context.request, 'GET, PATCH, OPTIONS');
   }
 
   const method = context.request.method.toUpperCase();
@@ -186,11 +183,5 @@ export async function onRequest(context) {
     response = errorResponse('Method not allowed', 405);
   }
 
-  const headers = new Headers(response.headers);
-  Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
-
-  return new Response(response.body, {
-    status: response.status,
-    headers,
-  });
+  return withCors(response, context.request, 'GET, PATCH, OPTIONS');
 }

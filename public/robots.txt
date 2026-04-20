@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /auth/
+Disallow: /checkout
+Disallow: /compare
+Disallow: /dashboard/
+Disallow: /deposit
+
+Sitemap: https://tensr.systems/sitemap.xml

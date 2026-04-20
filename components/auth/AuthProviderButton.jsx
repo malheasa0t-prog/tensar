@@ -27,7 +27,8 @@ export default function AuthProviderButton({
       className={styles.providerButton}
       aria-label={label}
     >
-      <span className={styles.providerIcon}>{getProviderIcon(provider)}</span>
+      {isLoading ? <span className={`btn-spinner ${styles.providerSpinner}`} aria-hidden="true" /> : null}
+      {!isLoading ? <span className={styles.providerIcon}>{getProviderIcon(provider)}</span> : null}
       <span>{isLoading ? "جارٍ التحويل..." : label}</span>
     </button>
   );

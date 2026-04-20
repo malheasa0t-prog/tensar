@@ -1,6 +1,7 @@
 import Link from "next/link";
 import styles from "./notFound.module.css";
 import AppIcon from "@/components/AppIcon";
+import { usePageSeo } from "@/hooks/usePageSeo";
 
 const SUGGESTED_LINKS = [
   { href: "/products", label: "المنتجات الأكثر زيارة", icon: "shopping-bag" },
@@ -9,6 +10,12 @@ const SUGGESTED_LINKS = [
 ];
 
 export default function NotFound() {
+  usePageSeo({
+    title: "الصفحة غير موجودة",
+    description: "الرابط المطلوب غير متاح حاليًا. عد إلى الرئيسية أو تصفح الكتالوج للوصول إلى ما تريد.",
+    robots: "noindex, nofollow",
+  });
+
   return (
     <section className={`section page-top ${styles.section}`}>
       <div className="container">

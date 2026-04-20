@@ -1,4 +1,29 @@
-# https://developers.cloudflare.com/workers/static-assets/headers
-# https://opennext.js.org/cloudflare/caching#static-assets-caching
-/_next/static/*
-  Cache-Control: public,max-age=31536000,immutable
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://static.cloudflareinsights.com https://www.googletagmanager.com https://connect.facebook.net https://static.hotjar.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://serva-s.com https://cloudflareinsights.com https://www.google-analytics.com https://region1.google-analytics.com https://www.facebook.com https://*.hotjar.com wss://*.hotjar.com; frame-src 'self' https://www.googletagmanager.com https://www.facebook.com https://vars.hotjar.com; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests; block-all-mixed-content
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+
+# Cache immutable Vite output assets aggressively.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/admin-sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/fonts/fonts.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/fonts/*.woff2
+  Cache-Control: public, max-age=31536000, immutable

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { filterVisibleNotifications } from '@/lib/dashboardNotificationsModel';
 
 /**
  * Loads the dashboard summary snapshot for the current user.
@@ -39,11 +40,11 @@ async function fetchDashboardHomeSnapshot() {
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(3),
+      .limit(10),
   ]);
 
   const orders = ordersRes.data || [];
-  const recentNotifications = notificationsRes.data || [];
+  const recentNotifications = filterVisibleNotifications(notificationsRes.data || []).slice(0, 3);
   const activeSyncOrders = orders.filter(
     (order) =>
       order.external_order_id &&

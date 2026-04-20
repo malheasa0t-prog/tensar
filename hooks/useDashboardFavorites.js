@@ -4,40 +4,29 @@ import { useCallback, useEffect, useState } from "react";
 import { useCart } from "@/components/CartProvider";
 import { useFavorites } from "@/components/FavoritesProvider";
 import { useToast } from "@/components/ToastProvider";
-import { mapProductsExplorerProduct } from "@/lib/productsExplorerModel";
-import { supabase } from "@/lib/supabaseClient";
-import { fetchFavoriteProductSnapshots } from "@/services/favoritesService";
+import {
+  fetchFavoriteCategoryMap,
+  fetchFavoriteProductSnapshots,
+  mapFavoriteProductsForDisplay,
+} from "@/services/favoritesService";
 
 const FAVORITES_LOAD_ERROR_MESSAGE = "تعذر تحميل تفاصيل المفضلة حالياً.";
-const FAVORITES_CATEGORY_FALLBACK = "منتجات عامة";
 
-async function fetchFavoriteCategoryMap(categoryIds) {
-  if (categoryIds.length === 0) {
-    return {};
-  }
-
-  const response = await supabase
-    .from("categories")
-    .select("id,name")
-    .in("id", categoryIds)
-    .eq("status", "active");
-
-  if (response?.error) {
-    throw new Error(FAVORITES_LOAD_ERROR_MESSAGE);
-  }
-
-  return Object.fromEntries((response.data || []).map((category) => [category.id, category.name]));
-}
-
-function sortFavoriteProducts(products, favoriteIds) {
-  const positions = Object.fromEntries(favoriteIds.map((id, index) => [id, index]));
-
-  return [...products].sort(
-    (first, second) =>
-      (positions[first.id] ?? Number.MAX_SAFE_INTEGER) - (positions[second.id] ?? Number.MAX_SAFE_INTEGER)
-  );
-}
-
+/**
+ * Manages the current-device favorites dashboard state and actions.
+ *
+ * @returns {{
+ *   clearAllFavorites: () => void,
+ *   error: string,
+ *   favoriteCount: number,
+ *   favoriteIds: string[],
+ *   favoriteProducts: Array<Record<string, unknown>>,
+ *   hasHydratedFavorites: boolean,
+ *   loading: boolean,
+ *   moveFavoriteToCart: (product: Record<string, unknown>) => void,
+ *   removeFromFavorites: (productId: string) => void,
+ * }}
+ */
 export function useDashboardFavorites() {
   const { addToCart, openSidebar } = useCart();
   const { clearFavorites, favoriteCount, favoriteIds, hasHydratedFavorites, removeFavorite } = useFavorites();
@@ -66,7 +55,7 @@ export function useDashboardFavorites() {
       try {
         const rawProducts = await fetchFavoriteProductSnapshots({ productIds: favoriteIds });
         const categoryIds = [...new Set(rawProducts.map((product) => product.category_id).filter(Boolean))];
-        const categoryMap = await fetchFavoriteCategoryMap(categoryIds);
+        const categoryMap = await fetchFavoriteCategoryMap({ categoryIds });
         const foundIds = new Set(rawProducts.map((product) => String(product.id)));
 
         if (!active) {
@@ -76,12 +65,11 @@ export function useDashboardFavorites() {
         favoriteIds.filter((id) => !foundIds.has(id)).forEach((id) => removeFavorite(id));
 
         setFavoriteProducts(
-          sortFavoriteProducts(
-            rawProducts.map((product) =>
-              mapProductsExplorerProduct(product, categoryMap[product.category_id] || FAVORITES_CATEGORY_FALLBACK)
-            ),
-            favoriteIds
-          )
+          mapFavoriteProductsForDisplay({
+            categoryMap,
+            favoriteIds,
+            products: rawProducts,
+          })
         );
         setError("");
       } catch (loadError) {
@@ -141,6 +129,7 @@ export function useDashboardFavorites() {
     clearAllFavorites,
     error,
     favoriteCount,
+    favoriteIds,
     favoriteProducts,
     hasHydratedFavorites,
     loading,

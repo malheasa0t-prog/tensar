@@ -10,6 +10,7 @@ import FavoritesProvider from "@/components/FavoritesProvider";
 import CartSidebar from "@/components/CartSidebar";
 import DynamicFavicon from "@/components/DynamicFavicon";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import SeoProvider from "@/components/SeoProvider";
 import SiteRuntimeProvider from "@/components/SiteRuntimeProvider";
 import ScrollProgress from "@/components/ScrollProgress";
 import WelcomeOnboardingEntry from "@/components/WelcomeOnboardingEntry";
@@ -40,24 +41,26 @@ export default function ClientProviders({
         initialDynamicLinks={initialDynamicLinks}
         initialSiteSettings={initialSiteSettings}
       >
-        <FavoritesProvider>
-          <ComparisonProvider>
-            <CartProvider>
-              <ToastProvider>
-                <KeyboardShortcuts />
-                <DynamicFavicon />
-                <ScrollProgress />
-                {children}
-                <WelcomeOnboardingEntry />
-                <CartSidebar />
-                <ComparisonDock />
-                <LiveChatWidget />
-                <WhatsappFloatingButton />
-                <BackToTop />
-              </ToastProvider>
-            </CartProvider>
-          </ComparisonProvider>
-        </FavoritesProvider>
+        <SeoProvider>
+          <FavoritesProvider>
+            <ComparisonProvider>
+              <CartProvider>
+                <ToastProvider>
+                  <KeyboardShortcuts />
+                  <DynamicFavicon />
+                  <ScrollProgress />
+                  {children}
+                  <WelcomeOnboardingEntry />
+                  <CartSidebar />
+                  <ComparisonDock />
+                  <LiveChatWidget />
+                  <WhatsappFloatingButton />
+                  <BackToTop />
+                </ToastProvider>
+              </CartProvider>
+            </ComparisonProvider>
+          </FavoritesProvider>
+        </SeoProvider>
       </SiteRuntimeProvider>
     </ThemeProvider>
   );

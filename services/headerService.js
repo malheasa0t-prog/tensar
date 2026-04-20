@@ -3,12 +3,22 @@ import {
   buildHeaderCategoryLinks,
   resolveHeaderUserLabel,
 } from "../lib/headerSnapshotModel.js";
+import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 import { loadSiteSettingsClient } from "../lib/siteSettingsClient.js";
-import { supabase } from "../lib/supabaseClient.js";
 
 const LOGIN_LABEL = "تسجيل الدخول";
 
 export { buildHeaderCategoryLinks, resolveHeaderUserLabel };
+
+/**
+ * Resolves the client used by the public header services.
+ *
+ * @param {Record<string, unknown> | null | undefined} client
+ * @returns {Promise<Record<string, unknown>>}
+ */
+async function resolveHeaderClient(client) {
+  return client || loadSupabaseClient();
+}
 
 /**
  * Checks whether auth metadata already provides a usable public display name.
@@ -26,12 +36,15 @@ function hasAuthDisplayName(user) {
 /**
  * Loads header settings and the visible root categories.
  *
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ siteSettings: ReturnType<typeof normalizeSiteSettings>, dynamicLinks: Array<{ href: string, label: string, id: string, image: string }> }>}
  */
-export async function fetchHeaderSnapshot(client = supabase) {
-  const siteSettings = await loadSiteSettingsClient(client).catch(() => normalizeSiteSettings());
-  const response = await client
+export async function fetchHeaderSnapshot(client) {
+  const resolvedClient = await resolveHeaderClient(client);
+  const siteSettings = await loadSiteSettingsClient(resolvedClient).catch(() =>
+    normalizeSiteSettings()
+  );
+  const response = await resolvedClient
     .from("categories")
     .select("*")
     .eq("status", "active")
@@ -48,7 +61,7 @@ export async function fetchHeaderSnapshot(client = supabase) {
 /**
  * Loads the authenticated user snapshot used by the header CTA.
  *
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{
  *   unreadNotifications: number,
  *   user: Record<string, unknown> | null,
@@ -56,8 +69,9 @@ export async function fetchHeaderSnapshot(client = supabase) {
  *   walletBalance: number,
  * }>}
  */
-export async function fetchHeaderAuthSnapshot(client = supabase) {
-  const authResponse = await client.auth.getUser();
+export async function fetchHeaderAuthSnapshot(client) {
+  const resolvedClient = await resolveHeaderClient(client);
+  const authResponse = await resolvedClient.auth.getUser();
   const user = authResponse?.data?.user || null;
 
   if (!user) {
@@ -72,18 +86,18 @@ export async function fetchHeaderAuthSnapshot(client = supabase) {
   const shouldLoadProfile = !hasAuthDisplayName(user);
   const [profileResponse, walletResponse, notificationsResponse] = await Promise.all([
     shouldLoadProfile
-      ? client
+      ? resolvedClient
           .from("user_profiles")
           .select("full_name")
           .eq("user_id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
-    client
+    resolvedClient
       .from("wallets")
       .select("balance")
       .eq("user_id", user.id)
       .maybeSingle(),
-    client
+    resolvedClient
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
@@ -105,21 +119,44 @@ export async function fetchHeaderAuthSnapshot(client = supabase) {
  * Subscribes to auth changes relevant to the public header.
  *
  * @param {() => void | Promise<void>} onChange
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {() => void}
  */
-export function subscribeToHeaderAuthChanges(onChange, client = supabase) {
+export function subscribeToHeaderAuthChanges(onChange, client) {
   if (typeof onChange !== "function") {
     return () => {};
   }
 
-  const {
-    data: { subscription },
-  } = client.auth.onAuthStateChange(() => {
-    void onChange();
-  });
+  let active = true;
+  let unsubscribe = () => {};
+
+  /**
+   * Attaches the auth listener once the client becomes available.
+   *
+   * @returns {Promise<void>}
+   */
+  async function attachSubscription() {
+    const resolvedClient = await resolveHeaderClient(client);
+
+    if (!active) {
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = resolvedClient.auth.onAuthStateChange(() => {
+      void onChange();
+    });
+
+    unsubscribe = () => {
+      subscription?.unsubscribe?.();
+    };
+  }
+
+  void attachSubscription();
 
   return () => {
-    subscription?.unsubscribe?.();
+    active = false;
+    unsubscribe();
   };
 }

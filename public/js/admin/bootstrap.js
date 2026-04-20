@@ -3,7 +3,7 @@
 (function () {
     'use strict';
 
-    const ADMIN_ASSET_VERSION = '20260408-1';
+    const ADMIN_ASSET_VERSION = '20260417-1';
     const DATA_ENGINE_MODULE_PATH = `/js/admin/data-engine.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_SERVICE_WORKER_PATH = `/admin-sw.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_RUNTIME_ROUTE = '/api/admin/runtime';

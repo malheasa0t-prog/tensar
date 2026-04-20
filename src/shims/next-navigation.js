@@ -6,6 +6,7 @@
  */
 
 import { useLocation, useNavigate, useParams, useSearchParams as useSearchParamsRRD } from 'react-router-dom';
+import { prefetchRouteModule } from '../routePrefetch';
 
 /**
  * Returns the current pathname string.
@@ -31,7 +32,9 @@ export function useRouter() {
     back: () => navigate(-1),
     forward: () => navigate(1),
     refresh: () => window.location.reload(),
-    prefetch: () => {},
+    prefetch: (url) => {
+      void prefetchRouteModule(url);
+    },
   };
 }
 

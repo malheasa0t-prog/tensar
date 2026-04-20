@@ -5,17 +5,22 @@
  * wraps the app in providers, and renders routes via Outlet.
  */
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect, Suspense } from 'react';
-import { Outlet, useLocation, ScrollRestoration } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import ClientProviders from '@/components/ClientProviders';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import PageTransitionShell from '@/components/PageTransitionShell';
+import RouteSuspenseFallback from '@/components/RouteSuspenseFallback';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
-import AiChatbot from '@/components/AiChatbot';
-import RouteLoadingScreen from '@/components/RouteLoadingScreen';
-import { supabase } from '@/lib/supabaseClient';
 import { normalizeSiteSettings } from '@/lib/contactChannels';
-import { buildHeaderCategoryLinks } from '@/lib/headerSnapshotModel';
-import { selectHomepageCategories } from '@/lib/techfixModel';
+import { fetchHeaderSnapshot } from '@/services/headerService';
+
+const AiChatbot = dynamic(() => import('@/components/AiChatbot'), {
+  loading: () => null,
+  ssr: false,
+});
 
 /**
  * Root application component that manages global state and layout.
@@ -25,43 +30,48 @@ import { selectHomepageCategories } from '@/lib/techfixModel';
 export default function App() {
   const [siteSettings, setSiteSettings] = useState(() => normalizeSiteSettings());
   const [dynamicLinks, setDynamicLinks] = useState([]);
-  const [loaded, setLoaded] = useState(false);
   const location = useLocation();
+  const errorBoundaryResetKey = `${location.pathname}${location.search}`;
 
   useEffect(() => {
     let cancelled = false;
+    let idleCallbackId = 0;
+    let timeoutId = 0;
 
     async function loadSiteData() {
       try {
-        const [settingsResult, categoriesResult] = await Promise.all([
-          supabase.from('settings').select('data').limit(1).maybeSingle(),
-          supabase
-            .from('categories')
-            .select('*')
-            .eq('status', 'active')
-            .is('parent_id', null)
-            .order('sort_order', { ascending: true }),
-        ]);
+        const snapshot = await fetchHeaderSnapshot();
 
         if (cancelled) return;
 
-        const settings = normalizeSiteSettings(settingsResult.data?.data);
-        const categories =
-          categoriesResult.error || !Array.isArray(categoriesResult.data)
-            ? []
-            : categoriesResult.data;
-
-        setSiteSettings(settings);
-        setDynamicLinks(buildHeaderCategoryLinks({ categories, siteSettings: settings }));
+        setSiteSettings(snapshot.siteSettings);
+        setDynamicLinks(snapshot.dynamicLinks);
       } catch (error) {
         console.error('Failed to load site data:', error);
-      } finally {
-        if (!cancelled) setLoaded(true);
       }
     }
 
-    loadSiteData();
-    return () => { cancelled = true; };
+    function scheduleLoad() {
+      void loadSiteData();
+    }
+
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleCallbackId = window.requestIdleCallback(scheduleLoad, { timeout: 1500 });
+    } else {
+      timeoutId = window.setTimeout(scheduleLoad, 180);
+    }
+
+    return () => {
+      cancelled = true;
+
+      if (idleCallbackId && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -69,23 +79,27 @@ export default function App() {
   }, [location.pathname]);
 
   return (
-    <div className="font-cairo font-inter">
-      <ClientProviders
-        initialDynamicLinks={dynamicLinks}
-        initialSiteSettings={siteSettings}
-      >
-        <a href="#main-content" className="skip-link">
-          تجاوز إلى المحتوى
-        </a>
-        <SiteHeader />
-        <div id="main-content">
-          <Suspense fallback={<RouteLoadingScreen />}>
-            <Outlet />
-          </Suspense>
-        </div>
-        <SiteFooter siteSettings={siteSettings} />
-        <AiChatbot />
-      </ClientProviders>
-    </div>
+    <ErrorBoundary resetKey={errorBoundaryResetKey}>
+      <div className="font-cairo font-inter">
+        <ClientProviders
+          initialDynamicLinks={dynamicLinks}
+          initialSiteSettings={siteSettings}
+        >
+          <a href="#main-content" className="skip-link">
+            تجاوز إلى المحتوى
+          </a>
+          <SiteHeader />
+          <main id="main-content">
+            <PageTransitionShell>
+              <Suspense fallback={<RouteSuspenseFallback pathname={location.pathname} />}>
+                <Outlet />
+              </Suspense>
+            </PageTransitionShell>
+          </main>
+          <SiteFooter siteSettings={siteSettings} />
+          <AiChatbot />
+        </ClientProviders>
+      </div>
+    </ErrorBoundary>
   );
 }

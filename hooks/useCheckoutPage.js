@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { trackPurchase } from '@/lib/analyticsModel';
-import { PUBLIC_ANALYTICS_CONFIG } from '@/lib/publicAnalyticsConfig';
 import { useCart } from '@/components/CartProvider';
+import { useToast } from '@/components/ToastProvider';
+import { trackPurchase } from '@/lib/analyticsModel';
 import {
   calculateCheckoutTotals,
   createCheckoutFormState,
   getWalletTransferInstructions,
   syncCheckoutSelections,
 } from '@/lib/checkoutModel';
+import { PUBLIC_ANALYTICS_CONFIG } from '@/lib/publicAnalyticsConfig';
 import {
   fetchCheckoutOptions,
   getDefaultCheckoutOptions,
@@ -17,6 +18,7 @@ import {
 } from '@/services/checkoutService';
 
 const DEFAULT_CHECKOUT_ERROR_MESSAGE = 'حدث خطأ غير متوقع أثناء إتمام الطلب';
+const INCOMPLETE_CHECKOUT_MESSAGE = 'أكمل الاسم ورقم الهاتف قبل تأكيد الطلب.';
 
 /**
  * Handles dynamic checkout options, form state, and order submission.
@@ -42,6 +44,7 @@ const DEFAULT_CHECKOUT_ERROR_MESSAGE = 'حدث خطأ غير متوقع أثنا
  */
 export function useCheckoutPage() {
   const { items, cartTotal, clearCart } = useCart();
+  const { showToast } = useToast();
   const defaultOptions = getDefaultCheckoutOptions();
   const [checkoutOptions, setCheckoutOptions] = useState(defaultOptions);
   const [form, setForm] = useState(createCheckoutFormState(defaultOptions));
@@ -117,6 +120,8 @@ export function useCheckoutPage() {
     event.preventDefault();
 
     if (!items.length || !form.customer_name.trim() || !form.customer_phone.trim()) {
+      setError(INCOMPLETE_CHECKOUT_MESSAGE);
+      showToast(INCOMPLETE_CHECKOUT_MESSAGE, { type: 'warning', title: 'بيانات ناقصة' });
       return;
     }
 
@@ -140,8 +145,14 @@ export function useCheckoutPage() {
 
       clearCart();
       setSuccess(nextSuccess);
+      showToast(`تم إنشاء الطلب بنجاح برقم ${nextSuccess.order_id}.`, {
+        type: 'success',
+        title: 'تم استلام الطلب',
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : DEFAULT_CHECKOUT_ERROR_MESSAGE);
+      const nextError = err instanceof Error ? err.message : DEFAULT_CHECKOUT_ERROR_MESSAGE;
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر إتمام الطلب' });
     } finally {
       setLoading(false);
     }

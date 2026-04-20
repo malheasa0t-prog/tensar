@@ -250,6 +250,12 @@
   color: #ffffff;
 }
 
+.providerSpinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
 .providerIcon svg { display: block; }
 
 .footerSlot {

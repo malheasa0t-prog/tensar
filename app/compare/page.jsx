@@ -1,13 +1,5 @@
 import PageSectionBreadcrumbs from "@/components/PageSectionBreadcrumbs";
 import ComparePageClient from "@/components/compare/ComparePageClient";
-import { getPageMetadata } from "@/lib/siteMetadata";
-
-export async function generateMetadata() {
-  return getPageMetadata({
-    title: "مقارنة المنتجات",
-    description: "قارن بين المنتجات جنباً إلى جنب لمعرفة السعر والتقييم والمخزون قبل الشراء.",
-  });
-}
 
 export default function ComparePage() {
   return (

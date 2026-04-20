@@ -14,7 +14,9 @@ import AppIcon from '@/components/AppIcon';
 import InternalPageHero from '@/components/InternalPageHero';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
+import { buildServiceStructuredData } from '@/lib/seo';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
@@ -89,6 +91,27 @@ export default function ServiceDetailsPage() {
   if (loading) return <CatalogPageSkeleton productCount={3} />;
   if (!service) return null;
 
+  usePageSeo({
+    title: service.name,
+    description:
+      service.description ||
+      `اطلع على خدمة ${service.name} والسعر ومدة التنفيذ وخطوات الحجز لدى TechZone.`,
+    image: service.image,
+    canonicalPath: `/services/${slug}`,
+    breadcrumbItems: [
+      { href: '/', label: 'الرئيسية' },
+      { href: '/services', label: 'خدمات الصيانة' },
+      { label: service.name },
+    ],
+    breadcrumbLabel: service.name,
+    structuredData: [
+      buildServiceStructuredData({
+        pathname: `/services/${slug}`,
+        service,
+      }),
+    ],
+  });
+
   return (
     <>
       <InternalPageHero
@@ -118,7 +141,8 @@ export default function ServiceDetailsPage() {
                   <Image
                     src={service.image}
                     alt={service.name}
-                    fill
+                    width={1080}
+                    height={1080}
                     loading="lazy"
                     quality={80}
                     sizes="(max-width: 900px) 100vw, 540px"

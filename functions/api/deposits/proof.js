@@ -5,14 +5,11 @@
  */
 
 import { createSupabaseAdmin, createSupabaseClient, extractBearerToken, errorResponse, successResponse } from '../../_lib/supabase.js';
+import { handlePreflight, withCors } from '../../_lib/cors.js';
 
 /* ─── Constants ─── */
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+/* CORS handled by shared _lib/cors.js module */
 
 const DEPOSIT_PROOF_BUCKET_NAME = 'deposits';
 const DEPOSIT_PROOF_SIZE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -74,7 +71,7 @@ async function ensureBucket(admin) {
   }
 
   const createResp = await admin.storage.createBucket(DEPOSIT_PROOF_BUCKET_NAME, {
-    public: true,
+    public: false,
     fileSizeLimit: DEPOSIT_PROOF_SIZE_LIMIT_BYTES,
     allowedMimeTypes: [...DEPOSIT_PROOF_ALLOWED_TYPES],
   });
@@ -88,7 +85,7 @@ async function ensureBucket(admin) {
 
 export async function onRequest(context) {
   if (context.request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return handlePreflight(context.request);
   }
 
   if (context.request.method !== 'POST') {
@@ -152,8 +149,5 @@ export async function onRequest(context) {
   const { data: { publicUrl } = {} } = bucketApi.getPublicUrl(objectPath);
 
   const response = successResponse({ data: { publicUrl: publicUrl || null } });
-  const headers = new Headers(response.headers);
-  Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
-
-  return new Response(response.body, { status: response.status, headers });
+  return withCors(response, request);
 }

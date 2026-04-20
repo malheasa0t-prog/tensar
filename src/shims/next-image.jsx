@@ -1,27 +1,38 @@
 /**
- * Next.js Image Compatibility Shim.
- *
- * Converts Next.js <Image> props to a standard <img> element.
- * Handles the 'fill' layout mode with absolute positioning.
+ * Next.js Image compatibility shim.
  */
 
 import { forwardRef } from 'react';
+import { optimizeImageSrc } from '@/lib/imageUtils';
 
 /**
- * Maps Next.js Image component to a standard img element.
+ * Extracts the most useful pixel width from a sizes string.
+ *
+ * @param {string | undefined} sizes
+ * @returns {number | undefined}
+ */
+function inferWidthFromSizes(sizes) {
+  if (typeof sizes !== 'string') {
+    return undefined;
+  }
+
+  const matches = sizes.match(/(\d+)px/g);
+  return matches?.length ? Number(matches[matches.length - 1].replace('px', '')) : undefined;
+}
+
+/**
+ * Maps Next.js Image props to a standard img element.
  *
  * @param {object} props
- * @param {string} props.src - Image source URL
- * @param {string} props.alt - Alt text
- * @param {number} [props.width] - Width in pixels
- * @param {number} [props.height] - Height in pixels
- * @param {boolean} [props.fill] - Fill parent container
- * @param {string} [props.sizes] - Ignored
- * @param {number} [props.quality] - Ignored
- * @param {boolean} [props.priority] - Maps to eager loading
- * @param {boolean} [props.unoptimized] - Ignored
- * @param {string} [props.loading] - Loading strategy
- * @param {Function} [props.onLoad] - Load callback
+ * @param {string} props.src
+ * @param {string} props.alt
+ * @param {number} [props.width]
+ * @param {number} [props.height]
+ * @param {boolean} [props.fill]
+ * @param {string} [props.sizes]
+ * @param {number} [props.quality]
+ * @param {boolean} [props.priority]
+ * @param {string} [props.loading]
  * @param {React.Ref} ref
  * @returns {JSX.Element}
  */
@@ -56,16 +67,22 @@ const Image = forwardRef(function Image(
     imgStyle.objectFit = imgStyle.objectFit || 'cover';
   }
 
+  const resolvedWidth = width || inferWidthFromSizes(sizes);
+  const optimizedSrc = unoptimized
+    ? src || ''
+    : optimizeImageSrc({ quality, src: src || '', width: resolvedWidth });
   const loadingAttr = priority ? 'eager' : loading || 'lazy';
 
   return (
     <img
       ref={ref}
-      src={src || ''}
+      src={optimizedSrc}
       alt={alt}
       width={fill ? undefined : width}
       height={fill ? undefined : height}
       loading={loadingAttr}
+      decoding={priority ? 'sync' : 'async'}
+      fetchPriority={priority ? 'high' : undefined}
       style={Object.keys(imgStyle).length > 0 ? imgStyle : undefined}
       {...rest}
     />

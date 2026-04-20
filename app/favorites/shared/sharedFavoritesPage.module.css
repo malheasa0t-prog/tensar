@@ -1,0 +1,103 @@
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.heroCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.2rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(31, 19, 62, 0.94), rgba(10, 14, 39, 0.98)),
+    radial-gradient(circle at top right, rgba(131, 56, 236, 0.14), transparent 32%);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+}
+
+.heroCopy,
+.heroActions {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.heroActions {
+  justify-items: end;
+}
+
+.heroBadge,
+.errorBanner,
+.infoBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.heroBadge {
+  width: fit-content;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(215, 167, 255, 0.24);
+  background: rgba(131, 56, 236, 0.14);
+  color: #f3e8ff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.heroNote {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.errorBanner,
+.infoBanner {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+}
+
+.errorBanner {
+  border: 1px solid rgba(239, 68, 68, 0.24);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fecaca;
+}
+
+.infoBanner {
+  border: 1px solid rgba(59, 130, 246, 0.24);
+  background: rgba(59, 130, 246, 0.08);
+  color: #bfdbfe;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .heroCard {
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    justify-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

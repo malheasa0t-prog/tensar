@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AppIcon from '@/components/AppIcon';
+import Button from '@/components/Button';
+import { useToast } from '@/components/ToastProvider';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
 import { supabase } from '@/lib/supabaseClient';
@@ -18,6 +20,7 @@ import {
 
 export default function RecoverPasswordPage() {
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const initialEmail = useMemo(() => normalizeAuthEmail(searchParams.get('email')), [searchParams]);
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
@@ -62,6 +65,7 @@ export default function RecoverPasswordPage() {
 
     if (validationError) {
       setError(validationError);
+      showToast(validationError, { type: 'warning', title: 'تحقق من البريد' });
       return;
     }
 
@@ -74,12 +78,19 @@ export default function RecoverPasswordPage() {
     });
 
     if (recoveryError) {
-      setError(mapRecoveryAuthError({ context: 'recovery', error: recoveryError }));
+      const nextError = mapRecoveryAuthError({ context: 'recovery', error: recoveryError });
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر إرسال الرابط' });
       setLoading(false);
       return;
     }
 
-    setSuccessMessage(`أرسلنا رابط الاستعادة إلى ${email}. افتح بريدك الإلكتروني ثم عد لإكمال التغيير.`);
+    const nextSuccessMessage = `أرسلنا رابط الاستعادة إلى ${email}. افتح بريدك الإلكتروني ثم عد لإكمال التغيير.`;
+    setSuccessMessage(nextSuccessMessage);
+    showToast(`أرسلنا رابط الاستعادة إلى ${email}.`, {
+      type: 'success',
+      title: 'تم إرسال الرابط',
+    });
     setLoading(false);
   }
 
@@ -95,6 +106,7 @@ export default function RecoverPasswordPage() {
 
     if (validationError) {
       setError(validationError);
+      showToast(validationError, { type: 'warning', title: 'تحقق من كلمة المرور' });
       return;
     }
 
@@ -104,14 +116,18 @@ export default function RecoverPasswordPage() {
 
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
-      setError('رابط الاستعادة غير صالح أو انتهت صلاحيته.');
+      const nextError = 'رابط الاستعادة غير صالح أو انتهت صلاحيته.';
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر التحقق من الرابط' });
       setLoading(false);
       return;
     }
 
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {
-      setError(mapRecoveryAuthError({ context: 'reset', error: updateError }));
+      const nextError = mapRecoveryAuthError({ context: 'reset', error: updateError });
+      setError(nextError);
+      showToast(nextError, { type: 'error', title: 'تعذر تحديث كلمة المرور' });
       setLoading(false);
       return;
     }
@@ -175,14 +191,9 @@ export default function RecoverPasswordPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className={loading ? 'btn btn-primary btn-block is-loading' : 'btn btn-primary btn-block'}
-              >
-                <AppIcon name="shield-check" size={16} />
-                {loading ? 'جارٍ حفظ كلمة المرور...' : 'حفظ كلمة المرور الجديدة'}
-              </button>
+              <Button type="submit" loading={loading} fullWidth loadingLabel="جارٍ حفظ كلمة المرور...">
+                حفظ كلمة المرور الجديدة
+              </Button>
             </form>
           ) : (
             <form onSubmit={handleRecoveryRequest} className={shellStyles.resetGrid}>
@@ -205,14 +216,9 @@ export default function RecoverPasswordPage() {
                 سنرسل الرابط إلى هذا البريد فقط.
               </span>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className={loading ? 'btn btn-primary btn-block is-loading' : 'btn btn-primary btn-block'}
-              >
-                <AppIcon name="mail" size={16} />
-                {loading ? 'جارٍ إرسال الرابط...' : 'إرسال رابط الاستعادة'}
-              </button>
+              <Button type="submit" loading={loading} fullWidth loadingLabel="جارٍ إرسال الرابط...">
+                إرسال رابط الاستعادة
+              </Button>
             </form>
           )}
         </>

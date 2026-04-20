@@ -10,6 +10,7 @@ dist
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Admin config (contains credentials)
 admin-config.js
@@ -36,9 +37,16 @@ Thumbs.db
 tmp-*.png
 tmp-*.html
 homepage-*.png
+chatgpt_promo*.html
+chatgpt_promo*.png
 test-results/
 audit-screenshots/
 audit-shots/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
 # IDE
 .vscode

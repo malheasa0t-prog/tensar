@@ -7,7 +7,7 @@ import {
   buildGlobalSearchPopularSuggestions,
   buildGlobalSearchQuickFilters,
 } from "../lib/globalSearchModel.js";
-import { supabase } from "../lib/supabaseClient.js";
+import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 const GLOBAL_SEARCH_ERROR_MESSAGE = "تعذر تحميل بيانات البحث حالياً.";
@@ -15,6 +15,16 @@ const GLOBAL_SEARCH_ERROR_MESSAGE = "تعذر تحميل بيانات البحث
 let cachedSnapshot = null;
 let cacheExpiryTimestamp = 0;
 let pendingSnapshotPromise = null;
+
+/**
+ * Resolves the Supabase client used by the global search loader.
+ *
+ * @param {Record<string, unknown> | null | undefined} client
+ * @returns {Promise<Record<string, unknown>>}
+ */
+async function resolveSearchClient(client) {
+  return client || loadSupabaseClient();
+}
 
 /**
  * Converts a Supabase response into a safe rows array.
@@ -60,7 +70,7 @@ function cacheSearchSnapshot(snapshot) {
 /**
  * Loads the raw search sources from Supabase.
  *
- * @param {typeof supabase} client
+ * @param {Record<string, unknown>} client
  * @returns {Promise<[Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]>}
  */
 async function loadSearchSources(client) {
@@ -85,12 +95,15 @@ async function loadSearchSources(client) {
 /**
  * Builds a normalized global search snapshot from the raw Supabase sources.
  *
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ items: Array<Record<string, unknown>>, popularSuggestions: string[], quickFilters: Array<Record<string, unknown>>, sourceErrors: string[] }>}
  * @throws {Error}
  */
-export async function loadGlobalSearchSnapshot(client = supabase) {
-  const [productsResponse, servicesResponse, categoriesResponse] = await loadSearchSources(client);
+export async function loadGlobalSearchSnapshot(client) {
+  const resolvedClient = await resolveSearchClient(client);
+  const [productsResponse, servicesResponse, categoriesResponse] = await loadSearchSources(
+    resolvedClient
+  );
   const sourceErrors = [
     readSearchError(productsResponse),
     readSearchError(servicesResponse),
@@ -118,10 +131,10 @@ export async function loadGlobalSearchSnapshot(client = supabase) {
 /**
  * Returns a cached global search snapshot or loads it on demand.
  *
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ items: Array<Record<string, unknown>>, popularSuggestions: string[], quickFilters: Array<Record<string, unknown>>, sourceErrors: string[] }>}
  */
-export async function fetchGlobalSearchSnapshot(client = supabase) {
+export async function fetchGlobalSearchSnapshot(client) {
   if (hasFreshSearchCache()) {
     return cachedSnapshot;
   }

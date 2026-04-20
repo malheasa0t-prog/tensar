@@ -3,49 +3,51 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, Heart, ShoppingCart, Star } from "lucide-react";
+import { ArrowRight, Bell, Check, Heart, RefreshCw, ShoppingCart } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { useComparison } from "./ComparisonProvider";
 import { useFavorites } from "./FavoritesProvider";
+import ProductCardRating from "./ProductCardRating";
 import { useToast } from "./ToastProvider";
+import AppIcon from "./AppIcon";
 import styles from "./ProductCard.module.css";
 import enhancedStyles from "./ProductCardEnhancements.module.css";
+import { useProductCardStockAlert } from "@/hooks/useProductCardStockAlert";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { isOptimizableImageSrc } from "@/lib/imageUtils";
 import { buildPointerGlowPosition } from "@/lib/interactiveEffectsModel";
-import {
-  buildProductCardSnapshot,
-  PRODUCT_CARD_TOTAL_STARS,
-} from "@/lib/productCardModel";
-import {
-  buildRevealClassName,
-  getStaggeredRevealDelay,
-  resolveRevealDelay,
-} from "@/lib/scrollRevealModel";
-import AppIcon from "./AppIcon";
+import { buildProductCardSnapshot } from "@/lib/productCardModel";
+import { buildRevealClassName, getStaggeredRevealDelay, resolveRevealDelay } from "@/lib/scrollRevealModel";
 
 const PRODUCT_PLACEHOLDER_IMAGE = "/images/product-placeholder.svg";
 
-function ProductCardRating({ filledStars, ratingValue, reviewCount }) {
-  return (
-    <div className={enhancedStyles.ratingRow} aria-label={`التقييم ${ratingValue.toFixed(1)} من 5`}>
-      <div className={enhancedStyles.ratingStars} aria-hidden="true">
-        {Array.from({ length: PRODUCT_CARD_TOTAL_STARS }, (_, index) => {
-          const isActive = index < filledStars;
-          const className = isActive
-            ? `${enhancedStyles.ratingStar} ${enhancedStyles.ratingStarActive}`
-            : enhancedStyles.ratingStar;
+function buildCardActionState({ cartFeedbackActive, isOutOfStock, stockAlertActive, stockAlertPending }) {
+  if (isOutOfStock) {
+    return {
+      buttonClassName: `${styles.addCartButton} ${styles.stockAlertButton}${
+        stockAlertActive ? ` ${styles.stockAlertButtonActive}` : ""
+      }`,
+      icon: stockAlertPending ? (
+        <RefreshCw size={15} className={styles.buttonSpinner} />
+      ) : stockAlertActive ? (
+        <Check size={15} />
+      ) : (
+        <Bell size={15} />
+      ),
+      label: stockAlertPending
+        ? "جاري تفعيل التنبيه"
+        : stockAlertActive
+          ? "سنخبرك عند التوفر"
+          : "نبهني عند التوفر",
+    };
+  }
 
-          return <Star key={`star-${index}`} size={14} className={className} fill={isActive ? "currentColor" : "none"} />;
-        })}
-      </div>
-
-      <span className={enhancedStyles.ratingSummary}>
-        {ratingValue.toFixed(1)} <small>({reviewCount})</small>
-      </span>
-    </div>
-  );
+  return {
+    buttonClassName: `${styles.addCartButton}${cartFeedbackActive ? ` ${styles.addCartButtonSuccess}` : ""}`,
+    icon: cartFeedbackActive ? <Check size={15} /> : <ShoppingCart size={15} />,
+    label: cartFeedbackActive ? "تمت الإضافة" : "أضف للسلة",
+  };
 }
 
 export default function ProductCard({ layout = "grid", product, revealIndex = 0 }) {
@@ -53,6 +55,8 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
   const { isCompared, toggleCompare } = useComparison();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { showToast } = useToast();
+  const { handleRequestStockAlert, isOutOfStock, stockAlertActive, stockAlertPending } =
+    useProductCardStockAlert(product);
   const { ref, isVisible } = useScrollReveal({ threshold: 0.16 });
   const cartFeedbackTimeoutRef = useRef(0);
   const favoriteFeedbackTimeoutRef = useRef(0);
@@ -68,6 +72,12 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
   const compared = isCompared(product.id);
   const showRealImage = Boolean(image) && !hasImageError;
   const displayImage = showRealImage ? image : PRODUCT_PLACEHOLDER_IMAGE;
+  const actionState = buildCardActionState({
+    cartFeedbackActive,
+    isOutOfStock,
+    stockAlertActive,
+    stockAlertPending,
+  });
 
   useEffect(() => {
     const current = ref.current;
@@ -124,6 +134,7 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
     if (result.isFavorite) {
       triggerFavoriteFeedback();
     }
+
     showToast(
       result.isFavorite ? "تمت إضافة المنتج إلى المفضلة" : "تمت إزالة المنتج من المفضلة",
       { type: "success" }
@@ -184,9 +195,7 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
       )}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      style={{
-        "--reveal-delay": resolveRevealDelay(getStaggeredRevealDelay(revealIndex)),
-      }}
+      style={{ "--reveal-delay": resolveRevealDelay(getStaggeredRevealDelay(revealIndex)) }}
     >
       <div className={enhancedStyles.mediaShell}>
         <Link href={href} className={styles.mediaLink} aria-label={`عرض تفاصيل ${productName}`}>
@@ -195,7 +204,8 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
               src={displayImage}
               alt={showRealImage ? productName : `صورة افتراضية للمنتج ${productName}`}
               className={`${styles.image}${showRealImage ? "" : ` ${styles.imagePlaceholder}`}`}
-              fill
+              width={720}
+              height={900}
               sizes="(max-width: 640px) 100vw, (max-width: 1200px) 50vw, 280px"
               quality={80}
               loading="lazy"
@@ -205,9 +215,7 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
           </div>
         </Link>
 
-        {snapshot.hasDiscount ? (
-          <div className={enhancedStyles.discountRibbon}>خصم {snapshot.discountPercentage}%</div>
-        ) : null}
+        {snapshot.hasDiscount ? <div className={enhancedStyles.discountRibbon}>خصم {snapshot.discountPercentage}%</div> : null}
 
         <button
           type="button"
@@ -221,7 +229,9 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
 
         <button
           type="button"
-          className={`${styles.favoriteButton}${isFav ? ` ${styles.favoriteButtonActive}` : ""}${favoriteFeedbackActive ? ` ${styles.favoriteButtonBurst}` : ""}`}
+          className={`${styles.favoriteButton}${isFav ? ` ${styles.favoriteButtonActive}` : ""}${
+            favoriteFeedbackActive ? ` ${styles.favoriteButtonBurst}` : ""
+          }`}
           title="المفضلة"
           aria-label="إضافة إلى المفضلة"
           aria-pressed={isFav}
@@ -259,12 +269,8 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
 
         <div className={styles.bottom}>
           <div className={styles.priceStack}>
-            <span className={styles.price}>
-              {formatCurrency(snapshot.finalPrice)}
-            </span>
-            {snapshot.hasDiscount ? (
-              <span className={styles.oldPrice}>{formatCurrency(snapshot.originalPrice)}</span>
-            ) : null}
+            <span className={styles.price}>{formatCurrency(snapshot.finalPrice)}</span>
+            {snapshot.hasDiscount ? <span className={styles.oldPrice}>{formatCurrency(snapshot.originalPrice)}</span> : null}
           </div>
 
           <div className={styles.actionsRow}>
@@ -275,11 +281,12 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
 
             <button
               type="button"
-              className={`${styles.addCartButton}${cartFeedbackActive ? ` ${styles.addCartButtonSuccess}` : ""}`}
-              onClick={handleAdd}
+              className={actionState.buttonClassName}
+              disabled={isOutOfStock ? stockAlertPending || stockAlertActive : false}
+              onClick={isOutOfStock ? handleRequestStockAlert : handleAdd}
             >
-              {cartFeedbackActive ? <Check size={15} /> : <ShoppingCart size={15} />}
-              {cartFeedbackActive ? "تمت الإضافة" : "أضف للسلة"}
+              {actionState.icon}
+              {actionState.label}
             </button>
           </div>
         </div>

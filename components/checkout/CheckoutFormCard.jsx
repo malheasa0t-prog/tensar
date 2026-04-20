@@ -1,4 +1,4 @@
-import AppIcon from "@/components/AppIcon";
+import Button from "@/components/Button";
 import CheckoutWalletTransferModal from "@/components/checkout/CheckoutWalletTransferModal";
 import { formatCurrency } from "@/lib/formatCurrency";
 
@@ -119,7 +119,7 @@ export default function CheckoutFormCard({
                 style={{ marginTop: "0.75rem" }}
               >
                 {isWalletTransferUnavailable
-                  ? "لم يتم ضبط رقم المحفظة في لوحة التحكم بعد، لذلك لا يمكن استخدام هذا الخيار حالياً."
+                  ? "لم يتم ضبط رقم المحفظة في لوحة التحكم بعد، لذلك لا يمكن استخدام هذا الخيار حاليًا."
                   : `سيظهر لك رقم المحفظة والمبلغ المطلوب (${walletTransferInstructions?.amountText || formatCurrency(checkoutTotal)}) في نافذة منبثقة.`}
               </div>
             ) : null}
@@ -139,14 +139,15 @@ export default function CheckoutFormCard({
           />
         </div>
 
-        <button
+        <Button
           type="submit"
-          className={loading ? "btn btn-primary btn-block is-loading" : "btn btn-primary btn-block"}
-          disabled={loading || !canSubmit}
+          disabled={!canSubmit}
+          loading={loading}
+          fullWidth
+          loadingLabel="جارٍ إنشاء الطلب..."
         >
-          <AppIcon name={loading ? "refresh" : success ? "badge-check" : "shopping-cart"} size={16} />
-          {loading ? "جارٍ إنشاء الطلب..." : success ? "تم الإرسال بنجاح" : "تأكيد الطلب"}
-        </button>
+          {success ? "تم الإرسال بنجاح" : "تأكيد الطلب"}
+        </Button>
       </form>
 
       <CheckoutWalletTransferModal
