@@ -171,6 +171,7 @@ export async function onRequestPost(context) {
           product_type: 'digital',
           brand: null,
           images: svc.image ? [svc.image] : [],
+          provider_service_id: svc.provider_service_id || null,
         });
       }
     }
@@ -276,8 +277,65 @@ export async function onRequestPost(context) {
       }]);
     }
 
+    /* ── Forward digital items to Serva-S provider ── */
+    const digitalForwardResults = [];
+    for (const item of orderItems) {
+      const product = productMap.get(item.product_id);
+      if (!product || product.product_type !== 'digital' || !product.provider_service_id) continue;
+
+      try {
+        const unitPrice = Number(product.price || 0);
+        const itemTotal = unitPrice * item.qty;
+
+        /* Create a service_order record for tracking */
+        const { data: svcOrder, error: svcError } = await admin.from('service_orders').insert([{
+          user_id: userId,
+          service_id: product.id,
+          service_name: product.name,
+          quantity: item.qty,
+          price: unitPrice,
+          cost_price: 0,
+          total: itemTotal,
+          status: 'pending',
+          metadata: { source_order_id: orderId },
+        }]).select('id').single();
+
+        if (svcError || !svcOrder) {
+          digitalForwardResults.push({ service: product.name, sent: false, error: svcError?.message });
+          continue;
+        }
+
+        /* Forward to Serva-S */
+        const { createProviderOrder } = await import('../_lib/providerApi.js');
+        const providerResult = await createProviderOrder(env, {
+          serviceId: product.provider_service_id,
+          quantity: item.qty,
+          link: null,
+        });
+
+        if (providerResult.success && providerResult.orderId) {
+          await admin.from('service_orders')
+            .update({ external_order_id: providerResult.orderId, status: 'processing' })
+            .eq('id', svcOrder.id);
+          digitalForwardResults.push({ service: product.name, sent: true, externalId: providerResult.orderId });
+        } else {
+          await admin.from('service_orders')
+            .update({ metadata: { provider_error: providerResult.error, provider_attempted_at: new Date().toISOString(), source_order_id: orderId } })
+            .eq('id', svcOrder.id);
+          digitalForwardResults.push({ service: product.name, sent: false, error: providerResult.error });
+        }
+      } catch (fwdErr) {
+        digitalForwardResults.push({ service: product.name, sent: false, error: fwdErr?.message });
+      }
+    }
+
     return successResponse({
-      data: { order_id: orderId, total, items_count: orderItems.length },
+      data: {
+        order_id: orderId,
+        total,
+        items_count: orderItems.length,
+        digital_forwarded: digitalForwardResults.filter(r => r.sent).length,
+      },
     });
 
   } catch (err) {
