@@ -5,7 +5,7 @@
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 
 const CART_PRODUCT_SELECT_FIELDS =
-  "id,name,price,discount_price,images,status,quantity,stock,inventory_quantity,available_quantity,category,icon";
+  "id,name,price,discount_price,images,status,quantity,category_id,product_type";
 const CART_REFRESH_ERROR_MESSAGE = "\u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0633\u0644\u0629 \u062d\u0627\u0644\u064a\u0627\u064b.";
 
 /**
@@ -46,6 +46,8 @@ export async function fetchCartProductSnapshots({ productIds, client }) {
   }
 
   const resolvedClient = await resolveCartClient(client);
+
+  /* Load from products table */
   const response = await resolvedClient
     .from("products")
     .select(CART_PRODUCT_SELECT_FIELDS)
@@ -55,5 +57,36 @@ export async function fetchCartProductSnapshots({ productIds, client }) {
     throw new Error(CART_REFRESH_ERROR_MESSAGE);
   }
 
-  return Array.isArray(response?.data) ? response.data : [];
+  const foundProducts = Array.isArray(response?.data) ? response.data : [];
+  const foundIds = new Set(foundProducts.map((p) => p.id));
+  const missingIds = normalizedIds.filter((id) => !foundIds.has(id));
+
+  /* Load missing items from services table (digital services) */
+  if (missingIds.length > 0) {
+    const servicesResponse = await resolvedClient
+      .from("services")
+      .select("id,name,price,image,status,category_id")
+      .in("id", missingIds);
+
+    if (!servicesResponse?.error && Array.isArray(servicesResponse?.data)) {
+      for (const svc of servicesResponse.data) {
+        foundProducts.push({
+          id: svc.id,
+          name: svc.name,
+          price: svc.price,
+          discount_price: null,
+          images: svc.image ? [svc.image] : [],
+          status: svc.status,
+          quantity: 9999,
+          stock: 9999,
+          inventory_quantity: 9999,
+          available_quantity: 9999,
+          category: svc.category_id || null,
+          icon: null,
+        });
+      }
+    }
+  }
+
+  return foundProducts;
 }

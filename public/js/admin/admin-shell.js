@@ -63,11 +63,8 @@
 
     function getAlertSnapshot() {
         return {
-            lowStock: (TZ.db.products || []).filter(function (product) { return product.quantity > 0 && product.quantity <= (product.lowStockAlert || 5); }).length,
             offlineQueueCount: state.offlineQueueCount,
-            pendingDeposits: (TZ.db.deposits || []).filter(function (deposit) { return deposit.status === 'pending'; }).length,
-            pendingOrders: (TZ.db.orders || []).filter(function (order) { return ['pending', 'processing', 'awaiting_delivery'].includes(order.status); }).length + (TZ.db.serviceOrders || []).filter(function (order) { return ['pending', 'processing', 'in_progress'].includes(order.status); }).length,
-            unreadMessages: (TZ.db.contactMessages || []).filter(function (message) { return message.status === 'new'; }).length
+            pendingOrders: (TZ.db.orders || []).filter(function (order) { return ['pending', 'processing', 'awaiting_delivery'].includes(order.status); }).length + (TZ.db.serviceOrders || []).filter(function (order) { return ['pending', 'processing', 'in_progress'].includes(order.status); }).length
         };
     }
 

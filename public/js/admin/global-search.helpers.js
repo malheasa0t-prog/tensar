@@ -31,40 +31,10 @@
         return hasRegularProduct ? 'product-orders' : 'accessory-orders';
     }
 
-    function countCustomerOrders(userId, orders, serviceOrders) {
-        const normalizedUserId = String(userId || '').trim();
-        if (!normalizedUserId) return 0;
-
-        return (Array.isArray(orders) ? orders : []).filter(function (order) {
-            return String(order?.userId || '').trim() === normalizedUserId;
-        }).length + (Array.isArray(serviceOrders) ? serviceOrders : []).filter(function (order) {
-            return String(order?.userId || '').trim() === normalizedUserId;
-        }).length;
-    }
-
     function buildAdminSearchIndex(input) {
-        const products = Array.isArray(input?.products) ? input.products : [];
         const orders = Array.isArray(input?.orders) ? input.orders : [];
         const serviceOrders = Array.isArray(input?.serviceOrders) ? input.serviceOrders : [];
-        const customers = Array.isArray(input?.users) ? input.users : [];
-        const services = Array.isArray(input?.services) ? input.services : [];
-        const categoryNameById = typeof input?.getCategoryName === 'function' ? input.getCategoryName : function () { return ''; };
         const helpers = input?.helpers || {};
-
-        const productResults = products.map(function (product) {
-            return {
-                id: `product:${product.id}`,
-                entityId: product.id,
-                section: 'products',
-                rowSelector: `[data-product-id="${product.id}"]`,
-                kind: 'product',
-                icon: 'fa-box',
-                title: product.name || 'منتج بدون اسم',
-                subtitle: `منتج • مخزون: ${Number(product.quantity || 0)}`,
-                meta: categoryNameById(product.categoryId) || 'بدون فئة',
-                searchText: buildSearchText([product.name, product.brand, product.id, categoryNameById(product.categoryId)])
-            };
-        });
 
         const physicalOrderResults = orders.map(function (order) {
             const section = resolvePhysicalOrderSection(order, helpers);
@@ -97,42 +67,7 @@
             };
         });
 
-        const customerResults = customers.map(function (user) {
-            const orderCount = countCustomerOrders(user.id, orders, serviceOrders);
-            return {
-                id: `customer:${user.id}`,
-                entityId: user.id,
-                section: 'customers',
-                rowSelector: `[data-customer-id="${user.id}"]`,
-                kind: 'customer',
-                icon: 'fa-user',
-                title: user.fullName || 'عميل',
-                subtitle: `عميل • ${orderCount} طلبات`,
-                meta: user.email || user.phone || user.status || 'active',
-                searchText: buildSearchText([user.fullName, user.email, user.phone, user.id])
-            };
-        });
-
-        const serviceResults = services.map(function (service) {
-            return {
-                id: `service:${service.id}`,
-                entityId: service.id,
-                section: 'services',
-                rowSelector: `[data-service-id="${service.id}"]`,
-                kind: 'service',
-                icon: 'fa-screwdriver-wrench',
-                title: service.name || 'خدمة',
-                subtitle: `خدمة صيانة • ${Number(service.price || 0).toFixed(2)} د.أ`,
-                meta: service.category || 'خدمات الصيانة',
-                searchText: buildSearchText([service.name, service.description, service.category, service.id])
-            };
-        });
-
-        return productResults
-            .concat(physicalOrderResults)
-            .concat(digitalOrderResults)
-            .concat(customerResults)
-            .concat(serviceResults);
+        return physicalOrderResults.concat(digitalOrderResults);
     }
 
     function scoreSearchItem(item, query) {
@@ -178,7 +113,6 @@
         normalizeText: normalizeText,
         buildSearchText: buildSearchText,
         resolvePhysicalOrderSection: resolvePhysicalOrderSection,
-        countCustomerOrders: countCustomerOrders,
         buildAdminSearchIndex: buildAdminSearchIndex,
         scoreSearchItem: scoreSearchItem,
         searchAdminIndex: searchAdminIndex

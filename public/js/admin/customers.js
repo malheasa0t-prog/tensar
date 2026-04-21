@@ -1,264 +1,133 @@
-// ===== TechZone Admin - Customers =====
+/**
+ * TechZone Admin — Customers Section (Rebuilt)
+ *
+ * Displays customer profiles with order stats, search, and status management.
+ * Uses mapper property names: authUserId, fullName, email, phone, role, status.
+ */
 (function () {
     'use strict';
 
-    const A = window.AdminApp;
-    const bulkActions = window.AdminBulkActions;
-    const H = window.AdminCustomerHelpers;
-    const state = { searchQuery: '', selectedCustomerId: '', statusFilter: 'all' };
+    var A = window.AdminApp;
+    if (!A) return;
 
-    if (!A || !H) return;
+    var searchQuery = '';
+    var filterStatus = '';
+    var currentPage = 1;
+    var PAGE_SIZE = 15;
+
+    function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
 
     function getCustomers() {
-        return (TZ.db.users || []).filter((user) => TZ.isCustomerUser(user));
-    }
-
-    function buildProfiles() {
-        return getCustomers().map((user) => H.buildCustomerProfile({
-            user: user,
-            orders: TZ.db.orders || [],
-            serviceOrders: TZ.db.serviceOrders || []
-        }));
-    }
-
-    function getVisibleProfiles() {
-        return H.filterCustomerProfiles({
-            profiles: buildProfiles(),
-            searchQuery: state.searchQuery,
-            statusFilter: state.statusFilter
+        return (TZ.db.users || []).filter(function (u) {
+            return typeof TZ.isCustomerUser === 'function' ? TZ.isCustomerUser(u) : true;
         });
     }
 
-    function getSelectedProfile(profiles) {
-        const fallbackProfile = profiles[0] || null;
-        const selectedProfile = profiles.find((profile) => profile.customer.id === state.selectedCustomerId) || fallbackProfile;
-        state.selectedCustomerId = selectedProfile?.customer.id || '';
-        return selectedProfile;
-    }
-
-    function buildCustomerExportRows(ids) {
-        return buildProfiles()
-            .filter((profile) => ids.includes(profile.customer.id))
-            .map((profile) => ({
-                createdAt: A.formatDate(profile.createdAt),
-                email: profile.customer.email || '',
-                fullName: profile.customer.fullName || '',
-                orders: profile.orderCount,
-                phone: profile.customer.phone || '',
-                status: profile.status,
-                totalSpend: TZ.formatPrice(profile.totalSpend || 0)
-            }));
-    }
-
-    async function updateCustomerStatus(ids, status) {
-        const customers = getCustomers().filter((customer) => ids.includes(customer.id));
-        await Promise.all(customers.map((customer) => {
-            customer.status = status;
-            return Promise.resolve(TZ.commitDb('customer_status_change', TZ.getSession()?.userId, `${customer.fullName}: ${status}`, {
-                type: 'user',
-                data: customer
-            }));
-        }));
-        renderCustomers();
-        A.showToast(`تم تحديث حالة ${customers.length} عملاء.`);
-    }
-
-    function mountCustomerBulkActions() {
-        if (!bulkActions) return;
-        bulkActions.mount({
-            scopeKey: 'customers',
-            tableSelector: '#customersTable',
-            status: {
-                title: 'تغيير حالة العملاء المحددين',
-                options: [{ value: 'active', label: 'نشط' }, { value: 'inactive', label: 'معطل' }],
-                run: updateCustomerStatus
-            },
-            export: {
-                filename: 'customers-export.csv',
-                columns: [
-                    { key: 'fullName', label: 'الاسم' },
-                    { key: 'email', label: 'البريد' },
-                    { key: 'phone', label: 'الجوال' },
-                    { key: 'orders', label: 'الطلبات' },
-                    { key: 'totalSpend', label: 'إجمالي المشتريات' },
-                    { key: 'status', label: 'الحالة' },
-                    { key: 'createdAt', label: 'تاريخ التسجيل' }
-                ],
-                buildRows: buildCustomerExportRows
-            }
+    function enrichCustomer(u) {
+        var orders = (TZ.db.orders || []).filter(function (o) {
+            return o.userId === u.id || o.userId === u.authUserId;
         });
+        var totalSpend = orders.reduce(function (sum, o) { return sum + Number(o.total || 0); }, 0);
+        return { user: u, orderCount: orders.length, totalSpend: totalSpend };
     }
 
-    function openNotificationPrefill(profile) {
-        window.__TZ_ADMIN_NOTIFICATION_PREFILL = {
-            audience: 'single',
-            title: `رسالة إلى ${profile.customer.fullName || 'العميل'}`,
-            userId: profile.customer.id
-        };
-        A.renderSection('notifications', { history: 'push' });
-    }
-
-    function openOrdersForCustomer(profile) {
-        window.__TZ_ADMIN_ORDERS_PREFILL_QUERY = profile.customer.fullName || profile.customer.email || profile.customer.phone || profile.customer.id;
-        A.renderSection('orders', { history: 'push' });
-    }
-
-    function renderSummaryCards(profiles) {
-        const activeCount = profiles.filter((profile) => profile.status === 'active').length;
-        const totalSpend = profiles.reduce((sum, profile) => sum + Number(profile.totalSpend || 0), 0);
-        return `
-            <div class="admin-customer-summary-grid">
-                <article class="admin-customer-summary-card"><strong>${profiles.length}</strong><span>العملاء المطابقون</span></article>
-                <article class="admin-customer-summary-card"><strong>${activeCount}</strong><span>حسابات نشطة</span></article>
-                <article class="admin-customer-summary-card"><strong>${TZ.formatPrice(totalSpend)}</strong><span>إجمالي المشتريات</span></article>
-            </div>
-        `;
-    }
-
-    function renderDetailPanel(profile) {
-        if (!profile) {
-            return '<div class="admin-customer-empty">اختر عميلاً لعرض تفاصيله وتاريخ نشاطه.</div>';
+    function applyFilters(list) {
+        var result = list;
+        if (filterStatus) {
+            result = result.filter(function (c) { return c.user.status === filterStatus; });
         }
-
-        const customer = profile.customer;
-        return `
-            <section class="admin-panel admin-customer-detail-panel">
-                <div class="panel-header">
-                    <h2><i class="fas fa-address-card"></i> ${TZ.escapeHtml(customer.fullName || 'عميل')}</h2>
-                </div>
-                <div class="panel-body padded">
-                    <div class="admin-customer-metrics">
-                        <div><span>تاريخ التسجيل</span><strong>${A.formatDate(profile.createdAt)}</strong></div>
-                        <div><span>آخر طلب</span><strong>${A.formatDate(profile.lastOrderAt)}</strong></div>
-                        <div><span>إجمالي الطلبات</span><strong>${profile.orderCount}</strong></div>
-                        <div><span>إجمالي المشتريات</span><strong>${TZ.formatPrice(profile.totalSpend)}</strong></div>
-                    </div>
-                    <div class="admin-customer-contact">
-                        <span><i class="fas fa-envelope"></i> ${TZ.escapeHtml(customer.email || '-')}</span>
-                        <span dir="ltr"><i class="fas fa-phone"></i> ${TZ.escapeHtml(customer.phone || '-')}</span>
-                        <span><i class="fas fa-user-clock"></i> ${A.formatDate(profile.lastLoginAt)}</span>
-                    </div>
-                    <div class="admin-customer-actions">
-                        <button type="button" class="btn btn-outline btn-sm" data-customer-action="orders" data-customer-id="${customer.id}"><i class="fas fa-box-open"></i> عرض الطلبات</button>
-                        <button type="button" class="btn btn-outline btn-sm" data-customer-action="notify" data-customer-id="${customer.id}"><i class="fas fa-bell"></i> إرسال إشعار</button>
-                        <button type="button" class="btn ${profile.status === 'active' ? 'btn-danger' : 'btn-primary'} btn-sm" data-customer-action="toggle-status" data-customer-id="${customer.id}">
-                            <i class="fas ${profile.status === 'active' ? 'fa-user-slash' : 'fa-user-check'}"></i>
-                            ${profile.status === 'active' ? 'تعطيل الحساب' : 'تفعيل الحساب'}
-                        </button>
-                    </div>
-                    <div class="admin-customer-order-list">
-                        ${(profile.recentOrders.length ? profile.recentOrders : []).map((order) => `
-                            <article class="admin-customer-order-item">
-                                <div>
-                                    <strong>${TZ.escapeHtml(order.label)}</strong>
-                                    <small>${A.statusLabel(order.status)} • ${A.formatDateTime(order.createdAt)}</small>
-                                </div>
-                                <span>${TZ.formatPrice(order.total)}</span>
-                            </article>
-                        `).join('') || '<div class="admin-customer-empty">لا توجد طلبات مسجلة لهذا العميل.</div>'}
-                    </div>
-                </div>
-            </section>
-        `;
+        if (searchQuery) {
+            var q = searchQuery.toLowerCase();
+            result = result.filter(function (c) {
+                var u = c.user;
+                return (u.fullName || '').toLowerCase().includes(q)
+                    || (u.email || '').toLowerCase().includes(q)
+                    || (u.phone || '').toLowerCase().includes(q);
+            });
+        }
+        return result;
     }
 
-    function bindEvents(profiles) {
-        document.getElementById('customerSearch')?.addEventListener('input', function () {
-            state.searchQuery = String(this.value || '');
-            renderCustomers();
-        });
-        document.getElementById('customerStatusFilter')?.addEventListener('change', function () {
-            state.statusFilter = String(this.value || 'all');
-            renderCustomers();
-        });
-        document.querySelectorAll('[data-customer-select]').forEach((button) => {
-            button.addEventListener('click', function () {
-                state.selectedCustomerId = this.dataset.customerSelect;
-                renderCustomers();
-            });
-        });
-        document.querySelectorAll('[data-customer-action]').forEach((button) => {
-            button.addEventListener('click', async function () {
-                const profile = profiles.find((item) => item.customer.id === this.dataset.customerId);
-                if (!profile) return;
-                if (this.dataset.customerAction === 'orders') return openOrdersForCustomer(profile);
-                if (this.dataset.customerAction === 'notify') return openNotificationPrefill(profile);
-                if (this.dataset.customerAction !== 'toggle-status') return;
+    function paginate(list) {
+        var s = (currentPage - 1) * PAGE_SIZE;
+        return { items: list.slice(s, s + PAGE_SIZE), total: list.length, pages: Math.ceil(list.length / PAGE_SIZE) || 1 };
+    }
 
-                const nextStatus = profile.status === 'active' ? 'inactive' : 'active';
-                const confirmed = await A.showConfirmModal({
-                    type: nextStatus === 'inactive' ? 'danger' : 'success',
-                    title: nextStatus === 'inactive' ? 'تعطيل حساب العميل' : 'إعادة تفعيل الحساب',
-                    message: `هل تريد ${nextStatus === 'inactive' ? 'تعطيل' : 'تفعيل'} حساب ${profile.customer.fullName}؟`,
-                    confirmText: nextStatus === 'inactive' ? 'تعطيل' : 'تفعيل',
-                    cancelText: 'إلغاء'
-                });
-                if (confirmed) await updateCustomerStatus([profile.customer.id], nextStatus);
-            });
-        });
-
-        mountCustomerBulkActions();
+    async function toggleCustomerStatus(userId, currentStatus) {
+        var newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        var result = await TZ.supabase.from('user_profiles').update({
+            status: newStatus, updated_at: new Date().toISOString()
+        }).eq('user_id', userId);
+        if (result.error) { A.showToast('فشل تحديث حالة العميل'); return; }
+        A.showToast('تم تحديث حالة العميل');
+        await TZ.refreshData();
+        renderCustomers();
     }
 
     function renderCustomers() {
-        const visibleProfiles = getVisibleProfiles();
-        const selectedProfile = getSelectedProfile(visibleProfiles);
+        var customers = getCustomers().map(enrichCustomer);
+        var filtered = applyFilters(customers);
+        var page = paginate(filtered);
 
-        A.adminContent.innerHTML = `
-            <div class="filter-bar">
-                <input type="text" id="customerSearch" placeholder="ابحث باسم العميل أو بريده أو رقمه..." value="${TZ.escapeHtml(state.searchQuery)}" style="flex:1;min-width:220px;">
-                <select id="customerStatusFilter">
-                    <option value="all" ${state.statusFilter === 'all' ? 'selected' : ''}>كل الحالات</option>
-                    <option value="active" ${state.statusFilter === 'active' ? 'selected' : ''}>نشط</option>
-                    <option value="inactive" ${state.statusFilter === 'inactive' ? 'selected' : ''}>معطل</option>
-                </select>
-            </div>
-            ${renderSummaryCards(visibleProfiles)}
-            <div class="admin-customer-layout">
-                <div class="admin-panel">
-                    <div class="panel-header"><h2><i class="fas fa-users"></i> العملاء (${visibleProfiles.length})</h2></div>
-                    <div class="panel-body">
-                        ${bulkActions ? bulkActions.getToolbarMarkup({ scopeKey: 'customers', itemLabel: 'عملاء', actions: { status: true, export: true } }) : ''}
-                        <div class="table-wrap">
-                            <table class="data-table" id="customersTable" data-paginated="true" data-item-label="عميل" data-page-size-options="10,25,50">
-                                <thead>
-                                    <tr>
-                                        ${bulkActions ? bulkActions.getHeaderCheckboxMarkup('customers') : ''}
-                                        <th>الاسم</th>
-                                        <th>التواصل</th>
-                                        <th>الطلبات</th>
-                                        <th>المشتريات</th>
-                                        <th>آخر طلب</th>
-                                        <th>الحالة</th>
-                                        <th>إجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="customersTableBody">
-                                    ${visibleProfiles.map((profile) => `
-                                        <tr data-customer-id="${profile.customer.id}" data-customer-search="${TZ.escapeHtml(profile.searchableText)}" class="${profile.customer.id === state.selectedCustomerId ? 'is-selected' : ''}">
-                                            ${bulkActions ? bulkActions.getRowCheckboxMarkup('customers', profile.customer.id) : ''}
-                                            <td><button type="button" class="admin-customer-link" data-customer-select="${profile.customer.id}"><strong>${TZ.escapeHtml(profile.customer.fullName || '-')}</strong></button></td>
-                                            <td><div class="admin-customer-contact-stack"><span>${TZ.escapeHtml(profile.customer.email || '-')}</span><small dir="ltr">${TZ.escapeHtml(profile.customer.phone || '-')}</small></div></td>
-                                            <td>${profile.orderCount}</td>
-                                            <td>${TZ.formatPrice(profile.totalSpend)}</td>
-                                            <td>${A.formatDate(profile.lastOrderAt)}</td>
-                                            <td><span class="status-badge ${profile.status}">${profile.status === 'active' ? 'نشط' : 'معطل'}</span></td>
-                                            <td class="actions-cell">
-                                                <button type="button" class="btn btn-outline btn-sm" data-customer-select="${profile.customer.id}"><i class="fas fa-eye"></i> تفاصيل</button>
-                                                <button type="button" class="btn btn-outline btn-sm" data-customer-action="notify" data-customer-id="${profile.customer.id}"><i class="fas fa-bell"></i> إشعار</button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                ${renderDetailPanel(selectedProfile)}
-            </div>
-        `;
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-users"></i> العملاء</h2><p>' + customers.length + ' عميل</p></div></div>';
 
-        bindEvents(visibleProfiles);
+        html += '<div class="filter-bar">'
+            + '<input type="search" id="custSearch" placeholder="ابحث بالاسم أو البريد أو الهاتف..." value="' + esc(searchQuery) + '">'
+            + '<select id="custStatusFilter"><option value="">كل الحالات</option>'
+            + '<option value="active"' + (filterStatus === 'active' ? ' selected' : '') + '>نشط</option>'
+            + '<option value="inactive"' + (filterStatus === 'inactive' ? ' selected' : '') + '>معطل</option>'
+            + '</select></div>';
+
+        html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
+            + '<th>العميل</th><th>البريد</th><th>الهاتف</th><th>الطلبات</th><th>الإنفاق</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>';
+
+        if (page.items.length === 0) {
+            html += '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-users"></i><p>لا يوجد عملاء</p></div></td></tr>';
+        } else {
+            page.items.forEach(function (c) {
+                var u = c.user;
+                var uid = u.authUserId || u.id;
+                html += '<tr>'
+                    + '<td><strong>' + esc(u.fullName) + '</strong></td>'
+                    + '<td><small>' + esc(u.email || '-') + '</small></td>'
+                    + '<td><small>' + esc(u.phone || '-') + '</small></td>'
+                    + '<td>' + c.orderCount + '</td>'
+                    + '<td style="font-weight:600;color:#00b894;">' + TZ.formatPrice(c.totalSpend) + '</td>'
+                    + '<td><span class="status-badge ' + (u.status || 'active') + '">' + (u.status === 'inactive' ? 'معطل' : 'نشط') + '</span></td>'
+                    + '<td class="actions-cell">'
+                    + '<button class="action-btn toggle-cust-btn" data-uid="' + uid + '" data-status="' + (u.status || 'active') + '" title="' + (u.status === 'active' ? 'تعطيل' : 'تفعيل') + '"><i class="fas fa-' + (u.status === 'active' ? 'ban' : 'check') + '"></i></button>'
+                    + '<button class="action-btn notify-cust-btn" data-uid="' + uid + '" data-name="' + esc(u.fullName) + '" title="إرسال إشعار"><i class="fas fa-bell"></i></button>'
+                    + '</td></tr>';
+            });
+        }
+        html += '</tbody></table></div></div>';
+
+        if (page.pages > 1) {
+            html += '<div class="admin-table-pagination"><div class="admin-table-pagination-info">عرض ' + page.items.length + ' من ' + page.total + '</div>';
+            html += '<div class="admin-table-pagination-controls">';
+            for (var i = 1; i <= page.pages; i++) {
+                html += '<button data-page="' + i + '" class="' + (i === currentPage ? 'active' : '') + '">' + i + '</button>';
+            }
+            html += '</div></div>';
+        }
+        html += '</div>';
+
+        A.adminContent.innerHTML = html;
+
+        document.getElementById('custSearch')?.addEventListener('input', function () { searchQuery = this.value; currentPage = 1; renderCustomers(); });
+        document.getElementById('custStatusFilter')?.addEventListener('change', function () { filterStatus = this.value; currentPage = 1; renderCustomers(); });
+        document.querySelectorAll('[data-page]').forEach(function (b) {
+            b.addEventListener('click', function () { currentPage = parseInt(b.dataset.page, 10); renderCustomers(); });
+        });
+        document.querySelectorAll('.toggle-cust-btn').forEach(function (b) {
+            b.addEventListener('click', function () { toggleCustomerStatus(b.dataset.uid, b.dataset.status); });
+        });
+        document.querySelectorAll('.notify-cust-btn').forEach(function (b) {
+            b.addEventListener('click', function () {
+                window.__TZ_ADMIN_NOTIFICATION_PREFILL = { userId: b.dataset.uid, title: 'رسالة إلى ' + b.dataset.name };
+                A.renderSection('notifications', { history: 'push' });
+            });
+        });
     }
 
     A.sections.customers = renderCustomers;

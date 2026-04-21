@@ -218,3 +218,31 @@ export async function createProviderOrder(env, payload, options = {}) {
 
   return { success: true, orderId: String(data.order) };
 }
+
+/**
+ * Checks the status of a Serva-S order.
+ *
+ * @param {Record<string, string | undefined>} env - Environment bindings.
+ * @param {string} orderId - External Serva-S order ID.
+ * @param {{ fetchImpl?: typeof fetch }} [options={}] - Optional dependencies for tests.
+ * @returns {Promise<{ success: boolean, status?: string, startCount?: number | null, remains?: number | null, charge?: string, error?: string }>} Status result.
+ */
+export async function checkProviderOrderStatus(env, orderId, options = {}) {
+  if (!orderId) {
+    return { success: false, error: "Order ID is required.", status: PROVIDER_INVALID_PAYLOAD_STATUS };
+  }
+
+  const result = await postProviderAction(env, { action: "status", order: orderId }, options);
+  if (!result.success) {
+    return result;
+  }
+
+  const data = /** @type {{ status?: string, start_count?: unknown, remains?: unknown, charge?: string }} */ (result.data ?? {});
+  return {
+    success: true,
+    status: String(data.status || "unknown").toLowerCase(),
+    startCount: Number.isFinite(Number(data.start_count)) ? Number(data.start_count) : null,
+    remains: Number.isFinite(Number(data.remains)) ? Number(data.remains) : null,
+    charge: data.charge || "0",
+  };
+}

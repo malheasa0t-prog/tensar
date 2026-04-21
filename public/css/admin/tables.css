@@ -1,135 +1,179 @@
-﻿/* Admin Tables */
-.admin-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-md);
-    margin-bottom: 25px;
-    overflow: hidden;
+/* ===== TechZone Admin — Data Tables (Rebuilt) ===== */
+
+.data-table,
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.88rem;
 }
 
-.panel-header {
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border-light);
+.data-table thead th,
+.admin-table thead th {
+    padding: 14px 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    white-space: nowrap;
+    text-align: right;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.data-table tbody td,
+.admin-table tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--text-secondary);
+    vertical-align: middle;
+    transition: background 0.15s ease;
+}
+
+.data-table tbody tr,
+.admin-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.data-table tbody tr:hover,
+.admin-table tbody tr:hover {
+    background: rgba(var(--primary-rgb),0.04);
+}
+
+.data-table tbody tr:last-child td,
+.admin-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ── Selected Row ── */
+.data-table tbody tr.is-selected,
+.admin-table tbody tr.is-selected {
+    background: rgba(var(--primary-rgb),0.08);
+}
+.data-table tbody tr.is-selected td,
+.admin-table tbody tr.is-selected td {
+    color: var(--text-primary);
+}
+
+/* ── Checkbox in table ── */
+.data-table input[type="checkbox"],
+.admin-table input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-height: auto;
+    padding: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+/* ── Table Links ── */
+.data-table a,
+.admin-table a {
+    color: var(--primary-light);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+.data-table a:hover,
+.admin-table a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* ── Sortable Header ── */
+.data-table thead th[data-sort],
+.admin-table thead th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+}
+.data-table thead th[data-sort]:hover,
+.admin-table thead th[data-sort]:hover {
+    color: var(--primary-light);
+}
+
+/* ── Table Pagination ── */
+.admin-table-pagination {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.82rem;
+    color: var(--text-muted);
 }
-
-.panel-header h2 {
-    font-size: 1.05rem;
-    font-weight: 700;
+.admin-table-pagination-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-
-.panel-body {
-    padding: 0;
+.admin-table-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
-
-.panel-body.padded {
-    padding: 20px;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th,
-.data-table td {
-    padding: 12px 16px;
-    text-align: right;
-    border-bottom: 1px solid var(--border-light);
-    font-size: 0.88rem;
-}
-
-.data-table th {
-    background: rgba(var(--primary-rgb), 0.05);
-    font-weight: 600;
+.admin-table-pagination-controls button {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
     color: var(--text-secondary);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.admin-table-pagination-controls button:hover {
+    background: rgba(var(--primary-rgb),0.1);
+    border-color: rgba(var(--primary-rgb),0.3);
+    color: var(--primary-light);
+}
+.admin-table-pagination-controls button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.admin-table-pagination-controls button:disabled {
+    opacity: 0.3;
+    cursor: default;
 }
 
-.data-table tr:last-child td {
-    border-bottom: none;
-}
-
-.data-table tr:hover td {
-    background: rgba(var(--primary-rgb), 0.03);
-}
-
-/* Status Badges */
-.status-badge {
-    display: inline-flex;
+/* ── Page Size Selector ── */
+.admin-table-page-size {
+    display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 600;
+    gap: 8px;
+}
+.admin-table-page-size select {
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
 }
 
-.status-badge.active {
-    background: rgba(0, 184, 148, 0.15);
-    color: #00b894;
+/* ── Responsive Table ── */
+@media (max-width: 768px) {
+    .data-table,
+    .admin-table {
+        font-size: 0.82rem;
+    }
+    .data-table thead th,
+    .admin-table thead th,
+    .data-table tbody td,
+    .admin-table tbody td {
+        padding: 10px 12px;
+    }
 }
-
-.status-badge.awaiting_delivery {
-    background: rgba(253, 203, 110, 0.15);
-    color: #fdcb6e;
-}
-
-.status-badge.awaiting_device {
-    background: rgba(225, 112, 85, 0.15);
-    color: #e17055;
-}
-
-.status-badge.under_maintenance {
-    background: rgba(162, 155, 254, 0.15);
-    color: #a29bfe;
-}
-
-.status-badge.awaiting_pickup {
-    background: rgba(0, 184, 148, 0.15);
-    color: #00b894;
-}
-
-.status-badge.pending {
-    background: rgba(253, 203, 110, 0.15);
-    color: #fdcb6e;
-}
-
-.status-badge.hidden {
-    background: rgba(214, 48, 49, 0.15);
-    color: #d63031;
-}
-
-/* Delivery Badge */
-.delivery-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 15px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.delivery-badge.delivery {
-    background: rgba(116, 185, 255, 0.15);
-    color: #74b9ff;
-}
-
-.delivery-badge.pickup {
-    background: rgba(0, 184, 148, 0.15);
-    color: #00b894;
-}
-
-.delivery-badge.remote {
-    background: rgba(0, 206, 201, 0.15);
-    color: #00cec9;
-}
-

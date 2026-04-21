@@ -12,27 +12,24 @@ function loadHooks() {
   return window.__adminShellTestHooks;
 }
 
-test("buildAdminBreadcrumbs should include group label for nested sections", () => {
+test("buildAdminBreadcrumbs should include group label for order subsections", () => {
   const hooks = loadHooks();
-  const breadcrumbs = hooks.buildAdminBreadcrumbs("products");
+  const breadcrumbs = hooks.buildAdminBreadcrumbs("product-orders");
   assert.deepEqual(
     JSON.parse(JSON.stringify(breadcrumbs.map((item) => item.label))),
-    ["الرئيسية", "المتجر", "المنتجات"]
+    ["الرئيسية", "إدارة الطلبات", "طلبات المنتجات"]
   );
 });
 
-test("buildAdminHeaderAlerts should prioritize actionable dashboard alerts", () => {
+test("buildAdminHeaderAlerts should return orders and queue alerts only", () => {
   const hooks = loadHooks();
   const alerts = hooks.buildAdminHeaderAlerts({
-    lowStock: 2,
     offlineQueueCount: 1,
-    pendingDeposits: 3,
-    pendingOrders: 4,
-    unreadMessages: 5
+    pendingOrders: 4
   });
   assert.equal(alerts[0].section, "orders");
-  assert.equal(alerts[1].section, "deposits");
-  assert.equal(alerts.length, 5);
+  assert.equal(alerts[1].section, "dashboard");
+  assert.equal(alerts.length, 2);
 });
 
 test("searchAdminCommands should return strongly matching commands first", () => {

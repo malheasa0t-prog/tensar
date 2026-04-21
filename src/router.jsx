@@ -33,7 +33,8 @@ const RegisterPage = lazy(routeModuleLoaders['auth-register']);
 const RecoverPage = lazy(routeModuleLoaders['auth-recover']);
 const AuthCallbackPage = lazy(routeModuleLoaders['auth-callback']);
 
-/* Dashboard Pages */
+/* Dashboard Layout + Pages */
+const DashboardLayout = lazy(() => import('@/app/dashboard/layout'));
 const DashboardPage = lazy(routeModuleLoaders.dashboard);
 const DashboardOrdersPage = lazy(routeModuleLoaders['dashboard-orders']);
 const DashboardFavoritesPage = lazy(routeModuleLoaders['dashboard-favorites']);
@@ -70,19 +71,19 @@ export default function AppRouter() {
         <Route path="auth/recover" element={<RecoverPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
 
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="dashboard/orders" element={<DashboardOrdersPage />} />
-        <Route path="dashboard/favorites" element={<DashboardFavoritesPage />} />
-        <Route path="dashboard/profile" element={<DashboardProfilePage />} />
-        <Route
-          path="dashboard/notifications"
-          element={<DashboardNotificationsPage />}
-        />
-        <Route path="dashboard/deposit" element={<DashboardDepositPage />} />
-        <Route path="dashboard/wallet" element={<DashboardWalletPage />} />
+        <Route path="dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="orders" element={<DashboardOrdersPage />} />
+          <Route path="favorites" element={<DashboardFavoritesPage />} />
+          <Route path="profile" element={<DashboardProfilePage />} />
+          <Route path="notifications" element={<DashboardNotificationsPage />} />
+          <Route path="deposit" element={<DashboardDepositPage />} />
+          <Route path="wallet" element={<DashboardWalletPage />} />
+        </Route>
 
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );
 }
+

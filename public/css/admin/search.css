@@ -1,25 +1,30 @@
-.admin-header {
-    flex-wrap: wrap;
-}
+/* ===== Admin Global Search ===== */
 
 .admin-header-search {
     position: relative;
-    flex: 1 1 380px;
-    max-width: 620px;
+    flex: 1 1 320px;
+    max-width: 560px;
 }
 
 .admin-search-input-wrap {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
     background: rgba(255, 255, 255, 0.03);
+    transition: all 0.2s ease;
+}
+
+.admin-search-input-wrap:focus-within {
+    border-color: rgba(var(--primary-rgb), 0.3);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
 }
 
 .admin-search-input-wrap i {
     color: var(--text-muted);
+    font-size: 0.88rem;
 }
 
 .admin-search-input-wrap input {
@@ -29,73 +34,90 @@
     background: transparent;
     color: var(--text-primary);
     font: inherit;
+    font-size: 0.88rem;
 }
 
 .admin-search-input-wrap input:focus {
     outline: none;
 }
 
+.admin-search-input-wrap input::placeholder {
+    color: var(--text-muted);
+}
+
 .admin-search-shortcut {
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.04);
-    color: var(--text-secondary);
-    border-radius: 999px;
-    padding: 5px 10px;
-    font-size: 0.78rem;
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
 }
 
-.admin-search-dropdown {
+/* ── Search Dropdown ── */
+.admin-search-dropdown:not([hidden]) {
     position: absolute;
     inset-inline: 0;
-    top: calc(100% + 10px);
+    top: calc(100% + 8px);
     z-index: 30;
     display: grid;
-    gap: 8px;
-    padding: 10px;
-    border-radius: 18px;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(9, 15, 27, 0.96);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(16px);
+    background: rgba(9, 15, 27, 0.97);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(12px);
+    max-height: 380px;
+    overflow-y: auto;
+    animation: adminFadeUp 0.2s ease;
 }
 
 .admin-search-result {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     text-align: right;
-    padding: 12px 14px;
+    padding: 10px 12px;
     border: 1px solid transparent;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    background: transparent;
     color: var(--text-primary);
     cursor: pointer;
-    transition: var(--transition);
+    font-family: inherit;
+    font-size: 0.88rem;
+    transition: all 0.15s ease;
 }
 
 .admin-search-result:hover,
 .admin-search-result.is-active {
-    border-color: rgba(var(--primary-rgb), 0.28);
-    background: rgba(var(--primary-rgb), 0.1);
+    border-color: rgba(var(--primary-rgb), 0.2);
+    background: rgba(var(--primary-rgb), 0.08);
 }
 
 .admin-search-result-icon {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     display: inline-grid;
     place-items: center;
-    border-radius: 12px;
-    background: rgba(var(--primary-rgb), 0.12);
-    color: var(--text-primary);
+    border-radius: 10px;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-light);
+    font-size: 0.85rem;
 }
 
 .admin-search-result-body {
     display: grid;
-    gap: 4px;
+    gap: 2px;
+}
+
+.admin-search-result-body strong {
+    font-size: 0.86rem;
 }
 
 .admin-search-result-body small,
@@ -105,28 +127,24 @@
 }
 
 .admin-search-result-meta {
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.78rem;
+    font-weight: 600;
 }
 
 .admin-search-empty {
     padding: 16px;
     text-align: center;
+    font-size: 0.86rem;
 }
 
+/* ── Search Highlight ── */
 .admin-search-highlight {
-    animation: admin-search-highlight 2.2s ease;
+    animation: admin-search-highlight 2s ease;
 }
 
 @keyframes admin-search-highlight {
-    0%,
-    100% {
-        background: transparent;
-    }
-    18%,
-    54% {
-        background: rgba(108, 92, 231, 0.18);
-    }
+    0%, 100% { background: transparent; }
+    15%, 50% { background: rgba(108, 92, 231, 0.15); }
 }
 
 @media (max-width: 860px) {

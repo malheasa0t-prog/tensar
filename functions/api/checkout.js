@@ -42,8 +42,8 @@ function asPositiveInt(value) {
  * @returns {string | null} Error message or null if valid
  */
 function validateCustomer({ name, phone }) {
-  if (!name || name.length < 2 || name.length > 120) return 'الاسم غير صالح';
-  if (!/^[+0-9\s()-]{7,20}$/.test(phone)) return 'رقم الهاتف غير صالح';
+  if (!name || name.length < 2 || name.length > 120) return '[CHK-101] الاسم غير صالح';
+  if (!/^[+0-9\s()-]{7,20}$/.test(phone)) return '[CHK-102] رقم الهاتف غير صالح';
   return null;
 }
 
@@ -113,7 +113,7 @@ export async function onRequestPost(context) {
 
     /* ── Validate cart items ── */
     const items = normalizeItems(body?.items);
-    if (items.length === 0) return errorResponse('بيانات السلة غير صالحة', 400);
+    if (items.length === 0) return errorResponse('[CHK-103] بيانات السلة غير صالحة', 400);
 
     const admin = createSupabaseAdmin(env);
 
@@ -133,7 +133,7 @@ export async function onRequestPost(context) {
       if (user) {
         userId = user.id;
         const { data: profile } = await admin.from('user_profiles').select('status').eq('user_id', user.id).single();
-        if (profile?.status === 'banned') return errorResponse(BANNED_ACCOUNT_MESSAGE, 403);
+        if (profile?.status === 'banned') return errorResponse('[CHK-104] ' + BANNED_ACCOUNT_MESSAGE, 403);
       }
     }
 
@@ -145,18 +145,45 @@ export async function onRequestPost(context) {
       .in('id', productIds)
       .eq('status', 'active');
 
-    if (productsError) return errorResponse('تعذر تحميل بيانات المنتجات', 500);
+    if (productsError) return errorResponse('[CHK-105] تعذر تحميل بيانات المنتجات', 500);
+
+    /* ── Load missing items from services table (digital services) ── */
+    const productMap = new Map((products || []).map((p) => [p.id, p]));
+    const missingIds = productIds.filter((id) => !productMap.has(id));
+
+    if (missingIds.length > 0) {
+      const { data: services } = await admin
+        .from('services')
+        .select('id,name,price,image,status,category_id,provider_service_id')
+        .in('id', missingIds)
+        .eq('status', 'active');
+
+      for (const svc of services || []) {
+        productMap.set(svc.id, {
+          id: svc.id,
+          name: svc.name,
+          price: svc.price,
+          discount_price: null,
+          quantity: 9999,
+          sold: 0,
+          status: 'active',
+          category_id: svc.category_id || null,
+          product_type: 'digital',
+          brand: null,
+          images: svc.image ? [svc.image] : [],
+        });
+      }
+    }
 
     /* ── Build order lines with validation ── */
-    const productMap = new Map((products || []).map((p) => [p.id, p]));
     const orderItems = [];
     let subtotal = 0;
 
     for (const item of items) {
       const product = productMap.get(item.id);
-      if (!product) return errorResponse(`المنتج غير متاح: ${item.id}`, 400);
-      if (product.quantity < item.qty) {
-        return errorResponse(`الكمية المطلوبة (${item.qty}) تتجاوز المتوفر (${product.quantity}) — ${product.name}`, 400);
+      if (!product) return errorResponse(`[CHK-106] المنتج غير متاح: ${item.id}`, 400);
+      if (product.product_type !== 'digital' && product.quantity < item.qty) {
+        return errorResponse(`[CHK-107] الكمية المطلوبة (${item.qty}) تتجاوز المتوفر (${product.quantity}) — ${product.name}`, 400);
       }
 
       const unitPrice = Number(product.discount_price || product.price || 0);
@@ -184,29 +211,33 @@ export async function onRequestPost(context) {
       : [{ value: 'delivery', label: 'توصيل', fee: 2 }, { value: 'pickup', label: 'استلام', fee: 0 }];
 
     if (!deliveryMethods.some((m) => m.value === deliveryMethod)) {
-      return errorResponse('طريقة التسليم غير صالحة', 400);
+      return errorResponse('[CHK-108] طريقة التسليم غير صالحة', 400);
     }
 
     const shippingFee = getShippingFee(deliveryMethod, deliveryMethods);
     const total = subtotal + shippingFee;
-    const orderId = generateOrderId();
 
     /* ── Create order ── */
-    const { error: orderError } = await admin.from('orders').insert([{
-      id: orderId,
+    const { data: orderRow, error: orderError } = await admin.from('orders').insert([{
       user_id: userId,
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_email: customerEmail || null,
+      subtotal,
       total,
-      status: 'new',
+      status: 'pending',
       delivery_method: deliveryMethod,
       payment_method: paymentMethod,
       shipping_fee: shippingFee,
       notes: notes || null,
-    }]);
+    }]).select('id').single();
 
-    if (orderError) return errorResponse('تعذر إنشاء الطلب', 500);
+    if (orderError || !orderRow) {
+      console.error('Order insert error:', JSON.stringify(orderError));
+      return errorResponse(`[CHK-109] تعذر إنشاء الطلب: ${orderError?.message || 'خطأ غير معروف'}`, 500);
+    }
+
+    const orderId = orderRow.id;
 
     /* ── Create order items ── */
     const { error: itemsError } = await admin.from('order_items').insert(
@@ -214,14 +245,15 @@ export async function onRequestPost(context) {
     );
 
     if (itemsError) {
+      console.error('Order items insert error:', JSON.stringify(itemsError));
       await admin.from('orders').delete().eq('id', orderId);
-      return errorResponse('تعذر حفظ عناصر الطلب', 500);
+      return errorResponse(`[CHK-110] تعذر حفظ عناصر الطلب: ${itemsError?.message || 'خطأ غير معروف'}`, 500);
     }
 
     /* ── Decrement inventory ── */
     for (const item of items) {
       const product = productMap.get(item.id);
-      if (product) {
+      if (product && product.product_type !== 'digital') {
         await admin
           .from('products')
           .update({
@@ -250,6 +282,6 @@ export async function onRequestPost(context) {
 
   } catch (err) {
     console.error('Checkout API error:', err);
-    return errorResponse('حدث خطأ غير متوقع', 500);
+    return errorResponse(`[CHK-500] حدث خطأ غير متوقع: ${err?.message || ''}`, 500);
   }
 }

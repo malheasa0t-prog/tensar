@@ -3,6 +3,32 @@
 
 import { ADMIN_SECTIONS, ROLES, db } from './core.js';
 
+const ALLOWED_ADMIN_SECTIONS = new Set([
+    'dashboard',
+    'orders',
+    'product-orders',
+    'accessory-orders',
+    'products',
+    'accessories',
+    'categories',
+    'main-categories',
+    'subcategories',
+    'services',
+    'repair-services',
+    'serva-catalog',
+    'customers',
+    'messages',
+    'contact-messages',
+    'chats',
+    'support-chats',
+    'notifications',
+    'deposits',
+    'coupons',
+    'settings',
+    'logs',
+    'audit-logs'
+]);
+
 function normalizeRole(role) {
     const normalizedRole = String(role || 'user').toLowerCase();
     return normalizedRole === 'customer' ? 'user' : normalizedRole;
@@ -85,6 +111,7 @@ export function canAccessAdmin(user) {
 
 export function canAccessSection(user, sectionId) {
     if (!user || user.status !== 'active') return false;
+    if (!ALLOWED_ADMIN_SECTIONS.has(sectionId)) return false;
     const role = ROLES[user.role];
     const section = ADMIN_SECTIONS.find((entry) => entry.id === sectionId);
     return Boolean(role && section && role.level >= section.minLevel);

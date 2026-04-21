@@ -1,340 +1,121 @@
-﻿// ===== TechZone Admin - Maintenance Services Only =====
+/**
+ * TechZone Admin — Services Section (Rebuilt)
+ *
+ * Manages repair/maintenance services via Supabase.
+ */
 (function () {
     'use strict';
-    const A = window.AdminApp;
-    const bulkActions = window.AdminBulkActions;
 
-    function getServiceBulkToolbarMarkup() {
-        return bulkActions ? bulkActions.getToolbarMarkup({
-            scopeKey: 'services',
-            itemLabel: 'خدمات',
-            actions: { status: true, delete: true, export: true }
-        }) : '';
+    var A = window.AdminApp;
+    if (!A) return;
+
+    function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
+
+    async function saveService(data, isEdit) {
+        var payload = {
+            name: data.name,
+            category: data.category || null,
+            price: Number(data.price) || 0,
+            duration: data.duration || null,
+            description: data.description || null,
+            status: data.status || 'active',
+            updated_at: new Date().toISOString()
+        };
+        var result;
+        if (isEdit) result = await TZ.supabase.from('repair_services').update(payload).eq('id', data.id);
+        else result = await TZ.supabase.from('repair_services').insert([payload]);
+        if (result.error) { A.showToast('فشل حفظ الخدمة'); return false; }
+        A.showToast(isEdit ? 'تم تحديث الخدمة' : 'تم إضافة الخدمة');
+        return true;
     }
 
-    async function updateBulkServiceStatus(ids, status) {
-        const services = (TZ.db.repairServices || []).filter((service) => ids.includes(service.id));
-        await Promise.all(services.map((service) => {
-            service.status = status;
-            return Promise.resolve(TZ.commitDb('service_bulk_status', TZ.getSession()?.userId, `${service.name}: ${status}`, {
-                type: 'repair_service',
-                data: service
-            }));
-        }));
+    async function deleteService(id) {
+        if (!confirm('هل أنت متأكد من حذف هذه الخدمة؟')) return;
+        var result = await TZ.supabase.from('repair_services').delete().eq('id', id);
+        if (result.error) { A.showToast('فشل حذف الخدمة'); return; }
+        A.showToast('تم حذف الخدمة');
+        await TZ.refreshData();
         renderServices();
-        A.showToast(`تم تحديث حالة ${services.length} خدمات.`);
     }
 
-    async function deleteBulkServices(ids) {
-        const services = (TZ.db.repairServices || []).filter((service) => ids.includes(service.id));
-        TZ.db.repairServices = (TZ.db.repairServices || []).filter((service) => !ids.includes(service.id));
-        await Promise.all(services.map((service) => Promise.resolve(TZ.commitDb('service_delete', TZ.getSession()?.userId, service.name, {
-            type: 'repair_service_delete',
-            data: { id: service.id }
-        }))));
-        renderServices();
-        A.showToast(`تم حذف ${services.length} خدمات.`);
-    }
+    function openServiceForm(service) {
+        var s = service || {};
+        var isEdit = Boolean(s.id);
+        var backdrop = document.createElement('div');
+        backdrop.className = 'admin-slideover-backdrop';
+        var panel = document.createElement('div');
+        panel.className = 'admin-slideover';
+        panel.innerHTML = '<div class="admin-slideover-head"><h3><i class="fas ' + (isEdit ? 'fa-edit' : 'fa-plus') + '"></i> ' + (isEdit ? 'تعديل الخدمة' : 'إضافة خدمة') + '</h3><button class="btn btn-ghost btn-sm close-svc"><i class="fas fa-times"></i></button></div>'
+            + '<div class="admin-slideover-body"><form class="admin-form"><div class="form-grid">'
+            + '<div class="admin-form-group full"><label>اسم الخدمة *</label><div class="admin-input-wrap"><i class="fas fa-wrench"></i><input type="text" id="svcName" value="' + esc(s.name || '') + '" required></div></div>'
+            + '<div class="admin-form-group"><label>الفئة</label><div class="admin-input-wrap"><i class="fas fa-tag"></i><input type="text" id="svcCategory" value="' + esc(s.category || '') + '"></div></div>'
+            + '<div class="admin-form-group"><label>السعر *</label><div class="admin-input-wrap"><i class="fas fa-money-bill"></i><input type="number" id="svcPrice" value="' + (s.price || '') + '" min="0" step="0.01" required></div></div>'
+            + '<div class="admin-form-group"><label>المدة المتوقعة</label><div class="admin-input-wrap"><i class="fas fa-clock"></i><input type="text" id="svcDuration" value="' + esc(s.duration || '') + '" placeholder="مثال: 2-3 أيام"></div></div>'
+            + '<div class="admin-form-group"><label>الحالة</label><select id="svcStatus"><option value="active"' + (s.status === 'active' || !s.status ? ' selected' : '') + '>نشطة</option><option value="inactive"' + (s.status === 'inactive' ? ' selected' : '') + '>معطلة</option></select></div>'
+            + '<div class="admin-form-group full"><label>الوصف</label><textarea id="svcDesc" rows="3">' + esc(s.description || '') + '</textarea></div>'
+            + '</div></form></div>'
+            + '<div class="admin-slideover-footer"><button class="btn btn-primary" id="saveSvcBtn"><i class="fas fa-save"></i> ' + (isEdit ? 'تحديث' : 'إضافة') + '</button><button class="btn btn-outline close-svc">إلغاء</button></div>';
 
-    function buildServiceExportRows(ids) {
-        return (TZ.db.repairServices || []).filter((service) => ids.includes(service.id)).map((service) => ({
-            name: service.name || '',
-            category: service.category || 'خدمات الصيانة',
-            price: service.price || 0,
-            duration: service.duration || '',
-            status: service.status || 'active'
-        }));
-    }
+        document.body.appendChild(backdrop);
+        document.body.appendChild(panel);
+        function close() { backdrop.remove(); panel.remove(); }
+        backdrop.addEventListener('click', close);
+        panel.querySelectorAll('.close-svc').forEach(function (b) { b.addEventListener('click', close); });
 
-    function mountServiceBulkActions() {
-        if (!bulkActions) return;
-        bulkActions.mount({
-            scopeKey: 'services',
-            tableSelector: '#servicesTable',
-            status: {
-                title: 'تغيير حالة الخدمات المحددة',
-                options: [{ value: 'active', label: 'ظاهر' }, { value: 'hidden', label: 'مخفي' }],
-                run: updateBulkServiceStatus
-            },
-            delete: {
-                title: 'حذف الخدمات المحددة',
-                message: 'سيتم حذف خدمات الصيانة المحددة. هل تريد المتابعة؟',
-                run: deleteBulkServices
-            },
-            export: {
-                filename: 'services-export.csv',
-                columns: [
-                    { key: 'name', label: 'الخدمة' },
-                    { key: 'category', label: 'القسم' },
-                    { key: 'price', label: 'السعر' },
-                    { key: 'duration', label: 'المدة' },
-                    { key: 'status', label: 'الحالة' }
-                ],
-                buildRows: buildServiceExportRows
-            }
+        document.getElementById('saveSvcBtn').addEventListener('click', async function () {
+            var name = document.getElementById('svcName').value.trim();
+            if (!name) { A.showToast('أدخل اسم الخدمة'); return; }
+            this.disabled = true;
+            var ok = await saveService({
+                id: isEdit ? s.id : null, name: name,
+                category: document.getElementById('svcCategory').value.trim(),
+                price: document.getElementById('svcPrice').value,
+                duration: document.getElementById('svcDuration').value.trim(),
+                status: document.getElementById('svcStatus').value,
+                description: document.getElementById('svcDesc').value.trim()
+            }, isEdit);
+            if (ok) { close(); await TZ.refreshData(); renderServices(); }
+            else { this.disabled = false; }
         });
     }
 
     function renderServices() {
-        const services = (TZ.db.repairServices || []).slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        var services = TZ.db.repairServices || [];
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-screwdriver-wrench"></i> خدمات الصيانة</h2><p>' + services.length + ' خدمة</p></div>'
+            + '<div class="admin-section-actions"><button class="btn btn-primary btn-sm" id="addSvcBtn"><i class="fas fa-plus"></i> إضافة خدمة</button></div></div>';
 
-        A.adminContent.innerHTML = `
-            <div class="filter-bar">
-                <input type="text" id="serviceSearch" placeholder="بحث باسم الخدمة..." style="flex:1;min-width:220px;">
-                <button class="btn btn-primary btn-sm" id="addServiceBtn"><i class="fas fa-plus"></i> إضافة خدمة صيانة</button>
-            </div>
+        html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
+            + '<th>الخدمة</th><th>الفئة</th><th>السعر</th><th>المدة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>';
 
-            <div class="admin-panel">
-                <div class="panel-header"><h2><i class="fas fa-tools"></i> خدمات الصيانة (${services.length})</h2></div>
-                <div class="panel-body">
-                    ${getServiceBulkToolbarMarkup()}
-                    <div class="table-wrap">
-                    <table class="data-table" id="servicesTable" data-paginated="true" data-item-label="خدمة" data-page-size-options="10,25,50">
-                        <thead>
-                            <tr>
-                                ${bulkActions ? bulkActions.getHeaderCheckboxMarkup('services') : ''}
-                                <th>الخدمة</th>
-                                <th>القسم</th>
-                                <th>السعر</th>
-                                <th>المدة</th>
-                                <th>الحالة</th>
-                                <th>إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="servicesTableBody">
-                            ${services.map(s => `
-                                <tr data-service-id="${s.id}">
-                                    ${bulkActions ? bulkActions.getRowCheckboxMarkup('services', s.id) : ''}
-                                    <td>
-                                        <strong>${TZ.escapeHtml(s.name || '')}</strong>
-                                        ${s.description ? `<br><small style="color:var(--text-muted)">${TZ.escapeHtml((s.description || '').substring(0, 70))}</small>` : ''}
-                                    </td>
-                                    <td>${TZ.escapeHtml(s.category || 'خدمات الصيانة')}</td>
-                                    <td>${TZ.formatPrice(Number(s.price || 0))}</td>
-                                    <td>${TZ.escapeHtml(s.duration || '-')}</td>
-                                    <td><span class="status-badge ${s.status === 'active' ? 'active' : 'hidden'}">${s.status === 'active' ? 'ظاهر' : 'مخفي'}</span></td>
-                                    <td class="actions-cell">
-                                        <button class="action-btn edit-service-btn" data-id="${s.id}" title="تعديل"><i class="fas fa-edit"></i></button>
-                                        <button class="action-btn success toggle-service-btn" data-id="${s.id}" title="إظهار/إخفاء"><i class="fas fa-toggle-on"></i></button>
-                                        <button class="action-btn danger delete-service-btn" data-id="${s.id}" title="حذف"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="admin-panel" id="serviceFormPanel" style="display:none;">
-                <div class="panel-header"><h2 id="serviceFormTitle"><i class="fas fa-plus"></i> إضافة خدمة صيانة</h2></div>
-                <div class="panel-body padded">
-                    <form class="admin-form" id="serviceForm">
-                        <div class="form-grid">
-                            <div class="admin-form-group">
-                                <label>اسم الخدمة *</label>
-                                <div class="admin-input-wrap"><i class="fas fa-tools"></i><input type="text" id="srvName" required></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>السعر *</label>
-                                <div class="admin-input-wrap"><i class="fas fa-money-bill"></i><input type="number" id="srvPrice" min="0" step="0.01" required></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>مدة التنفيذ</label>
-                                <div class="admin-input-wrap"><i class="fas fa-clock"></i><input type="text" id="srvDuration" placeholder="مثال: 30 دقيقة"></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>الأيقونة</label>
-                                <div class="admin-input-wrap"><i class="fas fa-icons"></i><input type="text" id="srvIcon" placeholder="fa-wrench"></div>
-                            </div>
-                            <div class="admin-form-group">
-                                <label>الحالة</label>
-                                <select id="srvStatus">
-                                    <option value="active">ظاهر</option>
-                                    <option value="hidden">مخفي</option>
-                                </select>
-                            </div>
-                            <div class="admin-form-group full">
-                                <label>الوصف</label>
-                                <textarea id="srvDescription" rows="3"></textarea>
-                            </div>
-                            <div class="admin-form-group full">
-                                <label>صورة الخدمة</label>
-                                <div class="image-upload-area" id="srvImageUploadArea" style="cursor:pointer;">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>اضغط لرفع صورة (حد أقصى ${A.getAdminImageUploadLimitText()})</p>
-                                    <input type="file" id="srvImageInput" accept="image/*" style="display:none;">
-                                </div>
-                                <div id="srvImagePreview" style="margin-top:10px;"></div>
-                            </div>
-                        </div>
-                        <div style="margin-top:15px;display:flex;gap:10px;">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button>
-                            <button type="button" class="btn btn-outline" id="cancelServiceBtn">إلغاء</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-
-        bindServiceEvents();
-        mountServiceBulkActions();
-    }
-
-    function bindServiceEvents() {
-        const search = document.getElementById('serviceSearch');
-        search.addEventListener('input', function () {
-            const q = (this.value || '').toLowerCase().trim();
-            document.querySelectorAll('#servicesTableBody tr').forEach(tr => {
-                const service = (TZ.db.repairServices || []).find(s => s.id === tr.dataset.serviceId);
-                const name = (service?.name || '').toLowerCase();
-                tr.style.display = !q || name.includes(q) ? '' : 'none';
+        if (services.length === 0) {
+            html += '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-screwdriver-wrench"></i><p>لا توجد خدمات</p></div></td></tr>';
+        } else {
+            services.forEach(function (s) {
+                html += '<tr>'
+                    + '<td><strong>' + esc(s.name) + '</strong></td>'
+                    + '<td>' + esc(s.category || '-') + '</td>'
+                    + '<td style="font-weight:600;">' + TZ.formatPrice(s.price) + '</td>'
+                    + '<td>' + esc(s.duration || '-') + '</td>'
+                    + '<td><span class="status-badge ' + s.status + '">' + (s.status === 'active' ? 'نشطة' : 'معطلة') + '</span></td>'
+                    + '<td class="actions-cell">'
+                    + '<button class="action-btn edit-svc-btn" data-id="' + s.id + '"><i class="fas fa-edit"></i></button>'
+                    + '<button class="action-btn danger del-svc-btn" data-id="' + s.id + '"><i class="fas fa-trash"></i></button>'
+                    + '</td></tr>';
             });
-        });
-
-        const formPanel = document.getElementById('serviceFormPanel');
-        const form = document.getElementById('serviceForm');
-        const preview = document.getElementById('srvImagePreview');
-        let imageValue = '';
-
-        function fillForm(service) {
-            if (service) {
-                document.getElementById('srvName').value = service.name || '';
-                document.getElementById('srvPrice').value = Number(service.price || 0);
-                document.getElementById('srvDuration').value = service.duration || '';
-                document.getElementById('srvIcon').value = service.icon || '';
-                document.getElementById('srvStatus').value = service.status || 'active';
-                document.getElementById('srvDescription').value = service.description || '';
-                imageValue = service.image || '';
-            } else {
-                form.reset();
-                document.getElementById('srvStatus').value = 'active';
-                imageValue = '';
-            }
-
-            if (imageValue) {
-                preview.innerHTML = `<div class="image-preview" style="display:inline-block;position:relative;"><img src="${imageValue}" alt="صورة الخدمة" style="max-width:120px;border-radius:8px;"><button type="button" class="remove-img" style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:10px;"><i class="fas fa-times"></i></button></div>`;
-                preview.querySelector('.remove-img').addEventListener('click', () => {
-                    imageValue = '';
-                    preview.innerHTML = '';
-                });
-            } else {
-                preview.innerHTML = '';
-            }
         }
+        html += '</tbody></table></div></div></div>';
+        A.adminContent.innerHTML = html;
 
-        document.getElementById('addServiceBtn').addEventListener('click', function () {
-            A.editingServiceId = null;
-            document.getElementById('serviceFormTitle').innerHTML = '<i class="fas fa-plus"></i> إضافة خدمة صيانة';
-            fillForm(null);
-            formPanel.style.display = 'block';
-            formPanel.scrollIntoView({ behavior: 'smooth' });
-        });
-
-        document.getElementById('cancelServiceBtn').addEventListener('click', function () {
-            formPanel.style.display = 'none';
-        });
-
-        document.querySelectorAll('.edit-service-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const service = (TZ.db.repairServices || []).find(s => s.id === this.dataset.id);
-                if (!service) return;
-                A.editingServiceId = service.id;
-                document.getElementById('serviceFormTitle').innerHTML = '<i class="fas fa-edit"></i> تعديل خدمة الصيانة';
-                fillForm(service);
-                formPanel.style.display = 'block';
-                formPanel.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('addSvcBtn')?.addEventListener('click', function () { openServiceForm(null); });
+        document.querySelectorAll('.edit-svc-btn').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var svc = services.find(function (s) { return s.id === b.dataset.id; });
+                if (svc) openServiceForm(svc);
             });
         });
-
-        document.querySelectorAll('.toggle-service-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const service = (TZ.db.repairServices || []).find(s => s.id === this.dataset.id);
-                if (!service) return;
-                service.status = service.status === 'active' ? 'hidden' : 'active';
-                TZ.commitDb('service_toggle', TZ.getSession()?.userId, `${service.name}: ${service.status}`, { type: 'repair_service', data: service });
-                renderServices();
-                A.showToast('تم تحديث حالة خدمة الصيانة');
-            });
-        });
-
-        document.querySelectorAll('.delete-service-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const service = (TZ.db.repairServices || []).find(s => s.id === this.dataset.id);
-                if (!service) return;
-                A.showConfirmModal('حذف خدمة الصيانة', `هل أنت متأكد من حذف الخدمة "${TZ.escapeHtml(service.name)}"؟`, () => {
-                    TZ.db.repairServices = (TZ.db.repairServices || []).filter(s => s.id !== service.id);
-                    TZ.commitDb('service_delete', TZ.getSession()?.userId, service.name, { type: 'repair_service_delete', data: { id: service.id } });
-                    renderServices();
-                    A.showToast('تم حذف خدمة الصيانة');
-                });
-            });
-        });
-
-        const uploadArea = document.getElementById('srvImageUploadArea');
-        const imageInput = document.getElementById('srvImageInput');
-        uploadArea.addEventListener('click', () => imageInput.click());
-        imageInput.addEventListener('change', function () {
-            const file = this.files[0];
-            if (!file) return;
-            if (A.isAdminImageUploadTooLarge(file)) {
-                A.showAdminImageUploadLimitToast();
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                imageValue = e.target.result;
-                preview.innerHTML = `<div class="image-preview" style="display:inline-block;position:relative;"><img src="${imageValue}" alt="صورة الخدمة" style="max-width:120px;border-radius:8px;"><button type="button" class="remove-img" style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:10px;"><i class="fas fa-times"></i></button></div>`;
-                preview.querySelector('.remove-img').addEventListener('click', () => {
-                    imageValue = '';
-                    preview.innerHTML = '';
-                });
-            };
-            reader.readAsDataURL(file);
-        });
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const payload = {
-                name: document.getElementById('srvName').value.trim(),
-                category: 'خدمات الصيانة',
-                price: Number(document.getElementById('srvPrice').value || 0),
-                duration: document.getElementById('srvDuration').value.trim(),
-                icon: document.getElementById('srvIcon').value.trim() || 'fa-wrench',
-                description: document.getElementById('srvDescription').value.trim(),
-                image: imageValue || '',
-                status: document.getElementById('srvStatus').value,
-                updatedAt: TZ.nowIso()
-            };
-
-            if (!payload.name) {
-                A.showToast('⚠️ أدخل اسم الخدمة');
-                return;
-            }
-            if (payload.price < 0) {
-                A.showToast('⚠️ السعر يجب أن يكون صفر أو أكثر');
-                return;
-            }
-
-            if (A.editingServiceId) {
-                const existing = (TZ.db.repairServices || []).find(s => s.id === A.editingServiceId);
-                if (!existing) return;
-                Object.assign(existing, payload);
-                TZ.commitDb('service_update', TZ.getSession()?.userId, payload.name, { type: 'repair_service', data: existing });
-                A.showToast('تم تحديث خدمة الصيانة');
-            } else {
-                payload.id = TZ.generateId('srv-');
-                payload.createdAt = TZ.nowIso();
-                if (!TZ.db.repairServices) TZ.db.repairServices = [];
-                TZ.db.repairServices.push(payload);
-                TZ.commitDb('service_create', TZ.getSession()?.userId, payload.name, { type: 'repair_service', data: payload });
-                A.showToast('تمت إضافة خدمة الصيانة');
-            }
-
-            renderServices();
-        });
+        document.querySelectorAll('.del-svc-btn').forEach(function (b) { b.addEventListener('click', function () { deleteService(b.dataset.id); }); });
     }
 
     A.sections.services = renderServices;
+    A.sections['repair-services'] = renderServices;
 })();

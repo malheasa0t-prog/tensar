@@ -1,144 +1,88 @@
-// ===== TechZone Admin - Logs =====
+/**
+ * TechZone Admin — Audit Logs Section (Rebuilt)
+ *
+ * Displays audit trail from audit_logs table.
+ * Uses mapper names: action, actorId, details, timestamp.
+ */
 (function () {
     'use strict';
 
-    const A = window.AdminApp;
-    const H = window.AdminLogsHelpers;
-    const state = { actorId: '', categoryId: 'all', searchQuery: '', startDate: '', endDate: '' };
+    var A = window.AdminApp;
+    if (!A) return;
 
-    if (!A || !H) return;
+    var searchQuery = '';
+    var currentPage = 1;
+    var PAGE_SIZE = 25;
 
-    function getActorName(actorId) {
-        return TZ.getUserById(actorId)?.fullName || 'النظام';
-    }
-
-    function buildPreparedLogs() {
-        return TZ.clone(TZ.db.logs || []).map((log) => ({
-            ...log,
-            actorName: getActorName(log.actorId),
-            meta: H.classifyAuditLog(log),
-            searchText: H.buildSearchText(log, getActorName(log.actorId))
-        })).sort((first, second) => new Date(second.timestamp || 0) - new Date(first.timestamp || 0));
-    }
-
-    function buildActorOptions(logs) {
-        const options = Array.from(new Map(logs
-            .filter((log) => log.actorId)
-            .map((log) => [String(log.actorId), log.actorName]))
-            .entries());
-
-        return ['<option value="">كل المستخدمين</option>']
-            .concat(options.map(([id, name]) => `<option value="${TZ.escapeHtml(id)}" ${state.actorId === id ? 'selected' : ''}>${TZ.escapeHtml(name)}</option>`))
-            .join('');
-    }
-
-    function exportLogs(logs) {
-        const rows = H.buildAuditExportRows(logs, getActorName);
-        const csv = ['الوقت,المستخدم,التصنيف,الإجراء,التفاصيل,حساس']
-            .concat(rows.map((row) => `"${row.timestamp}","${row.actor}","${row.category}","${row.action}","${row.details}","${row.sensitive}"`))
-            .join('\n');
-        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'audit-logs.csv';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(link.href);
-    }
-
-    function bindFilters(logs) {
-        document.getElementById('logSearch')?.addEventListener('input', function () {
-            state.searchQuery = String(this.value || '');
-            renderLogs();
-        });
-        document.getElementById('logCategoryFilter')?.addEventListener('change', function () {
-            state.categoryId = String(this.value || 'all');
-            renderLogs();
-        });
-        document.getElementById('logActorFilter')?.addEventListener('change', function () {
-            state.actorId = String(this.value || '');
-            renderLogs();
-        });
-        document.getElementById('logStartDate')?.addEventListener('change', function () {
-            state.startDate = String(this.value || '');
-            renderLogs();
-        });
-        document.getElementById('logEndDate')?.addEventListener('change', function () {
-            state.endDate = String(this.value || '');
-            renderLogs();
-        });
-        document.getElementById('exportLogsBtn')?.addEventListener('click', function () {
-            exportLogs(logs);
-        });
-        document.getElementById('clearLogsBtn')?.addEventListener('click', async function () {
-            const confirmed = await A.showConfirmModal({
-                type: 'danger',
-                title: 'مسح السجلات',
-                message: 'مسح جميع سجلات التدقيق؟ هذا الإجراء لا يمكن التراجع عنه.',
-                confirmText: 'مسح',
-                cancelText: 'إلغاء'
-            });
-            if (!confirmed) return;
-            TZ.db.logs = [];
-            await Promise.resolve(TZ.commitDb('clear_logs', TZ.getSession()?.userId, 'مسح السجلات'));
-            renderLogs();
-            A.showToast('تم مسح السجلات');
-        });
-    }
+    function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
 
     function renderLogs() {
-        const preparedLogs = buildPreparedLogs();
-        const filteredLogs = H.filterAuditLogs({
-            actorId: state.actorId,
-            categoryId: state.categoryId,
-            endDate: state.endDate,
-            logs: preparedLogs,
-            searchQuery: state.searchQuery,
-            startDate: state.startDate
+        var logs = TZ.db.logs || [];
+        logs.sort(function (a, b) { return new Date(b.timestamp || 0) - new Date(a.timestamp || 0); });
+
+        var filtered = logs;
+        if (searchQuery) {
+            var q = searchQuery.toLowerCase();
+            filtered = logs.filter(function (l) {
+                return (l.action || '').toLowerCase().includes(q)
+                    || (l.actorId || '').toLowerCase().includes(q)
+                    || (typeof l.details === 'string' && l.details.toLowerCase().includes(q));
+            });
+        }
+
+        var start = (currentPage - 1) * PAGE_SIZE;
+        var pageItems = filtered.slice(start, start + PAGE_SIZE);
+        var totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-clipboard-list"></i> سجل العمليات</h2><p>' + logs.length + ' سجل</p></div></div>';
+
+        html += '<div class="filter-bar"><input type="search" id="logsSearch" placeholder="ابحث بالإجراء أو المنفذ..." value="' + esc(searchQuery) + '"></div>';
+
+        html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
+            + '<th>الإجراء</th><th>المنفذ</th><th>التفاصيل</th><th>التاريخ</th></tr></thead><tbody>';
+
+        if (pageItems.length === 0) {
+            html += '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-clipboard-list"></i><p>لا توجد سجلات</p></div></td></tr>';
+        } else {
+            pageItems.forEach(function (l) {
+                var detailStr = '';
+                if (l.details) {
+                    if (typeof l.details === 'string') detailStr = l.details;
+                    else if (typeof l.details === 'object') detailStr = JSON.stringify(l.details).substring(0, 80);
+                }
+                html += '<tr>'
+                    + '<td><strong>' + esc(l.action || '-') + '</strong></td>'
+                    + '<td><small>' + esc(l.actorId || '-') + '</small></td>'
+                    + '<td><small>' + esc(detailStr || '-') + '</small></td>'
+                    + '<td><small>' + (l.timestamp ? new Date(l.timestamp).toLocaleString('ar-JO') : '-') + '</small></td>'
+                    + '</tr>';
+            });
+        }
+        html += '</tbody></table></div></div>';
+
+        if (totalPages > 1) {
+            html += '<div class="admin-table-pagination"><div class="admin-table-pagination-info">عرض ' + pageItems.length + ' من ' + filtered.length + '</div>';
+            html += '<div class="admin-table-pagination-controls">';
+            html += '<button data-page="' + (currentPage - 1) + '"' + (currentPage <= 1 ? ' disabled' : '') + '><i class="fas fa-chevron-right"></i></button>';
+            for (var i = 1; i <= Math.min(totalPages, 10); i++) {
+                html += '<button data-page="' + i + '" class="' + (i === currentPage ? 'active' : '') + '">' + i + '</button>';
+            }
+            html += '<button data-page="' + (currentPage + 1) + '"' + (currentPage >= totalPages ? ' disabled' : '') + '><i class="fas fa-chevron-left"></i></button>';
+            html += '</div></div>';
+        }
+        html += '</div>';
+
+        A.adminContent.innerHTML = html;
+
+        document.getElementById('logsSearch')?.addEventListener('input', function () { searchQuery = this.value; currentPage = 1; renderLogs(); });
+        document.querySelectorAll('[data-page]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var p = parseInt(b.dataset.page, 10);
+                if (p >= 1) { currentPage = p; renderLogs(); }
+            });
         });
-
-        A.adminContent.innerHTML = `
-            <div class="filter-bar">
-                <input type="text" id="logSearch" placeholder="بحث في السجلات..." value="${TZ.escapeHtml(state.searchQuery)}" style="flex:1;min-width:220px;">
-                <select id="logCategoryFilter">
-                    <option value="all" ${state.categoryId === 'all' ? 'selected' : ''}>كل التصنيفات</option>
-                    <option value="auth" ${state.categoryId === 'auth' ? 'selected' : ''}>الدخول والوصول</option>
-                    <option value="orders" ${state.categoryId === 'orders' ? 'selected' : ''}>الطلبات</option>
-                    <option value="catalog" ${state.categoryId === 'catalog' ? 'selected' : ''}>المتجر</option>
-                    <option value="finance" ${state.categoryId === 'finance' ? 'selected' : ''}>المالية</option>
-                    <option value="system" ${state.categoryId === 'system' ? 'selected' : ''}>النظام</option>
-                </select>
-                <select id="logActorFilter">${buildActorOptions(preparedLogs)}</select>
-                <input type="date" id="logStartDate" value="${TZ.escapeHtml(state.startDate)}">
-                <input type="date" id="logEndDate" value="${TZ.escapeHtml(state.endDate)}">
-                <button class="btn btn-outline btn-sm" id="exportLogsBtn"><i class="fas fa-download"></i> تصدير CSV</button>
-                <button class="btn btn-outline btn-sm" id="clearLogsBtn"><i class="fas fa-trash"></i> مسح السجلات</button>
-            </div>
-            <div class="admin-panel">
-                <div class="panel-header"><h2><i class="fas fa-history"></i> سجل العمليات (${filteredLogs.length})</h2></div>
-                <div class="panel-body padded">
-                    <div class="admin-logs-list">
-                        ${filteredLogs.length === 0 ? '<div class="admin-customer-empty">لا توجد سجلات مطابقة للفلاتر الحالية.</div>' : filteredLogs.map((log) => `
-                            <article class="admin-log-entry admin-log-entry--${log.meta.tone}">
-                                <div class="admin-log-entry__meta">
-                                    <span class="admin-log-badge">${TZ.escapeHtml(log.meta.categoryLabel)}</span>
-                                    ${log.meta.isSensitive ? '<span class="admin-log-badge admin-log-badge--danger">حساس</span>' : ''}
-                                    <small>${A.formatDateTime(log.timestamp)}</small>
-                                </div>
-                                <div class="admin-log-entry__body">
-                                    <strong>${TZ.escapeHtml(log.action)}</strong>
-                                    <p>${TZ.escapeHtml(log.actorName)} • ${TZ.escapeHtml(log.details || '-')}</p>
-                                </div>
-                            </article>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        bindFilters(filteredLogs);
     }
 
     A.sections.logs = renderLogs;
+    A.sections['audit-logs'] = renderLogs;
 })();

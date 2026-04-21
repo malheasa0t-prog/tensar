@@ -144,6 +144,36 @@ export default function ProductDetailPage() {
   const [isService, setIsService] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const isAccessoryProduct = product ? isAccessoryProductCategoryId(product.category_id) : false;
+  const categoryLabel = isAccessoryProduct
+    ? ACCESSORY_SECTION_NAME
+    : category?.name || 'منتج تقني';
+  const image = product && Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '';
+
+  usePageSeo(product ? {
+    title: product.name,
+    description:
+      product.description ||
+      `اطلع على سعر ${product.name} ومواصفاته وحالة التوفر وخطوات الشراء لدى TechZone.`,
+    image,
+    type: isService ? 'website' : 'product',
+    canonicalPath: `/products/${id}`,
+    breadcrumbItems: buildBreadcrumbItems({
+      category,
+      categoryId: product.category_id,
+      isAccessoryProduct,
+      name: product.name,
+    }),
+    breadcrumbLabel: product.name,
+    structuredData: buildDetailStructuredData({
+      categoryLabel,
+      id,
+      image,
+      isService,
+      product,
+    }),
+  } : null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -200,11 +230,9 @@ export default function ProductDetailPage() {
     return null;
   }
 
-  const isAccessoryProduct = isAccessoryProductCategoryId(product.category_id);
   const finalPrice = Number(product.discount_price || product.price || 0);
   const originalPrice = Number(product.price || 0);
   const hasDiscount = Number(product.discount_price || 0) > 0 && finalPrice < originalPrice;
-  const image = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '';
   const stockLabel = isService
     ? 'خدمة رقمية فورية'
     : Number(product.quantity || 0) > 0
@@ -212,33 +240,11 @@ export default function ProductDetailPage() {
       : 'حسب الطلب';
   const specs = Array.isArray(product.specs) ? product.specs.filter(Boolean) : [];
   const brandLabel = product.brand || 'بدون علامة محددة';
-  const categoryLabel = isAccessoryProduct
-    ? ACCESSORY_SECTION_NAME
-    : category?.name || 'منتج تقني';
   const breadcrumbItems = buildBreadcrumbItems({
     category,
     categoryId: product.category_id,
     isAccessoryProduct,
     name: product.name,
-  });
-
-  usePageSeo({
-    title: product.name,
-    description:
-      product.description ||
-      `اطلع على سعر ${product.name} ومواصفاته وحالة التوفر وخطوات الشراء لدى TechZone.`,
-    image,
-    type: isService ? 'website' : 'product',
-    canonicalPath: `/products/${id}`,
-    breadcrumbItems,
-    breadcrumbLabel: product.name,
-    structuredData: buildDetailStructuredData({
-      categoryLabel,
-      id,
-      image,
-      isService,
-      product,
-    }),
   });
 
   return (

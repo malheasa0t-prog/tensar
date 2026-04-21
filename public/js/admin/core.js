@@ -270,6 +270,9 @@
         if (section === 'refunds' && A.sections.refunds) A.sections.refunds();
         if (section === 'coupons' && ['coupons', 'all'].includes(table) && A.sections.coupons) A.sections.coupons();
         if (section === 'notifications' && A.sections.notifications) A.sections.notifications();
+        if (section === 'customers' && ['users', 'orders', 'all'].includes(table) && A.sections.customers) A.sections.customers();
+        if (section === 'settings' && ['settings', 'all'].includes(table) && A.sections.settings) A.sections.settings();
+        if (section === 'logs' && ['audit_logs', 'all'].includes(table) && A.sections.logs) A.sections.logs();
         helpers.updateOrdersBadge(TZ);
     });
 

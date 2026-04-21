@@ -24,6 +24,18 @@ export default function CategoryPage() {
   const { loading, error, category, mainCategory, subCategories, products, subCategoryProductsCount } =
     useCategoryPage(routeValue);
 
+  const hasSubCategories = !loading && !error && category && !category.parent_id && subCategories.length > 0;
+
+  usePageSeo(category ? {
+    title: category.name,
+    description:
+      category.description ||
+      `تصفح فئة ${category.name} واكتشف المنتجات أو الأقسام الفرعية المتاحة لدى TechZone.`,
+    image: category.image || '',
+    canonicalPath: `/category/${category.slug || category.id || routeValue}`,
+    breadcrumbLabel: category.name,
+  } : null);
+
   if (loading) {
     return <CatalogPageSkeleton showCategories categoryCount={4} productCount={6} />;
   }
@@ -54,18 +66,6 @@ export default function CategoryPage() {
     );
   }
 
-  const hasSubCategories = !category.parent_id && subCategories.length > 0;
-
-  usePageSeo({
-    title: category.name,
-    description:
-      category.description ||
-      `تصفح فئة ${category.name} واكتشف المنتجات أو الأقسام الفرعية المتاحة لدى TechZone.`,
-    image: category.image,
-    canonicalPath: `/category/${category.slug || category.id || routeValue}`,
-    breadcrumbLabel: category.name,
-  });
-
   return (
     <section className="section page-top" style={{ paddingBottom: '4rem' }}>
       <div className="container" style={{ display: 'grid', gap: '1.5rem' }}>
@@ -93,3 +93,4 @@ export default function CategoryPage() {
     </section>
   );
 }
+

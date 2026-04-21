@@ -1,307 +1,135 @@
-// ===== TechZone Admin - Deposits Management =====
+/**
+ * TechZone Admin — Deposits Section (Rebuilt)
+ *
+ * Manages deposit requests with approve/reject workflow via Supabase RPC.
+ */
 (function () {
     'use strict';
 
-    const A = window.AdminApp;
+    var A = window.AdminApp;
+    if (!A) return;
 
-    function resolveDepositUserId(deposit) {
-        return deposit ? (deposit.userId || deposit.user_id || '') : '';
-    }
+    var filterStatus = '';
 
-    function getRpcAdjustmentRow(response) {
-        const data = response ? response.data : null;
+    function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
 
-        if (Array.isArray(data)) {
-            return data[0] || null;
-        }
+    async function approveDeposit(deposit) {
+        if (!confirm('هل تريد الموافقة على هذا الإيداع وإضافة الرصيد للمستخدم؟')) return;
 
-        return data && typeof data === 'object' ? data : null;
-    }
+        var authUser = await TZ.getSupabaseUser();
+        var adminId = authUser ? authUser.id : TZ.getSession()?.userId;
+        var userId = deposit.user_id || deposit.userId;
+        if (!adminId || !userId) { A.showToast('تعذر تحديد المدير أو المستخدم'); return; }
 
-    function buildApprovedDepositNotification(input) {
-        const amount = Number(input.amount || 0).toFixed(2);
-
-        return {
-            user_id: input.userId,
-            title: 'تم شحن رصيدك بنجاح!',
-            body: 'تم إضافة ' + amount + ' د.أ إلى محفظتك.',
-            type: 'success',
-            reference_type: 'deposit',
-            reference_id: input.depositId
-        };
-    }
-
-    async function updateWalletNotificationReference(input) {
-        if (!input.transactionId) {
-            return false;
-        }
-
-        const result = await input.client
-            .from('notifications')
-            .update(input.payload)
-            .eq('user_id', input.userId)
-            .eq('reference_type', 'wallet_transaction')
-            .eq('reference_id', String(input.transactionId))
-            .select('id');
-
-        if (result.error) {
-            throw new Error('تعذر تحديث إشعار الإيداع بعد شحن الرصيد.');
-        }
-
-        return Array.isArray(result.data) && result.data.length > 0;
-    }
-
-    async function insertApprovedDepositNotification(input) {
-        const result = await input.client.from('notifications').insert([input.payload]);
-
-        if (result.error) {
-            throw new Error('تعذر إنشاء إشعار الإيداع بعد شحن الرصيد.');
-        }
-    }
-
-    async function ensureApprovedDepositNotification(input) {
-        const payload = buildApprovedDepositNotification(input);
-        const didUpdate = await updateWalletNotificationReference({
-            client: input.client,
-            userId: input.userId,
-            transactionId: input.transactionId,
-            payload: payload
-        });
-
-        if (!didUpdate) {
-            await insertApprovedDepositNotification({
-                client: input.client,
-                payload: payload
-            });
-        }
-    }
-
-    function getApproveActionsHtml(depositId) {
-        return '<button class="action-btn approve-deposit-btn" data-id="' + depositId + '" title="موافقة" style="color:#2ecc71;"><i class="fas fa-check-circle"></i></button>'
-            + '<button class="action-btn danger reject-deposit-btn" data-id="' + depositId + '" title="رفض"><i class="fas fa-times-circle"></i></button>';
-    }
-
-    function buildDepositRow(deposit, statusBadge) {
-        const userId = resolveDepositUserId(deposit) || '-';
-        const proofLink = deposit.proofUrl || deposit.proof_url;
-        const proofCell = proofLink ? '<a href="' + proofLink + '" target="_blank" style="color:var(--primary);">عرض الإثبات</a>' : '-';
-        const methodLabel = deposit.method === 'manual' ? 'تحويل يدوي' : 'بوابة دفع';
-        const dateStr = new Date(deposit.createdAt || deposit.created_at).toLocaleDateString('ar-JO');
-        const actionsHtml = deposit.status === 'pending' ? getApproveActionsHtml(deposit.id) : '—';
-
-        return '<tr data-deposit-id="' + deposit.id + '">'
-            + '<td><small>' + TZ.escapeHtml(userId) + '</small></td>'
-            + '<td style="font-weight:bold; color:#2ecc71;">' + TZ.formatPrice(deposit.amount) + '</td>'
-            + '<td>' + methodLabel + '</td>'
-            + '<td>' + proofCell + '</td>'
-            + '<td>' + (statusBadge[deposit.status] || deposit.status) + '</td>'
-            + '<td><small>' + dateStr + '</small></td>'
-            + '<td class="actions-cell">' + actionsHtml + '</td>'
-            + '</tr>';
-    }
-
-    function renderDepositsTable(deposits) {
-        const statusBadge = {
-            pending: '<span class="status-badge" style="background:#f39c12;color:#fff;">قيد المراجعة</span>',
-            approved: '<span class="status-badge" style="background:#2ecc71;color:#fff;">تمت الموافقة</span>',
-            rejected: '<span class="status-badge" style="background:#e74c3c;color:#fff;">مرفوض</span>'
-        };
-
-        const tableRows = deposits.map(function (deposit) {
-            return buildDepositRow(deposit, statusBadge);
-        }).join('');
-
-        A.adminContent.innerHTML = ''
-            + '<div class="filter-bar">'
-            + '    <select id="depositStatusFilter">'
-            + '        <option value="">كل الحالات</option>'
-            + '        <option value="pending">قيد المراجعة</option>'
-            + '        <option value="approved">تمت الموافقة</option>'
-            + '        <option value="rejected">مرفوض</option>'
-            + '    </select>'
-            + '</div>'
-            + '<div class="admin-panel">'
-            + '    <div class="panel-header"><h2><i class="fas fa-money-check-alt"></i> طلبات الإيداع (' + deposits.length + ')</h2></div>'
-            + '    <div class="panel-body">'
-            + '        <div class="table-wrap">'
-            + '        <table class="data-table">'
-            + '            <thead><tr>'
-            + '                <th>المستخدم</th>'
-            + '                <th>المبلغ</th>'
-            + '                <th>الطريقة</th>'
-            + '                <th>إثبات التحويل</th>'
-            + '                <th>الحالة</th>'
-            + '                <th>التاريخ</th>'
-            + '                <th>إجراءات</th>'
-            + '            </tr></thead>'
-            + '            <tbody id="depositsTableBody">' + tableRows + '</tbody>'
-            + '        </table>'
-            + '        </div>'
-            + '    </div>'
-            + '</div>';
-    }
-
-    async function approveDeposit(deposits, depositId) {
-        const deposit = deposits.find(function (item) { return item.id === depositId; });
-        if (!deposit) {
-            return;
-        }
-
-        const authUser = await TZ.getSupabaseUser();
-        const adminUserId = authUser ? authUser.id : TZ.getSession()?.userId;
-        if (!adminUserId) {
-            A.showToast('تعذر تحديد حساب المدير الحالي.');
-            return;
-        }
-
-        const userId = resolveDepositUserId(deposit);
-        if (!userId) {
-            A.showToast('تعذر تحديد صاحب طلب الإيداع.');
-            return;
-        }
-
-        const adjustRes = await TZ.supabase.rpc('admin_adjust_wallet_balance', {
-            p_admin_user_id: adminUserId,
+        var adjustRes = await TZ.supabase.rpc('admin_adjust_wallet_balance', {
+            p_admin_user_id: adminId,
             p_target_user_id: userId,
             p_amount: Number(deposit.amount),
-            p_reason: 'موافقة على طلب إيداع #' + depositId
+            p_reason: 'موافقة على طلب إيداع #' + deposit.id
         });
+        if (adjustRes.error) { A.showToast('فشل إضافة الرصيد إلى المحفظة'); return; }
 
-        if (adjustRes.error) {
-            A.showToast('فشل إضافة الرصيد إلى المحفظة.');
-            return;
-        }
+        var updateRes = await TZ.supabase.from('deposits').update({
+            status: 'approved', reviewed_by: adminId, reviewed_at: new Date().toISOString()
+        }).eq('id', deposit.id);
+        if (updateRes.error) { A.showToast('فشل تحديث حالة الإيداع'); return; }
 
-        const updateRes = await TZ.supabase.from('deposits').update({
-            status: 'approved',
-            reviewed_by: adminUserId,
-            reviewed_at: new Date().toISOString()
-        }).eq('id', depositId);
+        /* Note: admin_adjust_wallet_balance RPC already sends a notification to the user */
 
-        if (updateRes.error) {
-            A.showToast('فشل تحديث حالة الإيداع.');
-            return;
-        }
-
-        const adjustment = getRpcAdjustmentRow(adjustRes);
-        let approvalMessage = 'تمت الموافقة وإضافة الرصيد بنجاح.';
-
-        try {
-            await ensureApprovedDepositNotification({
-                client: TZ.supabase,
-                userId: userId,
-                amount: deposit.amount,
-                depositId: depositId,
-                transactionId: adjustment ? adjustment.transaction_id : ''
-            });
-        } catch (notificationError) {
-            void notificationError;
-            approvalMessage = 'تمت الموافقة وإضافة الرصيد، لكن تعذر إشعار المستخدم.';
-        }
-
-        A.showToast(approvalMessage);
-        TZ.refreshData().then(function () { renderDeposits(); });
+        A.showToast('تمت الموافقة وإضافة الرصيد بنجاح');
+        await TZ.refreshData();
+        renderDeposits();
     }
 
-    async function rejectDeposit(deposits, depositId, reason) {
-        const authUser = await TZ.getSupabaseUser();
-        const result = await TZ.supabase.from('deposits').update({
-            status: 'rejected',
-            admin_note: reason || null,
+    async function rejectDeposit(deposit) {
+        var reason = prompt('سبب الرفض (اختياري):');
+        if (!confirm('هل تريد رفض هذا الإيداع؟')) return;
+
+        var authUser = await TZ.getSupabaseUser();
+        var result = await TZ.supabase.from('deposits').update({
+            status: 'rejected', admin_note: reason || null,
             reviewed_by: authUser ? authUser.id : TZ.getSession()?.userId,
             reviewed_at: new Date().toISOString()
-        }).eq('id', depositId);
+        }).eq('id', deposit.id);
 
-        if (result.error) {
-            A.showToast('تعذر رفض الإيداع.');
-            return;
-        }
+        if (result.error) { A.showToast('تعذر رفض الإيداع'); return; }
 
-        const deposit = deposits.find(function (item) { return item.id === depositId; });
-        if (deposit) {
-            await TZ.supabase.from('notifications').insert([{
-                user_id: resolveDepositUserId(deposit),
-                title: 'تم رفض طلب الشحن',
-                body: reason ? 'السبب: ' + reason : 'لم يتم قبول إثبات التحويل. يرجى المحاولة مرة أخرى.',
-                type: 'error',
-                reference_type: 'deposit',
-                reference_id: depositId
-            }]);
-        }
+        await TZ.supabase.from('notifications').insert([{
+            user_id: deposit.user_id || deposit.userId,
+            title: 'تم رفض طلب الشحن',
+            body: reason ? 'السبب: ' + reason : 'لم يتم قبول إثبات التحويل.',
+            type: 'error', reference_type: 'deposit', reference_id: String(deposit.id)
+        }]);
 
-        A.showToast('تم رفض الإيداع.');
-        TZ.refreshData().then(function () { renderDeposits(); });
-    }
-
-    function bindApproveActions(deposits) {
-        document.querySelectorAll('.approve-deposit-btn').forEach(function (button) {
-            button.addEventListener('click', async function () {
-                const depositId = this.dataset.id;
-                const shouldApprove = confirm('هل تريد الموافقة على هذا الإيداع وإضافة الرصيد للمستخدم؟');
-                if (!shouldApprove) {
-                    return;
-                }
-
-                await approveDeposit(deposits, depositId);
-            });
-        });
-    }
-
-    function bindRejectActions(deposits) {
-        document.querySelectorAll('.reject-deposit-btn').forEach(function (button) {
-            button.addEventListener('click', async function () {
-                const depositId = this.dataset.id;
-                const reason = prompt('سبب الرفض (اختياري):');
-                const shouldReject = confirm('هل تريد رفض هذا الإيداع؟');
-                if (!shouldReject) {
-                    return;
-                }
-
-                await rejectDeposit(deposits, depositId, reason);
-            });
-        });
-    }
-
-    function bindFilter(deposits) {
-        const filterEl = document.getElementById('depositStatusFilter');
-        if (!filterEl) {
-            return;
-        }
-
-        filterEl.addEventListener('change', function () {
-            const filterVal = this.value;
-            document.querySelectorAll('#depositsTableBody tr').forEach(function (row) {
-                if (!filterVal) {
-                    row.style.display = '';
-                    return;
-                }
-
-                const deposit = deposits.find(function (item) { return item.id === row.dataset.depositId; });
-                row.style.display = deposit && deposit.status === filterVal ? '' : 'none';
-            });
-        });
+        A.showToast('تم رفض الإيداع');
+        await TZ.refreshData();
+        renderDeposits();
     }
 
     function renderDeposits() {
-        const deposits = TZ.db.deposits || [];
-        renderDepositsTable(deposits);
-        bindApproveActions(deposits);
-        bindRejectActions(deposits);
-        bindFilter(deposits);
-    }
+        var deposits = TZ.db.deposits || [];
+        var filtered = filterStatus ? deposits.filter(function (d) { return d.status === filterStatus; }) : deposits;
+        filtered.sort(function (a, b) { return new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt); });
 
-    if (window.__ENABLE_DEPOSIT_ADMIN_TEST_HOOKS__) {
-        window.__depositAdminTestHooks = {
-            resolveDepositUserId: resolveDepositUserId,
-            getRpcAdjustmentRow: getRpcAdjustmentRow,
-            buildApprovedDepositNotification: buildApprovedDepositNotification,
-            updateWalletNotificationReference: updateWalletNotificationReference,
-            insertApprovedDepositNotification: insertApprovedDepositNotification,
-            ensureApprovedDepositNotification: ensureApprovedDepositNotification
+        var statusBadges = {
+            pending: '<span class="status-badge pending">قيد المراجعة</span>',
+            approved: '<span class="status-badge approved">تمت الموافقة</span>',
+            rejected: '<span class="status-badge rejected">مرفوض</span>'
         };
+
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-money-check-alt"></i> طلبات الإيداع</h2><p>' + deposits.length + ' طلب</p></div></div>';
+
+        html += '<div class="filter-bar"><select id="depStatusFilter">'
+            + '<option value="">كل الحالات</option>'
+            + '<option value="pending"' + (filterStatus === 'pending' ? ' selected' : '') + '>قيد المراجعة</option>'
+            + '<option value="approved"' + (filterStatus === 'approved' ? ' selected' : '') + '>تمت الموافقة</option>'
+            + '<option value="rejected"' + (filterStatus === 'rejected' ? ' selected' : '') + '>مرفوض</option>'
+            + '</select></div>';
+
+        html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
+            + '<th>المستخدم</th><th>المبلغ</th><th>الطريقة</th><th>الإثبات</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>';
+
+        if (filtered.length === 0) {
+            html += '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-money-check-alt"></i><p>لا توجد طلبات إيداع</p></div></td></tr>';
+        } else {
+            filtered.forEach(function (d) {
+                var uid = d.user_id || d.userId || '-';
+                var proof = d.proof_url || d.proofUrl;
+                var proofHtml = proof ? '<a href="' + esc(proof) + '" target="_blank" style="color:var(--primary-light);">عرض</a>' : '-';
+                var method = d.method === 'manual' ? 'تحويل يدوي' : d.method === 'gateway' ? 'بوابة دفع' : d.method || '-';
+                var actions = d.status === 'pending'
+                    ? '<button class="action-btn approve-dep" data-id="' + d.id + '" style="color:#2ecc71;" title="موافقة"><i class="fas fa-check-circle"></i></button>'
+                    + '<button class="action-btn danger reject-dep" data-id="' + d.id + '" title="رفض"><i class="fas fa-times-circle"></i></button>'
+                    : '—';
+
+                html += '<tr>'
+                    + '<td><small>' + esc(uid) + '</small></td>'
+                    + '<td style="font-weight:700;color:#2ecc71;">' + TZ.formatPrice(d.amount) + '</td>'
+                    + '<td>' + method + '</td>'
+                    + '<td>' + proofHtml + '</td>'
+                    + '<td>' + (statusBadges[d.status] || d.status) + '</td>'
+                    + '<td><small>' + new Date(d.created_at || d.createdAt).toLocaleDateString('ar-JO') + '</small></td>'
+                    + '<td class="actions-cell">' + actions + '</td></tr>';
+            });
+        }
+        html += '</tbody></table></div></div></div>';
+
+        A.adminContent.innerHTML = html;
+
+        document.getElementById('depStatusFilter')?.addEventListener('change', function () { filterStatus = this.value; renderDeposits(); });
+        document.querySelectorAll('.approve-dep').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var dep = deposits.find(function (d) { return String(d.id) === b.dataset.id; });
+                if (dep) approveDeposit(dep);
+            });
+        });
+        document.querySelectorAll('.reject-dep').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var dep = deposits.find(function (d) { return String(d.id) === b.dataset.id; });
+                if (dep) rejectDeposit(dep);
+            });
+        });
     }
 
-    if (A) {
-        A.sections.deposits = renderDeposits;
-    }
+    A.sections.deposits = renderDeposits;
 })();

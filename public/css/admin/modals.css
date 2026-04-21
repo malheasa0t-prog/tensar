@@ -1,30 +1,32 @@
-﻿/* Modal Overlay */
+/* ===== Admin Modals ===== */
+
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    animation: fadeIn 0.24s ease;
+    padding: 16px;
+    animation: fadeIn 0.2s ease;
 }
 
 .modal-card {
     background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    padding: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 28px;
     width: 90%;
     max-width: 480px;
     text-align: center;
-    box-shadow: var(--shadow-lg);
-    animation: modalPopIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    animation: modalPopIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .modal-card h3 {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     margin-bottom: 8px;
     display: flex;
     align-items: center;
@@ -34,50 +36,52 @@
 
 .modal-card p {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    margin-bottom: 20px;
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+    line-height: 1.6;
 }
 
+/* ── Confirm Modal ── */
 .admin-confirm-modal {
     display: grid;
-    gap: 18px;
+    gap: 16px;
     text-align: center;
 }
 
 .admin-confirm-modal__icon {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
     margin-inline: auto;
     display: grid;
     place-items: center;
-    border-radius: 24px;
-    font-size: 1.7rem;
-    background: rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    font-size: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .modal-card--danger .admin-confirm-modal__icon {
     color: #ff7675;
-    background: rgba(255, 118, 117, 0.12);
+    background: rgba(255, 118, 117, 0.1);
 }
 
 .modal-card--warning .admin-confirm-modal__icon {
     color: #fdcb6e;
-    background: rgba(253, 203, 110, 0.14);
+    background: rgba(253, 203, 110, 0.1);
 }
 
 .modal-card--success .admin-confirm-modal__icon {
     color: #55efc4;
-    background: rgba(85, 239, 196, 0.14);
+    background: rgba(85, 239, 196, 0.1);
 }
 
 .modal-card--info .admin-confirm-modal__icon {
     color: #74b9ff;
-    background: rgba(116, 185, 255, 0.14);
+    background: rgba(116, 185, 255, 0.1);
 }
 
 .admin-confirm-modal__body {
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .admin-confirm-modal__body p {
@@ -89,46 +93,56 @@
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ── Choice Modal ── */
+.modal-choices {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 10px;
 }
 
-.modal-choices {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 15px;
-}
-
 .modal-choice-btn {
-    background: var(--bg-secondary);
-    border: 2px solid var(--border-light);
-    border-radius: var(--radius-md);
-    padding: 20px 15px;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 12px;
     align-items: center;
-    gap: 8px;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: all 0.2s ease;
     font-family: inherit;
     color: var(--text-primary);
+    text-align: right;
+}
+
+.modal-choice-btn:hover {
+    border-color: rgba(var(--primary-rgb), 0.3);
+    background: rgba(var(--primary-rgb), 0.06);
 }
 
 .modal-choice-btn i {
-    font-size: 1.8rem;
+    font-size: 1.3rem;
+    color: var(--primary-light);
+    justify-self: center;
 }
 
 .modal-choice-btn strong {
-    font-size: 0.95rem;
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 3px;
 }
 
 .modal-choice-btn span {
-    font-size: 0.78rem;
-    color: var(--text-muted);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .modal-choice-btn.delivery-choice:hover {
-    border-color: #74b9ff;
-    background: rgba(116, 185, 255, 0.1);
+    border-color: rgba(116, 185, 255, 0.35);
 }
 
 .modal-choice-btn.delivery-choice:hover i {
@@ -136,8 +150,7 @@
 }
 
 .modal-choice-btn.pickup-choice:hover {
-    border-color: #00b894;
-    background: rgba(0, 184, 148, 0.1);
+    border-color: rgba(0, 184, 148, 0.35);
 }
 
 .modal-choice-btn.pickup-choice:hover i {
@@ -145,33 +158,38 @@
 }
 
 .modal-choice-btn.remote-choice:hover {
-    border-color: #00cec9;
-    background: rgba(0, 206, 201, 0.1);
+    border-color: rgba(0, 206, 201, 0.35);
 }
 
 .modal-choice-btn.remote-choice:hover i {
     color: #00cec9;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
+/* ── Cancel Button ── */
+.modal-cancel-btn {
+    margin-top: 12px;
+}
 
-    to {
-        opacity: 1;
-    }
+/* ── Animations ── */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes modalPopIn {
     from {
         opacity: 0;
-        transform: translateY(12px) scale(0.96);
+        transform: translateY(10px) scale(0.97);
     }
-
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
 }
 
+@media (max-width: 640px) {
+    .modal-card {
+        padding: 22px;
+        width: 95%;
+    }
+}

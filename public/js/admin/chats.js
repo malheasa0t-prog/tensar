@@ -1,265 +1,173 @@
-// ===== TechZone Admin - Live Chats =====
+/**
+ * TechZone Admin — Chats Section (Rebuilt)
+ *
+ * Support chat management with conversation list and message view.
+ * Loads data directly from Supabase since support tables aren't in TZ.db.
+ */
 (function () {
     'use strict';
 
-    const A = window.AdminApp;
-    const H = window.AdminChatsHelpers;
+    var A = window.AdminApp;
+    if (!A) return;
 
-    if (!A || !H) return;
+    var selectedConversation = null;
+    var cachedConversations = [];
+    var cachedMessages = [];
 
-    const state = {
-        conversations: [],
-        messages: [],
-        selectedConversationId: '',
-        loading: false,
-        loadingMessages: false,
-        sending: false,
-        error: '',
-        cleanupConversations: null,
-        cleanupMessages: null
-    };
+    function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
 
-    /**
-     * Returns the currently selected conversation.
-     *
-     * @returns {Record<string, unknown> | null}
-     */
-    function getSelectedConversation() {
-        return state.conversations.find(function (conversation) {
-            return String(conversation.id) === String(state.selectedConversationId || '');
-        }) || null;
-    }
-
-    /**
-     * Removes all active realtime subscriptions for the chats section.
-     *
-     * @returns {void}
-     */
-    function cleanupChatsSection() {
-        if (typeof state.cleanupConversations === 'function') state.cleanupConversations();
-        if (typeof state.cleanupMessages === 'function') state.cleanupMessages();
-        state.cleanupConversations = null;
-        state.cleanupMessages = null;
-    }
-
-    /**
-     * Renders the main chats section shell using the current state snapshot.
-     *
-     * @returns {void}
-     */
-    function renderChats() {
-        const selectedConversation = getSelectedConversation();
-        const listMarkup = state.loading
-            ? '<div class="admin-chat-empty"><i class="fas fa-spinner fa-spin"></i><p>جاري تحميل المحادثات...</p></div>'
-            : state.conversations.length === 0
-                ? '<div class="admin-chat-empty"><i class="fas fa-comments"></i><p>لا توجد محادثات مباشرة حالياً.</p></div>'
-                : state.conversations.map(function (conversation) {
-                    const isActive = String(conversation.id) === String(state.selectedConversationId || '');
-                    const customerName = TZ.escapeHtml(conversation.customer_name || 'مستخدم');
-                    const customerEmail = TZ.escapeHtml(conversation.customer_email || '-');
-                    const statusLabel = H.getAdminChatStatusLabel(conversation);
-                    const rowClass = 'admin-chat-item' + (isActive ? ' is-active' : '') + (statusLabel === 'بانتظار الرد' ? ' has-pending' : '');
-
-                    return '<button type="button" class="' + rowClass + '" data-conversation-id="' + conversation.id + '">'
-                        + '<div class="admin-chat-item-head"><strong>' + customerName + '</strong><span>' + H.formatAdminChatRelativeTime(conversation.last_message_at) + '</span></div>'
-                        + '<p>' + customerEmail + '</p>'
-                        + '<div class="admin-chat-item-meta"><span>' + TZ.escapeHtml(H.buildAdminChatPreview(conversation.last_message_preview || '')) + '</span><small>' + statusLabel + '</small></div>'
-                        + '</button>';
-                }).join('');
-        const messagesMarkup = !selectedConversation
-            ? '<div class="admin-chat-thread-empty"><i class="fas fa-comment-dots"></i><p>اختر محادثة للرد</p></div>'
-            : state.loadingMessages
-                ? '<div class="admin-chat-thread-empty"><i class="fas fa-spinner fa-spin"></i><p>جاري تحميل الرسائل...</p></div>'
-                : state.messages.length === 0
-                    ? '<div class="admin-chat-thread-empty"><i class="fas fa-inbox"></i><p>لا توجد رسائل داخل هذه المحادثة بعد.</p></div>'
-                    : state.messages.map(function (message) {
-                        const messageClass = message.sender_role === 'admin' ? 'admin-chat-message admin' : 'admin-chat-message customer';
-                        return '<div class="' + messageClass + '"><div class="admin-chat-bubble"><div class="admin-chat-message-meta"><strong>'
-                            + TZ.escapeHtml(message.sender_name || 'المستخدم')
-                            + '</strong><span>' + H.formatAdminChatRelativeTime(message.created_at) + '</span></div><p>'
-                            + TZ.escapeHtml(message.body || '')
-                            + '</p></div></div>';
-                    }).join('');
-
-        A.adminContent.innerHTML = ''
-            + '<div class="admin-chat-grid">'
-            + '  <section class="admin-panel"><div class="panel-header"><h2><i class="fas fa-comments"></i> الدردشات</h2></div><div class="panel-body padded admin-chat-main">'
-            + (state.error ? '<div class="status-box warning">' + TZ.escapeHtml(state.error) + '</div>' : '')
-            + (selectedConversation
-                ? '<div class="admin-chat-header"><div><strong>' + TZ.escapeHtml(selectedConversation.customer_name || 'مستخدم') + '</strong><p>' + TZ.escapeHtml(selectedConversation.customer_email || '') + '</p></div><div class="admin-chat-header-meta"><span class="status-badge ' + (selectedConversation.status === 'closed' ? 'hidden' : 'active') + '">' + TZ.escapeHtml(H.getAdminChatStatusLabel(selectedConversation)) + '</span><button type="button" class="btn btn-outline btn-sm" id="toggleChatStatusBtn">' + (selectedConversation.status === 'closed' ? 'إعادة الفتح' : 'إغلاق المحادثة') + '</button></div></div>'
-                : '')
-            + '<div class="admin-chat-thread">' + messagesMarkup + '</div>'
-            + (selectedConversation ? '<form id="adminChatReplyForm" class="admin-chat-reply"><textarea id="adminChatReplyBody" placeholder="اكتب الرد هنا..." ' + (state.sending ? 'disabled' : '') + '></textarea><div class="admin-chat-reply-actions"><span>سيظهر الرد فوراً داخل الموقع وعبر الإشعارات.</span><button type="submit" class="btn btn-primary" ' + (state.sending ? 'disabled' : '') + '><i class="fas fa-paper-plane"></i> ' + (state.sending ? 'جاري الإرسال...' : 'إرسال الرد') + '</button></div></form>' : '')
-            + '  </div></section>'
-            + '  <aside class="admin-panel admin-chat-sidebar"><div class="panel-header"><h2><i class="fas fa-list"></i> المحادثات</h2></div><div class="panel-body admin-chat-list">' + listMarkup + '</div></aside>'
-            + '</div>';
-
-        bindChatEvents();
-    }
-
-    /**
-     * Loads messages for the active conversation and marks customer messages as seen.
-     *
-     * @param {string} conversationId
-     * @returns {Promise<void>}
-     */
-    async function loadMessages(conversationId) {
-        if (!conversationId) return;
-        state.loadingMessages = true;
-        renderChats();
-
-        const response = await TZ.supabase.from('support_chat_messages').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true });
-        state.messages = response.data || [];
-        state.loadingMessages = false;
-        if (response.error) state.error = 'تعذر تحميل الرسائل الحالية.';
-        renderChats();
-
-        await TZ.supabase.from('support_chat_messages').update({ is_read_by_admin: true }).eq('conversation_id', conversationId).eq('sender_role', 'customer').eq('is_read_by_admin', false);
-        if (typeof state.cleanupMessages === 'function') state.cleanupMessages();
-        const messagesChannel = TZ.supabase.channel('admin-chat-messages-' + conversationId).on('postgres_changes', {
-            event: '*', schema: 'public', table: 'support_chat_messages', filter: 'conversation_id=eq.' + conversationId
-        }, function () { void loadMessages(conversationId); }).subscribe();
-        state.cleanupMessages = function () {
-            TZ.supabase.removeChannel(messagesChannel);
-        };
-    }
-
-    /**
-     * Loads the conversations list while keeping the current selection when possible.
-     *
-     * @returns {Promise<void>}
-     */
+    /** Load conversations from Supabase directly */
     async function loadConversations() {
-        state.loading = true;
-        renderChats();
-
-        const response = await TZ.supabase.from('support_conversations').select('*').order('last_message_at', { ascending: false }).limit(100);
-        state.loading = false;
-        state.error = response.error ? 'تعذر تحميل المحادثات المباشرة.' : '';
-        state.conversations = H.sortAdminChatConversations(response.data || []);
-
-        if (!getSelectedConversation() && state.conversations.length > 0) {
-            state.selectedConversationId = state.conversations[0].id;
-        }
-
-        renderChats();
-        if (state.selectedConversationId) {
-            await loadMessages(state.selectedConversationId);
-        }
+        var result = await TZ.supabase.from('support_conversations')
+            .select('*')
+            .order('updated_at', { ascending: false });
+        cachedConversations = (result.data || []);
+        return cachedConversations;
     }
 
-    /**
-     * Sends a new admin reply to the selected conversation.
-     *
-     * @param {string} body
-     * @returns {Promise<void>}
-     */
-    async function sendReply(body) {
-        const conversation = getSelectedConversation();
-        const authUser = await TZ.getSupabaseUser();
-        const normalizedBody = H.normalizeAdminChatBody(body);
+    /** Load messages for a specific conversation */
+    async function loadMessages(conversationId) {
+        var result = await TZ.supabase.from('support_chat_messages')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: true });
+        cachedMessages = (result.data || []);
+        return cachedMessages;
+    }
 
-        if (!conversation || !authUser) {
-            A.showToast('تعذر تحديد جلسة الأدمن الحالية.');
-            return;
-        }
-        if (!normalizedBody) {
-            A.showToast('اكتب الرد أولاً.');
-            return;
-        }
+    async function sendReply(conversationId, body) {
+        var authUser = await TZ.getSupabaseUser();
+        if (!authUser) { A.showToast('يجب تسجيل الدخول'); return; }
 
-        state.sending = true;
-        renderChats();
-
-        const insertMessage = await TZ.supabase.from('support_chat_messages').insert([{
-            conversation_id: conversation.id,
+        var result = await TZ.supabase.from('support_chat_messages').insert([{
+            conversation_id: conversationId,
             sender_user_id: authUser.id,
             sender_role: 'admin',
-            sender_name: TZ.getSession()?.name || 'الإدارة',
-            body: normalizedBody,
-            is_read_by_customer: false,
+            sender_name: 'الإدارة',
+            body: body,
             is_read_by_admin: true
         }]);
-        const updateConversation = await TZ.supabase.from('support_conversations').update(H.buildAdminConversationUpdate(normalizedBody)).eq('id', conversation.id);
 
-        let successMessage = 'تم إرسال الرد بنجاح.';
-        if (!insertMessage.error && !updateConversation.error) {
-            const notifyResponse = await TZ.supabase.from('notifications').insert([H.buildAdminReplyNotification(conversation, normalizedBody)]);
-            if (notifyResponse.error) successMessage = 'تم إرسال الرد لكن تعذر إرسال الإشعار.';
-            A.showToast(successMessage);
-        } else {
-            A.showToast('تعذر إرسال الرد حالياً.');
+        if (result.error) { A.showToast('فشل إرسال الرد'); return; }
+
+        await TZ.supabase.from('support_conversations').update({
+            last_message_preview: body.substring(0, 100),
+            last_message_at: new Date().toISOString(),
+            last_message_sender_role: 'admin',
+            updated_at: new Date().toISOString()
+        }).eq('id', conversationId);
+
+        A.showToast('تم إرسال الرد');
+        renderChats();
+    }
+
+    async function closeConversation(id) {
+        await TZ.supabase.from('support_conversations').update({
+            status: 'closed', updated_at: new Date().toISOString()
+        }).eq('id', id);
+        A.showToast('تم إغلاق المحادثة');
+        selectedConversation = null;
+        renderChats();
+    }
+
+    async function renderChats() {
+        if (selectedConversation) {
+            await renderConversationDetail(selectedConversation);
+            return;
         }
 
-        state.sending = false;
-        state.error = insertMessage.error || updateConversation.error ? 'تعذر تحديث المحادثة بعد الرد.' : '';
-        await loadConversations();
-    }
+        A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-comments"></i> المحادثات</h2></div></div>'
+            + '<div class="admin-panel"><div class="panel-body"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></div></div>';
 
-    /**
-     * Updates the selected conversation status between open and closed.
-     *
-     * @returns {Promise<void>}
-     */
-    async function toggleConversationStatus() {
-        const conversation = getSelectedConversation();
-        if (!conversation) return;
+        var conversations = await loadConversations();
 
-        const nextStatus = conversation.status === H.CHAT_OPEN_STATUS ? 'closed' : H.CHAT_OPEN_STATUS;
-        const response = await TZ.supabase.from('support_conversations').update({ status: nextStatus }).eq('id', conversation.id);
-        A.showToast(response.error ? 'تعذر تحديث حالة المحادثة.' : 'تم تحديث حالة المحادثة.');
-        await loadConversations();
-    }
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-comments"></i> المحادثات</h2><p>' + conversations.length + ' محادثة</p></div></div>';
 
-    /**
-     * Binds click and submit handlers after each render.
-     *
-     * @returns {void}
-     */
-    function bindChatEvents() {
-        document.querySelectorAll('[data-conversation-id]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                state.selectedConversationId = this.dataset.conversationId;
-                void loadMessages(state.selectedConversationId);
+        html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
+            + '<th>العميل</th><th>الموضوع</th><th>آخر رسالة</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>';
+
+        if (conversations.length === 0) {
+            html += '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-comments"></i><p>لا توجد محادثات</p></div></td></tr>';
+        } else {
+            conversations.forEach(function (c) {
+                var isOpen = c.status === 'open';
+                html += '<tr>'
+                    + '<td><strong>' + esc(c.customer_name || '-') + '</strong></td>'
+                    + '<td>' + esc(c.subject || '-') + '</td>'
+                    + '<td><small>' + esc((c.last_message_preview || '').substring(0, 50)) + '</small></td>'
+                    + '<td><span class="status-badge ' + (isOpen ? 'active' : 'hidden') + '">' + (isOpen ? 'مفتوحة' : 'مغلقة') + '</span></td>'
+                    + '<td><small>' + new Date(c.last_message_at || c.created_at).toLocaleDateString('ar-JO') + '</small></td>'
+                    + '<td class="actions-cell">'
+                    + '<button class="action-btn open-chat-btn" data-id="' + c.id + '"><i class="fas fa-eye"></i></button>'
+                    + (isOpen ? '<button class="action-btn danger close-chat-btn" data-id="' + c.id + '"><i class="fas fa-times-circle"></i></button>' : '')
+                    + '</td></tr>';
+            });
+        }
+        html += '</tbody></table></div></div></div>';
+
+        A.adminContent.innerHTML = html;
+
+        document.querySelectorAll('.open-chat-btn').forEach(function (b) {
+            b.addEventListener('click', function () {
+                selectedConversation = b.dataset.id;
+                renderChats();
             });
         });
-
-        document.getElementById('toggleChatStatusBtn')?.addEventListener('click', function () {
-            void toggleConversationStatus();
-        });
-
-        document.getElementById('adminChatReplyForm')?.addEventListener('submit', function (event) {
-            event.preventDefault();
-            const body = document.getElementById('adminChatReplyBody')?.value || '';
-            void sendReply(body);
+        document.querySelectorAll('.close-chat-btn').forEach(function (b) {
+            b.addEventListener('click', function () { closeConversation(b.dataset.id); });
         });
     }
 
-    /**
-     * Renders and subscribes to the admin chats section.
-     *
-     * @returns {void}
-     */
-    function renderAdminChatsSection() {
-        cleanupChatsSection();
-        state.conversations = [];
-        state.messages = [];
-        state.selectedConversationId = '';
-        state.loading = true;
-        state.loadingMessages = false;
-        state.sending = false;
-        state.error = '';
-        renderChats();
+    async function renderConversationDetail(convId) {
+        A.adminContent.innerHTML = '<div class="admin-panel"><div class="panel-body"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>جاري تحميل الرسائل...</p></div></div></div>';
 
-        const conversationsChannel = TZ.supabase.channel('admin-support-conversations').on('postgres_changes', {
-            event: '*', schema: 'public', table: 'support_conversations'
-        }, function () { void loadConversations(); }).subscribe();
-        state.cleanupConversations = function () {
-            TZ.supabase.removeChannel(conversationsChannel);
-        };
-        void loadConversations();
-        A.teardownCurrentSection = cleanupChatsSection;
+        var conv = cachedConversations.find(function (c) { return c.id === convId; });
+        if (!conv) { selectedConversation = null; renderChats(); return; }
+
+        var messages = await loadMessages(convId);
+
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-comments"></i> ' + esc(conv.customer_name || 'محادثة') + ' — ' + esc(conv.subject || '') + '</h2></div>'
+            + '<div class="admin-section-actions"><button class="btn btn-outline btn-sm" id="backToChats"><i class="fas fa-arrow-right"></i> رجوع</button></div></div>';
+
+        html += '<div class="admin-panel"><div class="panel-body padded" style="max-height:500px;overflow-y:auto;" id="chatMessages">';
+        if (messages.length === 0) {
+            html += '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>لا توجد رسائل</p></div>';
+        } else {
+            messages.forEach(function (m) {
+                var isAdmin = m.sender_role === 'admin';
+                html += '<div style="display:flex;flex-direction:column;align-items:' + (isAdmin ? 'flex-start' : 'flex-end') + ';margin-bottom:12px;">'
+                    + '<div style="max-width:75%;padding:12px 16px;border-radius:14px;background:' + (isAdmin ? 'rgba(var(--primary-rgb),0.12)' : 'rgba(255,255,255,0.06)') + ';border:1px solid rgba(255,255,255,0.05);">'
+                    + '<small style="color:' + (isAdmin ? 'var(--primary-light)' : 'var(--text-muted)') + ';font-weight:600;">' + esc(m.sender_name || (isAdmin ? 'الإدارة' : 'العميل')) + '</small>'
+                    + '<p style="margin:4px 0 0;font-size:0.9rem;">' + esc(m.body) + '</p>'
+                    + '</div></div>';
+            });
+        }
+        html += '</div></div>';
+
+        if (conv.status === 'open') {
+            html += '<div class="admin-panel"><div class="panel-body padded" style="display:flex;gap:10px;">'
+                + '<input type="text" id="chatReplyInput" placeholder="اكتب ردك..." style="flex:1;">'
+                + '<button class="btn btn-primary btn-sm" id="sendReplyBtn"><i class="fas fa-paper-plane"></i></button>'
+                + '</div></div>';
+        }
+
+        A.adminContent.innerHTML = html;
+
+        document.getElementById('backToChats')?.addEventListener('click', function () { selectedConversation = null; renderChats(); });
+        document.getElementById('sendReplyBtn')?.addEventListener('click', function () {
+            var input = document.getElementById('chatReplyInput');
+            var body = (input.value || '').trim();
+            if (!body) return;
+            sendReply(convId, body);
+        });
+        document.getElementById('chatReplyInput')?.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') document.getElementById('sendReplyBtn')?.click();
+        });
+
+        var chatBox = document.getElementById('chatMessages');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    A.sections.chats = renderAdminChatsSection;
+    A.sections.chats = renderChats;
+    A.sections['support-chats'] = renderChats;
 })();

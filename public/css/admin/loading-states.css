@@ -1,4 +1,5 @@
-/* Admin loading and access states */
+/* ===== Admin Loading & Access States ===== */
+
 .admin-layout.is-section-loading .admin-content {
     opacity: 0.96;
 }
@@ -11,25 +12,26 @@
 .sidebar-link.is-loading::after {
     content: "";
     position: absolute;
-    inset-block: 8px;
-    inset-inline-start: 8px;
+    inset-block: 6px;
+    inset-inline-start: 6px;
     width: 3px;
     border-radius: 999px;
-    background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.2), rgba(var(--primary-rgb), 0.9));
-    animation: adminSidebarPulse 0.9s ease-in-out infinite;
+    background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.2), rgba(var(--primary-rgb), 0.8));
+    animation: adminSidebarPulse 0.8s ease-in-out infinite;
 }
 
+/* ── Section Loading Skeleton ── */
 .admin-section-loading,
 .admin-access-state {
     display: grid;
-    gap: 18px;
-    padding: 22px;
-    border-radius: 22px;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 16px;
 }
 
 .admin-section-loading {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--bg-card);
 }
 
 .admin-section-loading__header {
@@ -38,82 +40,89 @@
 }
 
 .admin-section-loading__header strong {
-    font-size: 1.18rem;
+    font-size: 1.1rem;
 }
 
 .admin-section-loading__eyebrow {
     color: var(--text-secondary);
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
 .admin-section-loading__grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
+    gap: 12px;
 }
 
+/* ── Skeleton Elements ── */
 .admin-skeleton-card,
 .admin-skeleton-panel,
 .admin-skeleton-line,
 .admin-skeleton-table span {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(var(--primary-rgb), 0.14), rgba(255, 255, 255, 0.05));
-    background-size: 220% 100%;
-    animation: adminSkeletonShift 1.4s linear infinite;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04),
+        rgba(var(--primary-rgb), 0.1),
+        rgba(255, 255, 255, 0.04)
+    );
+    background-size: 200% 100%;
+    animation: adminSkeletonShift 1.5s linear infinite;
 }
 
 .admin-skeleton-card {
-    min-height: 100px;
-    border-radius: 18px;
+    min-height: 90px;
+    border-radius: 14px;
 }
 
 .admin-skeleton-panel {
     display: grid;
-    gap: 14px;
-    padding: 18px;
-    border-radius: 22px;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 16px;
 }
 
 .admin-skeleton-line {
-    height: 14px;
+    height: 12px;
     border-radius: 999px;
 }
 
 .admin-skeleton-line--wide {
-    width: min(100%, 420px);
+    width: min(100%, 400px);
 }
 
 .admin-skeleton-line--short {
-    width: min(48%, 180px);
+    width: min(48%, 160px);
 }
 
 .admin-skeleton-table {
     display: grid;
-    gap: 10px;
+    gap: 8px;
 }
 
 .admin-skeleton-table span {
-    height: 48px;
-    border-radius: 16px;
+    height: 44px;
+    border-radius: 12px;
 }
 
 .admin-content.is-section-ready {
-    animation: adminSectionFadeIn 0.26s ease;
+    animation: adminSectionFadeIn 0.25s ease;
 }
 
+/* ── Access State ── */
 .admin-access-state {
     grid-template-columns: auto 1fr;
     align-items: center;
 }
 
 .admin-access-state i {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     display: grid;
     place-items: center;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.08);
-    font-size: 1.35rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 1.25rem;
 }
 
 .admin-access-state strong {
@@ -124,24 +133,20 @@
 .admin-access-state p {
     margin: 0;
     color: var(--text-secondary);
+    font-size: 0.88rem;
 }
 
+/* ── Animations ── */
 @keyframes adminSkeletonShift {
-    from {
-        background-position: 200% 0;
-    }
-
-    to {
-        background-position: -30% 0;
-    }
+    from { background-position: 200% 0; }
+    to { background-position: -30% 0; }
 }
 
 @keyframes adminSectionFadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(6px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -149,12 +154,10 @@
 }
 
 @keyframes adminSidebarPulse {
-    0%,
-    100% {
-        opacity: 0.5;
-        transform: scaleY(0.88);
+    0%, 100% {
+        opacity: 0.4;
+        transform: scaleY(0.9);
     }
-
     50% {
         opacity: 1;
         transform: scaleY(1);

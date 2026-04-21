@@ -18,14 +18,12 @@
 
     if (!A || !helpers || !input || !dropdown || !container) return;
 
+    input.placeholder = 'ابحث في الطلبات...';
+
     function getSearchData() {
         return {
-            products: TZ.db.products || [],
             orders: TZ.db.orders || [],
             serviceOrders: TZ.db.serviceOrders || [],
-            users: (TZ.db.users || []).filter(function (user) { return TZ.isCustomerUser(user); }),
-            services: TZ.db.repairServices || [],
-            getCategoryName: TZ.getCategoryName,
             helpers: {
                 getProductById: TZ.getProductById,
                 isAccessoryProduct: TZ.isAccessoryProduct,
@@ -56,11 +54,8 @@
 
     function formatResultType(kind) {
         return {
-            product: 'منتج',
             order: 'طلب',
-            'digital-order': 'طلب رقمي',
-            customer: 'عميل',
-            service: 'خدمة'
+            'digital-order': 'طلب رقمي'
         }[kind] || 'نتيجة';
     }
 

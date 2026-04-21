@@ -1,251 +1,116 @@
-// ===== TechZone Admin - Notifications =====
+/**
+ * TechZone Admin — Notifications Section (Rebuilt)
+ *
+ * Send targeted or global notifications via Supabase.
+ * Loads recent notifications directly since they aren't in TZ.db.
+ */
 (function () {
     'use strict';
 
-    const A = window.AdminApp;
-    const H = window.AdminNotificationHelpers;
+    var A = window.AdminApp;
+    if (!A) return;
 
-    if (!A || !H) return;
+    function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
 
-    /**
-     * Checks whether the current session can manage notifications.
-     *
-     * @returns {boolean}
-     */
-    function canManageNotifications() {
-        const session = typeof TZ !== 'undefined' && typeof TZ.getSession === 'function' ? TZ.getSession() : null;
-        const sessionUser = session ? { role: session.role, status: 'active' } : null;
-
-        return Boolean(sessionUser) && typeof TZ.canAccessSection === 'function'
-            ? TZ.canAccessSection(sessionUser, 'notifications')
-            : true;
+    async function loadRecentNotifications() {
+        var result = await TZ.supabase.from('notifications')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(30);
+        return result.data || [];
     }
 
-    /**
-     * Updates buttons, helper text, and the recipient field visibility.
-     *
-     * @param {{hiddenAudience:HTMLInputElement,toggleButtons:NodeListOf<Element>,recipientField:HTMLElement,recipientSelect:HTMLSelectElement,hint:HTMLElement,recipients:Array<Record<string, unknown>>,isLocked:boolean}} input
-     * @returns {void}
-     */
-    function updateAudienceState(input) {
-        const audience = input.hiddenAudience.value === H.AUDIENCE_SINGLE ? H.AUDIENCE_SINGLE : H.AUDIENCE_ALL;
-        const isSingle = audience === H.AUDIENCE_SINGLE;
-        const selectedUser = input.recipients.find(function (user) {
-            return String(user.id) === String(input.recipientSelect.value || '');
-        }) || null;
+    async function sendNotification(data) {
+        var payload = { title: data.title, body: data.body || '', type: data.type || 'info' };
 
-        input.toggleButtons.forEach(function (button) {
-            button.classList.toggle('active', button.dataset.audience === audience);
-        });
-        input.recipientField.hidden = !isSingle;
-        input.recipientSelect.disabled = !isSingle || input.isLocked;
-        if (!isSingle) {
-            input.recipientSelect.value = '';
+        if (data.userId && data.userId !== 'all') {
+            payload.user_id = data.userId;
+            var res = await TZ.supabase.from('notifications').insert([payload]);
+            if (res.error) { A.showToast('فشل إرسال الإشعار'); return false; }
+            A.showToast('تم إرسال الإشعار للمستخدم');
+            return true;
         }
-        input.hint.textContent = H.getAudienceHint({
-            audience: audience,
-            selectedUser: selectedUser,
-            totalRecipients: input.recipients.length
+
+        var users = TZ.db.users || [];
+        var customers = users.filter(function (u) {
+            return typeof TZ.isCustomerUser === 'function' ? TZ.isCustomerUser(u) : true;
         });
+        var batch = customers.map(function (u) {
+            return { user_id: u.authUserId || u.id, title: payload.title, body: payload.body, type: payload.type };
+        });
+
+        if (batch.length === 0) { A.showToast('لا يوجد مستخدمون لإرسال الإشعار إليهم'); return false; }
+        var res = await TZ.supabase.from('notifications').insert(batch);
+        if (res.error) { A.showToast('فشل الإرسال الجماعي'); return false; }
+        A.showToast('تم إرسال الإشعار إلى ' + batch.length + ' مستخدم');
+        return true;
     }
 
-    /**
-     * Sends the notification rows to Supabase and handles the form state.
-     *
-     * @param {{form:HTMLFormElement,submitButton:HTMLButtonElement,hiddenAudience:HTMLInputElement,recipientSelect:HTMLSelectElement,typeSelect:HTMLSelectElement,titleInput:HTMLInputElement,bodyInput:HTMLTextAreaElement,recipients:Array<Record<string, unknown>>}} input
-     * @returns {Promise<void>}
-     */
-    async function submitNotificationForm(input) {
-        const audience = input.hiddenAudience.value === H.AUDIENCE_SINGLE ? H.AUDIENCE_SINGLE : H.AUDIENCE_ALL;
-        const selectedRecipients = H.collectSelectedRecipients(input.recipients, audience, input.recipientSelect.value);
-        const originalLabel = input.submitButton.innerHTML;
-        let rows = [];
+    async function renderNotifications() {
+        A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-bell"></i> الإشعارات</h2></div></div>'
+            + '<div class="admin-panel"><div class="panel-body"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></div></div>';
 
-        try {
-            rows = H.buildNotificationRows({
-                audience: audience,
-                title: input.titleInput.value,
-                body: input.bodyInput.value,
-                type: input.typeSelect.value,
-                recipients: selectedRecipients
-            });
-        } catch (error) {
-            A.showToast(error.message || 'تعذر تجهيز الإشعار.');
-            return;
-        }
+        var recent = await loadRecentNotifications();
 
-        input.submitButton.disabled = true;
-        input.submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-
-        try {
-            for (const batch of H.buildInsertBatches(rows)) {
-                const result = await TZ.supabase.from('notifications').insert(batch);
-
-                if (result.error) {
-                    throw new Error(result.error.message || 'تعذر إرسال الإشعارات حالياً.');
-                }
-            }
-
-            TZ.commitDb(
-                'admin_notification_send',
-                TZ.getSession()?.userId,
-                audience === H.AUDIENCE_ALL
-                    ? 'إرسال إشعار جماعي إلى ' + rows.length + ' مستخدم'
-                    : 'إرسال إشعار إلى ' + (selectedRecipients[0]?.fullName || selectedRecipients[0]?.id || 'مستخدم')
-            );
-            input.form.reset();
-            input.hiddenAudience.value = audience;
-            A.showToast(audience === H.AUDIENCE_ALL ? 'تم إرسال ' + rows.length + ' إشعاراً بنجاح.' : 'تم إرسال الإشعار بنجاح.');
-        } catch (error) {
-            A.showToast(error.message || 'تعذر إرسال الإشعار حالياً.');
-        } finally {
-            input.submitButton.disabled = false;
-            input.submitButton.innerHTML = originalLabel;
-        }
-    }
-
-    /**
-     * Binds the notifications form interactions after rendering.
-     *
-     * @param {Array<Record<string, unknown>>} recipients
-     * @param {boolean} isLocked
-     * @returns {void}
-     */
-    function bindNotificationEvents(recipients, isLocked) {
-        const form = document.getElementById('adminNotificationForm');
-        if (!form || isLocked) return;
-
-        const hiddenAudience = document.getElementById('notificationAudience');
-        const recipientField = document.getElementById('notificationRecipientField');
-        const recipientSelect = document.getElementById('notificationRecipient');
-        const hint = document.getElementById('notificationAudienceHint');
-        const typeSelect = document.getElementById('notificationType');
-        const titleInput = document.getElementById('notificationTitle');
-        const bodyInput = document.getElementById('notificationBody');
-        const submitButton = document.getElementById('notificationSubmitBtn');
-        const toggleButtons = document.querySelectorAll('.admin-segment-btn');
-        const audienceStateInput = {
-            hiddenAudience: hiddenAudience,
-            toggleButtons: toggleButtons,
-            recipientField: recipientField,
-            recipientSelect: recipientSelect,
-            hint: hint,
-            recipients: recipients,
-            isLocked: isLocked
-        };
-
-        toggleButtons.forEach(function (button) {
-            button.addEventListener('click', function () {
-                hiddenAudience.value = button.dataset.audience === H.AUDIENCE_SINGLE ? H.AUDIENCE_SINGLE : H.AUDIENCE_ALL;
-                updateAudienceState(audienceStateInput);
-            });
-        });
-        recipientSelect.addEventListener('change', function () {
-            updateAudienceState(audienceStateInput);
-        });
-        form.addEventListener('submit', async function (event) {
-            event.preventDefault();
-            await submitNotificationForm({
-                form: form,
-                submitButton: submitButton,
-                hiddenAudience: hiddenAudience,
-                recipientSelect: recipientSelect,
-                typeSelect: typeSelect,
-                titleInput: titleInput,
-                bodyInput: bodyInput,
-                recipients: recipients
-            });
-            updateAudienceState(audienceStateInput);
-        });
-
-        updateAudienceState(audienceStateInput);
-    }
-
-    /**
-     * Applies a pending notification prefill from other admin sections.
-     *
-     * @param {Array<Record<string, unknown>>} recipients
-     * @returns {void}
-     */
-    function applyNotificationPrefill(recipients) {
-        const prefill = window.__TZ_ADMIN_NOTIFICATION_PREFILL;
-        if (!prefill) return;
-
-        const hiddenAudience = document.getElementById('notificationAudience');
-        const recipientSelect = document.getElementById('notificationRecipient');
-        const titleInput = document.getElementById('notificationTitle');
-        const recipientField = document.getElementById('notificationRecipientField');
-        const toggleButtons = document.querySelectorAll('.admin-segment-btn');
-        const targetUser = recipients.find(function (user) {
-            return String(user.id) === String(prefill.userId || '');
-        });
-
-        if (!hiddenAudience || !recipientSelect || !titleInput || !targetUser) {
-            window.__TZ_ADMIN_NOTIFICATION_PREFILL = null;
-            return;
-        }
-
-        hiddenAudience.value = H.AUDIENCE_SINGLE;
-        recipientSelect.value = String(targetUser.id);
-        titleInput.value = String(prefill.title || titleInput.value || '');
-        recipientField.hidden = false;
-        toggleButtons.forEach(function (button) {
-            button.classList.toggle('active', button.dataset.audience === H.AUDIENCE_SINGLE);
-        });
-        recipientSelect.dispatchEvent(new Event('change'));
+        var prefill = window.__TZ_ADMIN_NOTIFICATION_PREFILL || {};
         window.__TZ_ADMIN_NOTIFICATION_PREFILL = null;
-    }
 
-    /**
-     * Renders the admin notifications section shell.
-     *
-     * @returns {void}
-     */
-    function renderNotifications() {
-        if (!canManageNotifications()) {
-            A.adminContent.innerHTML = '<div class="status-box warning">لا تملك صلاحية الوصول إلى قسم إشعارات المستخدمين.</div>';
-            return;
+        var users = TZ.db.users || [];
+        var userOptions = '<option value="all">جميع العملاء (جماعي)</option>';
+        users.forEach(function (u) {
+            var name = u.fullName || u.email || u.id;
+            var uid = u.authUserId || u.id;
+            var sel = (prefill.userId === uid) ? ' selected' : '';
+            userOptions += '<option value="' + uid + '"' + sel + '>' + esc(name) + '</option>';
+        });
+
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-bell"></i> الإشعارات</h2></div></div>';
+
+        html += '<div class="admin-panel"><div class="panel-header"><h2><i class="fas fa-paper-plane"></i> إرسال إشعار جديد</h2></div><div class="panel-body padded">'
+            + '<form class="admin-form" id="notifForm"><div class="form-grid">'
+            + '<div class="admin-form-group"><label>المستلم *</label><select id="notifTarget">' + userOptions + '</select></div>'
+            + '<div class="admin-form-group"><label>النوع</label><select id="notifType"><option value="info">معلومات</option><option value="success">نجاح</option><option value="warning">تحذير</option><option value="error">خطأ</option></select></div>'
+            + '<div class="admin-form-group full"><label>العنوان *</label><div class="admin-input-wrap"><i class="fas fa-heading"></i><input type="text" id="notifTitle" value="' + esc(prefill.title || '') + '" required></div></div>'
+            + '<div class="admin-form-group full"><label>المحتوى</label><textarea id="notifBody" rows="3"></textarea></div>'
+            + '</div>'
+            + '<div class="admin-form-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> إرسال</button></div>'
+            + '</form></div></div>';
+
+        html += '<div class="admin-panel"><div class="panel-header"><h2><i class="fas fa-history"></i> آخر الإشعارات المرسلة</h2></div><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
+            + '<th>العنوان</th><th>النوع</th><th>القراءة</th><th>التاريخ</th></tr></thead><tbody>';
+
+        if (recent.length === 0) {
+            html += '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div></td></tr>';
+        } else {
+            recent.forEach(function (n) {
+                html += '<tr>'
+                    + '<td><strong>' + esc(n.title) + '</strong>' + (n.body ? '<br><small style="color:var(--text-muted);">' + esc(n.body).substring(0, 60) + '</small>' : '') + '</td>'
+                    + '<td><span class="status-badge ' + (n.type || 'info') + '">' + (n.type || 'info') + '</span></td>'
+                    + '<td>' + (n.is_read ? '<i class="fas fa-check" style="color:#00b894;"></i>' : '<i class="fas fa-clock" style="color:#fdcb6e;"></i>') + '</td>'
+                    + '<td><small>' + new Date(n.created_at).toLocaleDateString('ar-JO') + '</small></td>'
+                    + '</tr>';
+            });
         }
+        html += '</tbody></table></div></div></div>';
 
-        const recipients = H.getCustomerRecipients(TZ.db.users);
-        const isLocked = !TZ.legacyWriteEnabled || recipients.length === 0;
-        const notesMarkup = H.NOTE_ITEMS.map(function (item) {
-            return '<li><strong>' + item[0] + '</strong>' + item[1] + '</li>';
-        }).join('');
+        A.adminContent.innerHTML = html;
 
-        A.adminContent.innerHTML = ''
-            + '<div class="admin-notifications-grid">'
-            + '  <section class="admin-panel admin-notification-panel">'
-            + '      <div class="panel-header"><h2><i class="fas fa-paper-plane"></i> إرسال رسالة</h2></div>'
-            + '      <div class="panel-body padded">'
-            + '          <div class="admin-notification-inline"><i class="fas fa-bell"></i><span>الإرسال يتم عبر نظام الإشعارات داخل الموقع</span></div>'
-            + (TZ.legacyWriteEnabled ? '' : '<div class="status-box warning">لوحة الأدمن القديمة تعمل حالياً بوضع القراءة فقط، لذلك تم تعطيل الإرسال المباشر من هذا القسم.</div>')
-            + (recipients.length > 0 ? '' : '<div class="status-box warning">لا يوجد حالياً مستخدمون نشطون يمكن إرسال إشعارات لهم.</div>')
-            + '          <form class="admin-form admin-notification-form" id="adminNotificationForm">'
-            + '              <input type="hidden" id="notificationAudience" value="' + H.AUDIENCE_ALL + '">'
-            + '              <div class="admin-segmented" role="tablist" aria-label="الجمهور المستهدف">'
-            + '                  <button type="button" class="admin-segment-btn active" data-audience="' + H.AUDIENCE_ALL + '">أرسل للجميع</button>'
-            + '                  <button type="button" class="admin-segment-btn" data-audience="' + H.AUDIENCE_SINGLE + '">أرسل لمستخدم محدد</button>'
-            + '              </div>'
-            + '              <div class="form-grid">'
-            + '                  <div class="admin-form-group"><label for="notificationType">نوع الرسالة</label><select id="notificationType"' + (isLocked ? ' disabled' : '') + '><option value="info">رسالة عادية</option><option value="success">رسالة نجاح</option><option value="warning">تنبيه</option><option value="error">تنبيه مهم</option></select></div>'
-            + '                  <div class="admin-form-group"><label for="notificationTitle">عنوان الرسالة</label><div class="admin-input-wrap"><i class="fas fa-heading"></i><input type="text" id="notificationTitle" maxlength="' + H.TITLE_MAX_LENGTH + '" placeholder="رسالة من الإدارة" required' + (isLocked ? ' disabled' : '') + '></div></div>'
-            + '                  <div class="admin-form-group full admin-notification-user-field" id="notificationRecipientField" hidden><label for="notificationRecipient">المستخدم المستهدف</label><select id="notificationRecipient" disabled>' + H.buildUserOptions(recipients) + '</select></div>'
-            + '                  <div class="admin-form-group full"><label for="notificationBody">محتوى الرسالة</label><textarea id="notificationBody" rows="7" maxlength="' + H.BODY_MAX_LENGTH + '" placeholder="اكتب الرسالة التي تريد إيصالها للمستخدمين" required' + (isLocked ? ' disabled' : '') + '></textarea></div>'
-            + '              </div>'
-            + '              <div class="admin-notification-footnote" id="notificationAudienceHint">' + H.getAudienceHint({ audience: H.AUDIENCE_ALL, totalRecipients: recipients.length }) + '</div>'
-            + '              <div class="admin-form-actions"><button type="submit" class="btn btn-primary" id="notificationSubmitBtn"' + (isLocked ? ' disabled' : '') + '><i class="fas fa-paper-plane"></i> إرسال الرسالة</button></div>'
-            + '          </form>'
-            + '      </div>'
-            + '  </section>'
-            + '  <aside class="admin-panel admin-notes-panel">'
-            + '      <div class="panel-header"><h2><i class="fas fa-clipboard-list"></i> ملاحظات</h2></div>'
-            + '      <div class="panel-body padded"><ul class="admin-notes-list">' + notesMarkup + '</ul></div>'
-            + '  </aside>'
-            + '</div>';
-
-        bindNotificationEvents(recipients, isLocked);
-        applyNotificationPrefill(recipients);
+        document.getElementById('notifForm')?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            var title = document.getElementById('notifTitle').value.trim();
+            if (!title) { A.showToast('أدخل عنوان الإشعار'); return; }
+            var btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+            var ok = await sendNotification({
+                userId: document.getElementById('notifTarget').value,
+                title: title,
+                body: document.getElementById('notifBody').value.trim(),
+                type: document.getElementById('notifType').value
+            });
+            if (ok) { renderNotifications(); }
+            else { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال'; }
+        });
     }
 
     A.sections.notifications = renderNotifications;

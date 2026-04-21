@@ -88,10 +88,7 @@ export default function ServiceDetailsPage() {
     return () => { cancelled = true; };
   }, [slug, navigate]);
 
-  if (loading) return <CatalogPageSkeleton productCount={3} />;
-  if (!service) return null;
-
-  usePageSeo({
+  usePageSeo(service ? {
     title: service.name,
     description:
       service.description ||
@@ -110,7 +107,10 @@ export default function ServiceDetailsPage() {
         service,
       }),
     ],
-  });
+  } : null);
+
+  if (loading) return <CatalogPageSkeleton productCount={3} />;
+  if (!service) return null;
 
   return (
     <>

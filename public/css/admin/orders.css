@@ -1,85 +1,189 @@
-﻿
-.status-badge.cancelled,
-.status-badge.failed,
-.status-badge.refunded {
-    background: rgba(231, 76, 60, 0.16);
-    color: #ff9f8f;
+/* ===== Admin Orders ===== */
+
+/* Order status panel header with accent border */
+.order-status-header {
+    border-right-width: 3px !important;
+    border-right-style: solid !important;
 }
 
-.order-route-card,
-.order-route-head,
-.order-item-summary,
-.order-nav-tabs {
-    display: flex;
-    gap: 12px;
-}
-
-.order-route-card {
-    align-items: center;
-    justify-content: space-between;
-}
-
-.order-route-head {
-    align-items: center;
-}
-
-.order-route-head p {
-    margin: 4px 0 0;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-}
-
-.order-route-icon {
-    width: 46px;
-    height: 46px;
+/* Order count badge */
+.order-count-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
-    background: rgba(var(--primary-rgb), 0.14);
-    color: var(--primary-light);
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.02em;
 }
 
+/* Order navigation tabs */
 .order-tabs-bar {
-    justify-content: space-between;
-}
-
-.order-nav-tabs {
+    display: flex;
     align-items: center;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
+.order-nav-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Order item summary in table */
 .order-item-summary {
+    display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
+}
+
+.order-item-summary strong {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
 }
 
 .order-item-summary small {
+    font-size: 0.76rem;
     color: var(--text-muted);
 }
 
+/* Order action buttons in tables */
 .order-action-btn {
-    width: auto;
-    height: auto;
-    min-height: 38px;
-    padding: 0 12px;
-    white-space: nowrap;
+    font-size: 0.8rem !important;
+    min-height: 34px !important;
+    padding: 0 12px !important;
 }
 
-@media (max-width: 900px) {
-    .order-route-card,
-    .order-tabs-bar {
+/* ── Order Route Cards (Overview) ── */
+.admin-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.admin-insight-card {
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--bg-card);
+    transition: all 0.2s ease;
+}
+
+.admin-insight-card:hover {
+    border-color: rgba(var(--primary-rgb), 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.order-route-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.order-route-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.order-route-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-light);
+}
+
+.order-route-head strong {
+    display: block;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+}
+
+.order-route-head p {
+    margin: 2px 0 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+/* ── Delivery Choice Modal ── */
+.modal-choices {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.modal-choice-btn {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-primary);
+    font-family: inherit;
+    text-align: right;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-choice-btn:hover {
+    border-color: rgba(var(--primary-rgb), 0.3);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.modal-choice-btn i {
+    font-size: 1.2rem;
+    color: var(--primary-light);
+    justify-self: center;
+}
+
+.modal-choice-btn strong {
+    display: block;
+    font-size: 0.92rem;
+    margin-bottom: 4px;
+}
+
+.modal-choice-btn span {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.delivery-choice:hover { border-color: rgba(116, 185, 255, 0.4); }
+.pickup-choice:hover { border-color: rgba(0, 184, 148, 0.4); }
+.remote-choice:hover { border-color: rgba(0, 206, 201, 0.4); }
+
+/* Order status panel */
+.order-status-panel {
+    transition: all 0.2s ease;
+}
+
+.order-status-panel:hover {
+    border-color: rgba(var(--primary-rgb), 0.12);
+}
+
+@media (max-width: 768px) {
+    .admin-quick-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .order-route-card {
         flex-direction: column;
         align-items: stretch;
     }
-
-    .order-nav-tabs {
-        width: 100%;
-    }
-
-    .order-nav-tabs .btn,
-    .order-route-card .btn {
-        width: 100%;
-    }
 }
-

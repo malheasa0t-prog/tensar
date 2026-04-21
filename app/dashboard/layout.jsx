@@ -2,8 +2,8 @@
 
 import '../dashboard.css';
 import { useEffect, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 
 import DashboardShellSkeleton from '@/components/DashboardShellSkeleton';
 import { useFavorites } from '@/components/FavoritesProvider';
@@ -52,15 +52,16 @@ async function fetchWalletSnapshot(userId) {
  * @param {{ children: import('react').ReactNode }} props
  * @returns {JSX.Element}
  */
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout() {
   const { favoriteCount } = useFavorites();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [wallet, setWallet] = useState(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
-  const pathname = usePathname();
-  const router = useRouter();
+  const location = useLocation();
+  const pathname = location.pathname;
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -98,7 +99,7 @@ export default function DashboardLayout({ children }) {
       } = await supabase.auth.getUser();
 
       if (!currentUser) {
-        router.push('/auth/login');
+        navigate('/auth/login');
         return;
       }
 
@@ -189,7 +190,7 @@ export default function DashboardLayout({ children }) {
       cleanupWallet();
       window.removeEventListener('tz-notifications-updated', handleNotificationsUpdate);
     };
-  }, [router]);
+  }, [navigate]);
 
   /**
    * Signs out the active user and returns to the homepage.
@@ -286,7 +287,7 @@ export default function DashboardLayout({ children }) {
           })}
         </div>
 
-        <div className="dashboard-content">{children}</div>
+        <div className="dashboard-content"><Outlet /></div>
       </div>
     </section>
   );

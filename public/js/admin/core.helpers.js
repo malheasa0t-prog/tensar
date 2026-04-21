@@ -3,34 +3,55 @@
     'use strict';
 
     const VALID_SECTIONS = new Set([
-        'dashboard', 'analytics', 'orders', 'product-orders', 'accessory-orders',
-        'products', 'accessories', 'main-categories', 'subcategories', 'categories',
-        'services', 'customers', 'deposits', 'refunds', 'coupons', 'notifications',
-        'chats', 'messages', 'settings', 'logs', 'serva-catalog'
+        'dashboard',
+        'orders',
+        'product-orders',
+        'accessory-orders',
+        'products',
+        'accessories',
+        'categories',
+        'main-categories',
+        'subcategories',
+        'services',
+        'repair-services',
+        'serva-catalog',
+        'customers',
+        'messages',
+        'contact-messages',
+        'chats',
+        'support-chats',
+        'notifications',
+        'deposits',
+        'coupons',
+        'settings',
+        'logs',
+        'audit-logs'
     ]);
 
     const SECTION_TITLES = {
         dashboard: 'لوحة المعلومات',
-        analytics: 'التحليلات',
         orders: 'إدارة الطلبات',
         'product-orders': 'طلبات المنتجات',
         'accessory-orders': 'طلبات الإكسسوارات',
-        accessories: 'إدارة منتجات الإكسسوارات',
         products: 'إدارة المنتجات',
-        'main-categories': 'إدارة الفئات الرئيسية',
-        subcategories: 'إدارة الفئات الفرعية',
-        categories: 'مركز الفئات',
-        services: 'إدارة الخدمات',
+        accessories: 'الإكسسوارات',
+        categories: 'إدارة الفئات',
+        'main-categories': 'الفئات الرئيسية',
+        subcategories: 'الفئات الفرعية',
+        services: 'خدمات الصيانة',
+        'repair-services': 'خدمات الصيانة',
+        'serva-catalog': 'كتالوج Serva-S',
         customers: 'العملاء',
-        deposits: 'طلبات الإيداع',
-        refunds: 'طلبات الاسترجاع',
-        coupons: 'الكوبونات والخصومات',
-        notifications: 'إشعارات المستخدمين',
         messages: 'رسائل التواصل',
+        'contact-messages': 'رسائل التواصل',
+        chats: 'الدردشات',
+        'support-chats': 'دردشات الدعم',
+        notifications: 'الإشعارات',
+        deposits: 'طلبات الإيداع',
+        coupons: 'الكوبونات',
         settings: 'الإعدادات',
         logs: 'سجل العمليات',
-        chats: 'الدردشات المباشرة',
-        'serva-catalog': 'كتالوج Serva-S'
+        'audit-logs': 'سجل العمليات'
     };
 
     function requestAdminRuntimeAccess(enabled) {
@@ -68,11 +89,10 @@
 
     function normalizeSection(section) {
         if (!section) return 'dashboard';
+
         const clean = String(section).trim().toLowerCase().replace(/^\/+|\/+$/g, '');
         const tail = clean.includes('/') ? clean.split('/').pop() : clean;
-        const aliases = { 'admin-users': 'customers', users: 'customers' };
-        const normalized = aliases[tail] || tail;
-        return VALID_SECTIONS.has(normalized) ? normalized : 'dashboard';
+        return VALID_SECTIONS.has(tail) ? tail : 'dashboard';
     }
 
     function getInitialSection() {
@@ -104,12 +124,14 @@
 
     function syncSectionInUrl(section, options = {}) {
         const replaceHistory = options.replace === true;
+
         try {
             const url = buildSectionUrl(section);
             const currentUrl = new URL(window.location.href);
             const currentSection = normalizeSection(currentUrl.searchParams.get('section'));
             const historySection = normalizeSection(window.history.state?.section);
             const isDuplicateState = currentSection === section && historySection === section;
+
             if (!replaceHistory && isDuplicateState) return;
 
             const method = replaceHistory ? 'replaceState' : 'pushState';
@@ -170,6 +192,7 @@
             active: 'نشط',
             hidden: 'مخفي'
         };
+
         return labels[status] || status;
     }
 
@@ -180,6 +203,7 @@
             bank_transfer: 'تحويل بنكي',
             cod: 'دفع عند الاستلام'
         };
+
         return labels[method] || method || '-';
     }
 
