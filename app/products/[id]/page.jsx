@@ -29,6 +29,35 @@ import { supabase } from '@/lib/supabaseClient';
  * @returns {Promise<Record<string, unknown> | null>}
  */
 async function findItem(id) {
+  if (id?.startsWith('srv-')) {
+    const { data: service } = await supabase
+      .from('services')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (service) {
+      return {
+        id: service.id,
+        name: service.name,
+        price: service.price,
+        discount_price: null,
+        description: service.description,
+        images: service.image ? [service.image] : [],
+        category_id: service.category_id,
+        status: service.status,
+        product_type: 'digital',
+        brand: null,
+        quantity: service.max_qty || 999,
+        min_qty: service.min_qty,
+        max_qty: service.max_qty,
+        provider_service_id: service.provider_service_id,
+      };
+    }
+    return null;
+  }
+
   const { data: product } = await supabase
     .from('products')
     .select('*')

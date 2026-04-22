@@ -71,7 +71,7 @@ function cacheSearchSnapshot(snapshot) {
  * Loads the raw search sources from Supabase.
  *
  * @param {Record<string, unknown>} client
- * @returns {Promise<[Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]>}
+ * @returns {Promise<[Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]>}
  */
 async function loadSearchSources(client) {
   return Promise.all([
@@ -89,6 +89,10 @@ async function loadSearchSources(client) {
       .select("id,name,slug,parent_id")
       .eq("status", "active")
       .order("sort_order", { ascending: true }),
+    client
+      .from("services")
+      .select("id,name,description,price,category_id,status,provider_service_id")
+      .eq("status", "active"),
   ]);
 }
 
@@ -101,18 +105,36 @@ async function loadSearchSources(client) {
  */
 export async function loadGlobalSearchSnapshot(client) {
   const resolvedClient = await resolveSearchClient(client);
-  const [productsResponse, servicesResponse, categoriesResponse] = await loadSearchSources(
+  const [productsResponse, repairServicesResponse, categoriesResponse, digitalServicesResponse] = await loadSearchSources(
     resolvedClient
   );
   const sourceErrors = [
     readSearchError(productsResponse),
-    readSearchError(servicesResponse),
+    readSearchError(repairServicesResponse),
     readSearchError(categoriesResponse),
+    readSearchError(digitalServicesResponse),
   ].filter(Boolean);
 
+  const digitalProducts = readSearchRows(digitalServicesResponse).map(service => ({
+    id: service.id,
+    name: service.name,
+    description: service.description,
+    brand: null,
+    icon: 'code',
+    price: service.price,
+    discount_price: null,
+    sold: 0,
+    review_count: 0,
+    reviews_count: 0,
+    category_id: service.category_id,
+    product_type: 'digital'
+  }));
+
+  const allProducts = [...readSearchRows(productsResponse), ...digitalProducts];
+
   const items = buildGlobalSearchItems({
-    products: readSearchRows(productsResponse),
-    services: readSearchRows(servicesResponse),
+    products: allProducts,
+    services: readSearchRows(repairServicesResponse),
     categories: readSearchRows(categoriesResponse),
   });
 
