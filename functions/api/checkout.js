@@ -5,6 +5,7 @@
  */
 
 import { createSupabaseAdmin, extractBearerToken, errorResponse, successResponse } from '../_lib/supabase.js';
+import { createProviderOrder } from '../_lib/providerApi.js';
 
 const BANNED_ACCOUNT_MESSAGE = 'حسابك محظور. تواصل مع الإدارة.';
 
@@ -94,6 +95,7 @@ function buildOrderItem(product, qty) {
         product_type: product.product_type || 'physical',
         brand: product.brand || null,
         image: Array.isArray(product.images) ? product.images[0] || null : null,
+        provider_service_id: product.provider_service_id || null,
       },
     },
   };
@@ -267,13 +269,42 @@ export async function onRequestPost(context) {
       const product = productMap.get(item.id);
       if (!product) continue;
 
-      await admin
-        .from('products')
-        .update({
-          quantity: Math.max(0, product.quantity - item.qty),
-          sold: (product.sold || 0) + item.qty,
-        })
-        .eq('id', item.id);
+      if (!item.id.startsWith('srv-')) {
+        await admin
+          .from('products')
+          .update({
+            quantity: Math.max(0, product.quantity - item.qty),
+            sold: (product.sold || 0) + item.qty,
+          })
+          .eq('id', item.id);
+      } else if (product.provider_service_id) {
+        const providerResult = await createProviderOrder(env, {
+          serviceId: product.provider_service_id,
+          quantity: item.qty,
+          link: notes || customerPhone,
+        });
+
+        const snapshotUpdate = providerResult.success && providerResult.orderId
+          ? { provider_order_id: providerResult.orderId, provider_status: 'processing' }
+          : { provider_error: providerResult.error, provider_attempted_at: new Date().toISOString() };
+
+        const { data: currentItem } = await admin
+          .from('order_items')
+          .select('id, snapshot')
+          .eq('order_id', orderId)
+          .eq('product_id', item.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (currentItem) {
+          await admin
+            .from('order_items')
+            .update({
+              snapshot: { ...(currentItem.snapshot || {}), ...snapshotUpdate }
+            })
+            .eq('id', currentItem.id);
+        }
+      }
     }
 
     if (userId) {
