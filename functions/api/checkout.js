@@ -162,17 +162,49 @@ export async function onRequestPost(context) {
     const admin = createSupabaseAdmin(env);
     const userId = await resolveCheckoutUserId({ admin, env, request });
 
-    const productIds = items.map((item) => item.id);
-    const { data: products, error: productsError } = await admin
-      .from('products')
-      .select('id,name,price,discount_price,quantity,sold,status,category_id,product_type,brand,images')
-      .in('id', productIds)
-      .eq('status', 'active')
-      .or('product_type.is.null,product_type.eq.physical');
+    const serviceIds = items.filter((item) => item.id.startsWith('srv-')).map((item) => item.id);
+    const physicalIds = items.filter((item) => !item.id.startsWith('srv-')).map((item) => item.id);
 
-    if (productsError) return errorResponse('[CHK-105] تعذر تحميل بيانات المنتجات', 500);
+    const [productsResult, servicesResult] = await Promise.all([
+      physicalIds.length > 0
+        ? admin
+            .from('products')
+            .select('id,name,price,discount_price,quantity,sold,status,category_id,product_type,brand,images')
+            .in('id', physicalIds)
+            .eq('status', 'active')
+            .or('product_type.is.null,product_type.eq.physical')
+        : { data: [], error: null },
+      serviceIds.length > 0
+        ? admin
+            .from('services')
+            .select('id,name,price,min_qty,max_qty,image,category_id,status,provider_service_id')
+            .in('id', serviceIds)
+            .eq('status', 'active')
+        : { data: [], error: null },
+    ]);
 
-    const productMap = new Map((products || []).map((product) => [product.id, product]));
+    if (productsResult.error) return errorResponse('[CHK-105] تعذر تحميل بيانات المنتجات', 500);
+    if (servicesResult.error) return errorResponse('[CHK-105] تعذر تحميل بيانات الخدمات', 500);
+
+    const productMap = new Map((productsResult.data || []).map((product) => [product.id, product]));
+
+    for (const service of (servicesResult.data || [])) {
+      productMap.set(service.id, {
+        id: service.id,
+        name: service.name,
+        price: Number(service.price),
+        discount_price: null,
+        quantity: service.max_qty || 9999,
+        sold: 0,
+        status: service.status,
+        category_id: service.category_id,
+        product_type: 'digital',
+        brand: null,
+        images: service.image ? [service.image] : [],
+        provider_service_id: service.provider_service_id,
+      });
+    }
+
     const orderItems = [];
     let subtotal = 0;
 
