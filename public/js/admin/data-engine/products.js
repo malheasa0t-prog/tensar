@@ -1,5 +1,5 @@
 // ===== TechZone Admin Data Engine - Products =====
-// Category, product, and service mapping plus storefront catalog helpers.
+// Category and product mapping plus storefront catalog helpers.
 
 import {
     ACCESSORY_PUBLIC_LABEL,
@@ -43,29 +43,6 @@ export function mapProduct(row) {
         images: row.images || [],
         variants: row.variants || [],
         lowStockAlert: row.low_stock_alert,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-    };
-}
-
-export function mapDigitalService(row) {
-    return {
-        id: row.id,
-        name: row.name,
-        categoryId: row.category_id,
-        providerServiceId: row.provider_service_id,
-        subcategoryId: row.subcategory_id || row.category_id,
-        price: parseFloat(row.price),
-        costPrice: parseFloat(row.cost_price),
-        minQty: row.min_qty,
-        maxQty: row.max_qty,
-        description: row.description,
-        speed: row.speed,
-        guarantee: row.guarantee,
-        image: row.image,
-        status: row.status,
-        sortOrder: row.sort_order || 0,
-        slug: row.slug || '',
         createdAt: row.created_at,
         updatedAt: row.updated_at
     };

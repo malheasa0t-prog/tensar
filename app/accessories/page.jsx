@@ -1,5 +1,5 @@
 /**
- * Accessories Page — Client-side version.
+ * Accessories Page - Client-side version.
  *
  * Fetches accessory products and categories on mount.
  */
@@ -50,7 +50,7 @@ export default function AccessoriesPage() {
         setProducts(accessoryProducts);
         setCategories(categoriesResult.data || []);
       } catch (err) {
-        console.error('AccessoriesPage: failed to load', err);
+        console.error('[APG-500] AccessoriesPage: failed to load', err);
         if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
@@ -58,7 +58,9 @@ export default function AccessoriesPage() {
     }
 
     loadData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) return <CatalogPageSkeleton productCount={6} />;
@@ -72,7 +74,7 @@ export default function AccessoriesPage() {
             icon="refresh-cw"
             eyebrow="تعذر تحميل الإكسسوارات"
             title="لم نتمكن من عرض الإكسسوارات الآن"
-            description="حصل خلل أثناء الجلب. أعد المحاولة بعد قليل أو تواصل معنا."
+            description="[APG-500] حصل خلل أثناء الجلب. أعد المحاولة بعد قليل أو تواصل معنا."
             actions={
               <>
                 <Link href="/accessories" className="btn btn-primary">إعادة المحاولة</Link>

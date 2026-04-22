@@ -8,17 +8,11 @@
 import { createSupabaseAdmin, createSupabaseClient, extractBearerToken, errorResponse, successResponse } from '../../_lib/supabase.js';
 import { handlePreflight, withCors } from '../../_lib/cors.js';
 
-/* ─── Constants ─── */
-
-/* CORS handled by shared _lib/cors.js module */
-
-const INVALID_CURRENT_PASSWORD = 'كلمة المرور الحالية غير صحيحة';
-const MISSING_CURRENT_PASSWORD = 'أدخل كلمة المرور الحالية';
-const PASSWORD_MISMATCH = 'كلمتا المرور غير متطابقتين';
-const PASSWORD_REQUIREMENTS = 'كلمة المرور يجب أن تحتوي على أحرف وأرقام';
-const PASSWORD_TOO_SHORT = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-
-/* ─── Helpers ─── */
+const INVALID_CURRENT_PASSWORD = '[PWD-107] كلمة المرور الحالية غير صحيحة';
+const MISSING_CURRENT_PASSWORD = '[PWD-101] أدخل كلمة المرور الحالية';
+const PASSWORD_MISMATCH = '[PWD-104] كلمتا المرور غير متطابقتين';
+const PASSWORD_REQUIREMENTS = '[PWD-103] كلمة المرور يجب أن تحتوي على أحرف وأرقام';
+const PASSWORD_TOO_SHORT = '[PWD-102] كلمة المرور يجب أن تكون 8 أحرف على الأقل';
 
 /**
  * Validates the password change form payload.
@@ -35,7 +29,6 @@ function validatePasswordChangeForm(form) {
   if (newPassword.length < 8) return PASSWORD_TOO_SHORT;
   if (!/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) return PASSWORD_REQUIREMENTS;
   if (newPassword !== confirmPassword) return PASSWORD_MISMATCH;
-
   return null;
 }
 
@@ -49,25 +42,15 @@ function validatePasswordChangeForm(form) {
  */
 async function verifyCurrentPassword(env, email, currentPassword) {
   if (!email) {
-    return errorResponse('تعذر التحقق من الحساب الحالي', 400);
+    return errorResponse('[PWD-106] تعذر التحقق من الحساب الحالي', 400);
   }
 
   const supabase = createSupabaseClient(env);
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password: currentPassword,
-  });
-
+  const { error } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
   if (!error) return null;
-
-  if (Number(error.status) === 400) {
-    return errorResponse(INVALID_CURRENT_PASSWORD, 400);
-  }
-
-  return errorResponse('تعذر التحقق من كلمة المرور الحالية', 500);
+  if (Number(error.status) === 400) return errorResponse(INVALID_CURRENT_PASSWORD, 400);
+  return errorResponse('[PWD-500] تعذر التحقق من كلمة المرور الحالية', 500);
 }
-
-/* ─── Handler ─── */
 
 export async function onRequest(context) {
   if (context.request.method === 'OPTIONS') {
@@ -75,51 +58,46 @@ export async function onRequest(context) {
   }
 
   if (context.request.method !== 'POST') {
-    return errorResponse('Method not allowed', 405);
+    return errorResponse('[PWD-203] Method not allowed', 405);
   }
 
   const { env, request } = context;
-
-  /* Authenticate */
   const token = extractBearerToken(request);
   if (!token) {
-    return errorResponse('Unauthorized', 401);
+    return errorResponse('[PWD-201] Unauthorized', 401);
   }
 
   const supabase = createSupabaseClient(env);
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) {
-    return errorResponse('Unauthorized', 401);
+    return errorResponse('[PWD-202] Unauthorized', 401);
   }
 
-  /* Parse body */
   let body;
   try {
     body = await request.json();
-  } catch {
-    return errorResponse('بيانات الطلب غير صالحة', 400);
+  } catch (parseError) {
+    console.error('[PWD-105] Failed to parse password payload:', parseError);
+    return errorResponse('[PWD-105] بيانات الطلب غير صالحة', 400);
   }
 
-  /* Validate */
   const validationError = validatePasswordChangeForm(body);
   if (validationError) {
     return errorResponse(validationError, 400);
   }
 
-  /* Verify current password */
   const verifyResponse = await verifyCurrentPassword(env, user.email, body.current_password.trim());
   if (verifyResponse) {
     return withCors(verifyResponse, request);
   }
 
-  /* Update password */
   const admin = createSupabaseAdmin(env);
   const { error: updateError } = await admin.auth.admin.updateUserById(user.id, {
     password: body.new_password,
   });
 
   if (updateError) {
-    return errorResponse('تعذر تغيير كلمة المرور', 500);
+    return errorResponse('[PWD-301] تعذر تغيير كلمة المرور', 500);
   }
 
   return withCors(successResponse({ message: 'تم تغيير كلمة المرور بنجاح' }), request);

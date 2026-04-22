@@ -18,7 +18,7 @@
         var result = await TZ.supabase.from('contact_messages').update({
             status: status, updated_at: new Date().toISOString()
         }).eq('id', id);
-        if (result.error) { A.showToast('فشل تحديث حالة الرسالة'); return; }
+        if (result.error) { A.showErrorToast('MSG-301', 'فشل تحديث حالة الرسالة'); return; }
         A.showToast('تم تحديث الحالة');
         await TZ.refreshData();
         renderMessages();

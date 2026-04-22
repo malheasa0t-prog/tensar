@@ -8,7 +8,6 @@ const STATIC_PATHS = [
   { pathname: "/products", changeFrequency: "daily", priority: 0.9 },
   { pathname: "/services", changeFrequency: "weekly", priority: 0.9 },
   { pathname: "/accessories", changeFrequency: "weekly", priority: 0.8 },
-  { pathname: "/subscriptions", changeFrequency: "weekly", priority: 0.8 },
   { pathname: "/contact", changeFrequency: "monthly", priority: 0.6 },
 ];
 
@@ -20,7 +19,7 @@ const STATIC_PATHS = [
  */
 function extractRows(result) {
   if (result?.error) {
-    console.error("sitemap.xml query failed:", result.error.message || result.error);
+    console.error("[SMP-301] sitemap.xml query failed:", result.error.message || result.error);
     return [];
   }
 
@@ -31,11 +30,7 @@ function extractRows(result) {
  * Builds the full sitemap entry list from static and database-backed routes.
  *
  * @param {string} origin
- * @param {{
- *   categories?: Array<Record<string, unknown>>,
- *   products?: Array<Record<string, unknown>>,
- *   repairServices?: Array<Record<string, unknown>>,
- * }} snapshot
+ * @param {{ categories?: Array<Record<string, unknown>>, products?: Array<Record<string, unknown>>, repairServices?: Array<Record<string, unknown>> }} snapshot
  * @returns {Array<Record<string, string>>}
  */
 function buildSitemapEntries(origin, snapshot) {
@@ -79,11 +74,7 @@ function buildSitemapEntries(origin, snapshot) {
  * Loads the public route snapshot from Supabase.
  *
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase
- * @returns {Promise<{
- *   categories: Array<Record<string, unknown>>,
- *   products: Array<Record<string, unknown>>,
- *   repairServices: Array<Record<string, unknown>>,
- * }>}
+ * @returns {Promise<{ categories: Array<Record<string, unknown>>, products: Array<Record<string, unknown>>, repairServices: Array<Record<string, unknown>> }>}
  */
 async function loadSitemapSnapshot(supabase) {
   const [categoriesResult, productsResult, repairServicesResult] = await Promise.all([
@@ -117,7 +108,7 @@ export async function onRequestGet(context) {
     const supabase = createSupabaseClient(context.env);
     snapshot = await loadSitemapSnapshot(supabase);
   } catch (error) {
-    console.error("sitemap.xml failed to load dynamic routes:", error);
+    console.error("[SMP-500] sitemap.xml failed to load dynamic routes:", error);
   }
 
   const xml = renderSitemapXml(buildSitemapEntries(origin, snapshot));

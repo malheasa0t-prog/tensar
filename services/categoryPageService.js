@@ -42,7 +42,7 @@ async function findCategory(routeValue) {
 }
 
 /**
- * Counts active products AND digital services for the provided subcategory ids.
+ * Counts active products for the provided subcategory ids.
  *
  * @param {string[]} subCategoryIds
  * @returns {Promise<Record<string, number>>}
@@ -52,26 +52,18 @@ async function loadSubCategoryItemCounts(subCategoryIds) {
     return {};
   }
 
-  const [productsResponse, servicesResponse] = await Promise.all([
-    supabase
-      .from('products')
-      .select('category_id')
-      .eq('status', 'active')
-      .in('category_id', subCategoryIds),
-    supabase
-      .from('services')
-      .select('category_id')
-      .eq('status', 'active')
-      .in('category_id', subCategoryIds),
-  ]);
+  const productsResponse = await supabase
+    .from('products')
+    .select('category_id')
+    .eq('status', 'active')
+    .or('product_type.is.null,product_type.eq.physical')
+    .in('category_id', subCategoryIds);
 
   const counts = {};
   for (const item of (productsResponse.data || [])) {
     counts[item.category_id] = (counts[item.category_id] || 0) + 1;
   }
-  for (const item of (servicesResponse.data || [])) {
-    counts[item.category_id] = (counts[item.category_id] || 0) + 1;
-  }
+
   return counts;
 }
 
@@ -113,7 +105,7 @@ export async function loadCategoryPageSnapshot(routeValue) {
   }
 
   const rootCategoryId = category.parent_id || category.id;
-  const [rootResponse, subCategoriesResponse, productsResponse, servicesResponse] = await Promise.all([
+  const [rootResponse, subCategoriesResponse, productsResponse] = await Promise.all([
     supabase
       .from('categories')
       .select('*')
@@ -131,14 +123,9 @@ export async function loadCategoryPageSnapshot(routeValue) {
       .from('products')
       .select('*')
       .eq('status', 'active')
+      .or('product_type.is.null,product_type.eq.physical')
       .eq('category_id', category.id)
       .order('created_at', { ascending: false }),
-    supabase
-      .from('services')
-      .select('*')
-      .eq('status', 'active')
-      .eq('category_id', category.id)
-      .order('sort_order', { ascending: true }),
   ]);
 
   const subCategories = subCategoriesResponse.data || [];
@@ -146,19 +133,12 @@ export async function loadCategoryPageSnapshot(routeValue) {
     ? await loadSubCategoryItemCounts(subCategories.map((subCategory) => subCategory.id))
     : {};
 
-  const physicalProducts = productsResponse.data || [];
-  const digitalServices = (servicesResponse.data || []).map((service) => ({
-    ...service,
-    _isDigitalService: true,
-  }));
-  const allItems = [...physicalProducts, ...digitalServices];
-
   return {
     error: false,
     category,
     mainCategory: rootResponse.data || null,
     subCategories,
-    products: allItems,
+    products: productsResponse.data || [],
     subCategoryProductsCount,
   };
 }

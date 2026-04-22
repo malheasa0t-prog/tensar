@@ -14,7 +14,7 @@
     async function deleteCoupon(id) {
         if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
         var result = await TZ.supabase.from('coupons').delete().eq('id', id);
-        if (result.error) { A.showToast('فشل حذف الكوبون'); return; }
+        if (result.error) { A.showErrorToast('CPN-301', 'فشل حذف الكوبون'); return; }
         A.showToast('تم حذف الكوبون');
         await TZ.refreshData();
         renderCoupons();
@@ -31,7 +31,7 @@
             status: 'active',
             expires_at: data.expiresAt || new Date(Date.now() + 30 * 86400000).toISOString()
         }]);
-        if (result.error) { A.showToast('فشل إضافة الكوبون: ' + (result.error.message || '')); return false; }
+        if (result.error) { A.showErrorToast('CPN-302', 'فشل إضافة الكوبون: ' + (result.error.message || '')); return false; }
         A.showToast('تم إضافة الكوبون بنجاح');
         return true;
     }

@@ -33,7 +33,7 @@ export default function HomePage() {
         const snapshot = await getPublicSiteSnapshot();
         if (!cancelled) setData(snapshot);
       } catch (error) {
-        console.error('HomePage: failed to load data', error);
+        console.error('[HPG-500] HomePage: failed to load data', error);
       } finally {
         if (!cancelled) setLoading(false);
       }

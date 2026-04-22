@@ -49,7 +49,7 @@ export default function CategoryPage() {
             icon="folder-open"
             eyebrow="الفئة غير متاحة"
             title="لم نتمكن من العثور على هذه الفئة"
-            description="قد يكون الرابط غير صحيح أو أن هذه الفئة لم تعد منشورة حالياً."
+            description="[CPG-301] قد يكون الرابط غير صحيح أو أن هذه الفئة لم تعد منشورة حالياً."
             actions={
               <>
                 <Link href="/" className="btn btn-primary">
@@ -93,4 +93,3 @@ export default function CategoryPage() {
     </section>
   );
 }
-

@@ -19,7 +19,6 @@ export const routeModuleLoaders = Object.freeze({
   compare: () => import("@/app/compare/page"),
   "favorites-shared": () => import("@/app/favorites/shared/page"),
   accessories: () => import("@/app/accessories/page"),
-  subscriptions: () => import("@/app/subscriptions/page"),
   deposit: () => import("@/app/deposit/page"),
   "auth-login": () => import("@/app/auth/login/page"),
   "auth-register": () => import("@/app/auth/register/page"),

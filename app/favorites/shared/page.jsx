@@ -18,7 +18,7 @@ import {
 } from "@/services/favoritesService";
 import styles from "./sharedFavoritesPage.module.css";
 
-const SHARED_FAVORITES_LOAD_ERROR_MESSAGE = "تعذر تحميل المفضلة المشتركة حالياً.";
+const SHARED_FAVORITES_LOAD_ERROR_MESSAGE = "[FAV-302] تعذر تحميل المفضلة المشتركة حالياً.";
 
 /**
  * Public storefront page for viewing a shared favorites list.

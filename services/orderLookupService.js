@@ -31,7 +31,7 @@ export function normalizeOrderNumber(value) {
   const normalized = String(value || "").trim().toLowerCase();
 
   if (!ORDER_NUMBER_PATTERN.test(normalized)) {
-    throw new Error("أدخل رقم طلب صحيح مثل ord-123 أو bk-123.");
+    throw new Error("[OLK-101] أدخل رقم طلب صحيح مثل ord-123 أو bk-123.");
   }
 
   return normalized;

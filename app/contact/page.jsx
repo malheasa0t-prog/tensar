@@ -32,7 +32,7 @@ export default function ContactPage() {
         const settings = await getSiteSettings();
         if (!cancelled) setSiteSettings(settings);
       } catch (error) {
-        console.error('ContactPage: failed to load', error);
+        console.error('[CTP-500] ContactPage: failed to load', error);
       } finally {
         if (!cancelled) setLoading(false);
       }

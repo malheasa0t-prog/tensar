@@ -138,7 +138,7 @@ test("bootstrap should surface a generic runtime error instead of leaving the sc
   await flushBootstrapTasks();
 
   assert.equal(harness.loginOverlay.style.display, "flex");
-  assert.equal(harness.loginError.textContent, "Failed to load admin runtime config (503).");
+  assert.equal(harness.loginError.textContent, "[BST-301] تعذر تحميل إعدادات تشغيل لوحة الإدارة (503).");
 });
 
 test("bootstrap should use preloaded admin config without calling the runtime route", async () => {

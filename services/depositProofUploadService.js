@@ -11,9 +11,9 @@ export const DEPOSIT_PROOF_ALLOWED_MIME_TYPES = Object.freeze([
 ]);
 export const DEPOSIT_PROOF_SIZE_LIMIT_BYTES = 5 * 1024 * 1024;
 
-const INVALID_PROOF_FILE_MESSAGE = "ملف الإثبات يجب أن يكون صورة صالحة.";
-const OVERSIZED_PROOF_FILE_MESSAGE = "حجم صورة الإثبات أكبر من الحد المسموح.";
-const BUCKET_PREPARATION_ERROR_MESSAGE = "تعذر تجهيز مساحة رفع صور الإثبات.";
+const INVALID_PROOF_FILE_MESSAGE = "[DPU-101] ملف الإثبات يجب أن يكون صورة صالحة.";
+const OVERSIZED_PROOF_FILE_MESSAGE = "[DPU-102] حجم صورة الإثبات أكبر من الحد المسموح.";
+const BUCKET_PREPARATION_ERROR_MESSAGE = "[DPU-301] تعذر تجهيز مساحة رفع صور الإثبات.";
 
 /**
  * Validates the uploaded deposit proof before any storage call.
@@ -75,19 +75,7 @@ export async function ensureDepositProofBucket(storageApi) {
 /**
  * Uploads a deposit proof image and returns its public URL.
  *
- * @param {{
- *   storageApi: {
- *     getBucket: (name: string) => Promise<{ data?: unknown, error?: { message?: string } | null }>,
- *     createBucket: (name: string, options: { public: boolean, fileSizeLimit: number, allowedMimeTypes: string[] }) => Promise<{ error?: { message?: string } | null }>,
- *     from: (bucketName: string) => {
- *       upload: (path: string, file: File | { name?: string, type?: string }, options?: { contentType?: string, upsert?: boolean }) => Promise<{ error?: { message?: string } | null }>,
- *       getPublicUrl: (path: string) => { data?: { publicUrl?: string } }
- *     }
- *   },
- *   proofFile: File | { name?: string, type?: string, size?: number },
- *   userId: string,
- *   now?: () => number,
- * }} input
+ * @param {{ storageApi: { getBucket: (name: string) => Promise<{ data?: unknown, error?: { message?: string } | null }>, createBucket: (name: string, options: { public: boolean, fileSizeLimit: number, allowedMimeTypes: string[] }) => Promise<{ error?: { message?: string } | null }>, from: (bucketName: string) => { upload: (path: string, file: File | { name?: string, type?: string }, options?: { contentType?: string, upsert?: boolean }) => Promise<{ error?: { message?: string } | null }>, getPublicUrl: (path: string) => { data?: { publicUrl?: string } } } }, proofFile: File | { name?: string, type?: string, size?: number }, userId: string, now?: () => number }} input
  * @returns {Promise<string | null>}
  * @throws {Error}
  */
@@ -111,7 +99,7 @@ export async function uploadDepositProofFile({ storageApi, proofFile, userId, no
   });
 
   if (error) {
-    throw new Error(`فشل رفع صورة الإثبات: ${error.message || "خطأ غير معروف."}`);
+    throw new Error(`[DPU-302] فشل رفع صورة الإثبات: ${error.message || "خطأ غير معروف."}`);
   }
 
   const {

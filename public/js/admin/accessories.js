@@ -48,7 +48,7 @@
         var result;
         if (isEdit) result = await TZ.supabase.from('products').update(payload).eq('id', data.id);
         else result = await TZ.supabase.from('products').insert([payload]);
-        if (result.error) { A.showToast('فشل حفظ الإكسسوار'); return false; }
+        if (result.error) { A.showErrorToast('ACC-301', 'فشل حفظ الإكسسوار'); return false; }
         A.showToast(isEdit ? 'تم تحديث الإكسسوار' : 'تم إضافة الإكسسوار');
         return true;
     }
@@ -56,7 +56,7 @@
     async function deleteAccessory(id) {
         if (!confirm('هل أنت متأكد من الحذف؟')) return;
         var result = await TZ.supabase.from('products').delete().eq('id', id);
-        if (result.error) { A.showToast('فشل الحذف'); return; }
+        if (result.error) { A.showErrorToast('ACC-302', 'فشل حذف الإكسسوار'); return; }
         A.showToast('تم الحذف');
         await TZ.refreshData();
         renderAccessories();
@@ -88,7 +88,7 @@
 
         document.getElementById('saveAccBtn').addEventListener('click', async function () {
             var name = document.getElementById('accName').value.trim();
-            if (!name) { A.showToast('أدخل الاسم'); return; }
+            if (!name) { A.showErrorToast('ACC-101', 'أدخل الاسم'); return; }
             this.disabled = true;
             var ok = await saveAccessory({
                 id: isEdit ? a.id : null, name: name,

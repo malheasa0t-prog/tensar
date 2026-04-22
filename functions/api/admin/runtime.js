@@ -2,9 +2,10 @@
  * Cloudflare Pages Function for the legacy admin runtime config.
  */
 
-import { getAdminRuntimeConfig } from "../../../lib/adminRuntimeConfig.js";
+import { buildErrorPayload, formatErrorMessage } from "../../_lib/errorCodes.js";
 import { handlePreflight, withCors } from "../../_lib/cors.js";
 import { withSecurityHeaders } from "../../_lib/securityHeaders.js";
+import { getAdminRuntimeConfig } from "../../../lib/adminRuntimeConfig.js";
 
 const ADMIN_RUNTIME_METHODS = "GET, OPTIONS";
 const NO_STORE_CACHE_CONTROL = "no-store, max-age=0";
@@ -26,7 +27,9 @@ export function onRequestGet(context) {
     return withSecurityHeaders(withCors(response, context.request, ADMIN_RUNTIME_METHODS), headers);
   } catch (error) {
     const message = error instanceof Error ? error.message : UNAVAILABLE_RUNTIME_MESSAGE;
-    const response = Response.json({ success: false, error: message }, { status: 503, headers });
+    const payload = buildErrorPayload(formatErrorMessage("ADR-500", message));
+    console.error("[ADR-500] Failed to load admin runtime config:", error);
+    const response = Response.json(payload, { status: 503, headers });
     return withSecurityHeaders(withCors(response, context.request, ADMIN_RUNTIME_METHODS), headers);
   }
 }

@@ -17,10 +17,9 @@ import {
     mapCoupon,
     mapDeposit,
     mapOrder,
-    mapRepairBooking,
-    mapServiceOrder
+    mapRepairBooking
 } from './orders.js';
-import { mapCategory, mapDigitalService, mapProduct, mapRepairService } from './products.js';
+import { mapCategory, mapProduct, mapRepairService } from './products.js';
 
 const CATEGORY_SORTER = (first, second) => (first.sortOrder || 0) - (second.sortOrder || 0);
 
@@ -31,13 +30,6 @@ const REALTIME_BINDINGS = {
         eventName: 'categories',
         mapper: (row) => mapCategory(row),
         sortRecords: CATEGORY_SORTER
-    },
-    services: { collectionKey: 'services', eventName: 'services', mapper: (row) => mapDigitalService(row) },
-    service_orders: {
-        collectionKey: 'serviceOrders',
-        eventName: 'service_orders',
-        mapper: (row) => mapServiceOrder(row),
-        prepend: true
     },
     orders: {
         collectionKey: 'orders',

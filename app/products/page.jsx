@@ -1,5 +1,5 @@
 /**
- * Products Explorer Page — Client-side version.
+ * Products Explorer Page - Client-side version.
  *
  * Fetches products and categories on mount, then renders
  * the products explorer with search, filters, and sorting.
@@ -49,13 +49,18 @@ export default function ProductsPage() {
           return;
         }
 
-        const filteredCategories = (categoriesResult.data || [])
-          .filter((cat) => !isAccessoryCatalogCategoryId(cat.id));
+        const filteredCategories = (categoriesResult.data || []).filter(
+          (cat) => !isAccessoryCatalogCategoryId(cat.id)
+        );
         const categoryById = Object.fromEntries(
           filteredCategories.map((cat) => [cat.id, cat.name])
         );
         const filteredProducts = (productsResult.data || [])
-          .filter((product) => !isAccessoryProduct(product))
+          .filter(
+            (product) =>
+              !isAccessoryProduct(product) &&
+              ['physical', ''].includes(String(product.product_type || '').trim().toLowerCase())
+          )
           .map((product) =>
             mapProductsExplorerProduct(product, categoryById[product.category_id] || 'منتجات عامة')
           );
@@ -63,7 +68,7 @@ export default function ProductsPage() {
         setCategories(filteredCategories);
         setProducts(filteredProducts);
       } catch (err) {
-        console.error('ProductsPage: failed to load', err);
+        console.error('[PLS-500] ProductsPage: failed to load', err);
         if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
@@ -71,7 +76,9 @@ export default function ProductsPage() {
     }
 
     loadData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -87,7 +94,7 @@ export default function ProductsPage() {
             icon="refresh-cw"
             eyebrow="تعذر تحميل الكتالوج"
             title="لم نتمكن من عرض المنتجات الآن"
-            description="حدث خلل أثناء جلب المنتجات أو الفئات. أعد المحاولة بعد قليل أو انتقل إلى صفحة التواصل."
+            description="[PLS-500] حدث خلل أثناء جلب المنتجات أو الفئات. أعد المحاولة بعد قليل أو انتقل إلى صفحة التواصل."
             actions={
               <>
                 <Link href="/products" className="btn btn-primary">

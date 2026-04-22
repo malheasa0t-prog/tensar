@@ -43,7 +43,7 @@
         }
 
         if (result.error) {
-            A.showToast('فشل حفظ الفئة: ' + (result.error.message || ''));
+            A.showErrorToast('CAT-301', 'فشل حفظ الفئة: ' + (result.error.message || ''));
             return false;
         }
 
@@ -62,7 +62,7 @@
         }
 
         var result = await TZ.supabase.from('categories').delete().eq('id', id);
-        if (result.error) { A.showToast('فشل حذف الفئة'); return; }
+        if (result.error) { A.showErrorToast('CAT-302', 'فشل حذف الفئة'); return; }
 
         A.showToast('تم حذف الفئة');
         await TZ.refreshData();
@@ -105,7 +105,7 @@
 
         document.getElementById('saveCatBtn').addEventListener('click', async function () {
             var name = document.getElementById('catName').value.trim();
-            if (!name) { A.showToast('أدخل اسم الفئة'); return; }
+            if (!name) { A.showErrorToast('CAT-101', 'أدخل اسم الفئة'); return; }
             this.disabled = true;
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 

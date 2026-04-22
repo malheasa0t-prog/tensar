@@ -42,7 +42,6 @@ export function hasAdminMetadataAccess(user) {
 export async function hasStoredAdminAccess(adminClient, user) {
   const userId = String(user?.id ?? "").trim();
   const email = String(user?.email ?? "").trim();
-
   const [profileResult, legacyResult] = await Promise.all([
     adminClient.from("user_profiles").select("role, status").eq("user_id", userId).maybeSingle(),
     email
@@ -58,16 +57,13 @@ export async function hasStoredAdminAccess(adminClient, user) {
  *
  * @param {Request} request - Incoming request object.
  * @param {Record<string, string | undefined>} env - Environment bindings.
- * @param {{
- *   adminClient?: import("@supabase/supabase-js").SupabaseClient,
- *   publicClient?: import("@supabase/supabase-js").SupabaseClient,
- * }} [options={}] - Optional injected clients for tests.
+ * @param {{ adminClient?: import("@supabase/supabase-js").SupabaseClient, publicClient?: import("@supabase/supabase-js").SupabaseClient }} [options={}] - Optional injected clients for tests.
  * @returns {Promise<{ user: Record<string, unknown> | null, errorResponse: Response | null }>} Auth result.
  */
 export async function requireAdminAccess(request, env, options = {}) {
   const token = extractBearerToken(request);
   if (!token) {
-    return { user: null, errorResponse: errorResponse("غير مصرح — يجب تسجيل الدخول", 401) };
+    return { user: null, errorResponse: errorResponse("[ADM-201] غير مصرح — يجب تسجيل الدخول", 401) };
   }
 
   const publicClient = options.publicClient ?? createSupabaseClient(env);
@@ -77,7 +73,7 @@ export async function requireAdminAccess(request, env, options = {}) {
   } = await publicClient.auth.getUser(token);
 
   if (error || !user) {
-    return { user: null, errorResponse: errorResponse("غير مصرح — جلسة غير صالحة", 401) };
+    return { user: null, errorResponse: errorResponse("[ADM-202] غير مصرح — جلسة غير صالحة", 401) };
   }
 
   if (isAdminBypassEnabled(env) || hasAdminMetadataAccess(user)) {
@@ -86,9 +82,8 @@ export async function requireAdminAccess(request, env, options = {}) {
 
   const adminClient = options.adminClient ?? createSupabaseAdmin(env);
   const hasAccess = await hasStoredAdminAccess(adminClient, user);
-
   if (!hasAccess) {
-    return { user, errorResponse: errorResponse("صلاحيات غير كافية", 403) };
+    return { user, errorResponse: errorResponse("[ADM-203] صلاحيات غير كافية", 403) };
   }
 
   return { user, errorResponse: null };

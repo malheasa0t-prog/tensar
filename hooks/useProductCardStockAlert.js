@@ -5,7 +5,8 @@ import { useToast } from "@/components/ToastProvider";
 import { getProductsExplorerAvailability } from "@/lib/productsExplorerModel";
 import { requestStockAlert } from "@/services/stockAlertService";
 
-const LOGIN_REQUIRED_MESSAGE = "سجل الدخول أولاً لتفعيل تنبيه التوفر.";
+const LOGIN_REQUIRED_MESSAGE = "[SAL-201] سجل الدخول أولاً لتفعيل تنبيه التوفر.";
+const STOCK_ALERT_REQUEST_ERROR = "[SAL-301] تعذر تفعيل تنبيه التوفر حالياً.";
 
 /**
  * Manages the stock-alert state shown inside a product card.
@@ -46,7 +47,7 @@ export function useProductCardStockAlert(product) {
         { type: result.alreadySubscribed ? "info" : "success" }
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "تعذر تفعيل تنبيه التوفر حالياً.";
+      const message = error instanceof Error ? error.message : STOCK_ALERT_REQUEST_ERROR;
       showToast(message, {
         type: message === LOGIN_REQUIRED_MESSAGE ? "info" : "error",
       });

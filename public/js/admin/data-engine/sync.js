@@ -1,4 +1,4 @@
-// ===== TechZone Admin Data Engine - Sync =====
+﻿// ===== TechZone Admin Data Engine - Sync =====
 // Write operations, audit log sync, and refresh entry points.
 
 import {
@@ -14,17 +14,29 @@ import { isRetryableNetworkError, queueOfflineCommit, syncQueuedCommits } from '
 import { fireDataUpdate } from './realtime.js';
 import { fetchExistingProductSnapshot, syncProductRestockAlerts } from './restockAlerts.js';
 
-function createSyncError(error, fallbackMessage) {
+const ERROR_CODE_PATTERN = /\[[A-Z]{2,4}-\d{3}\]/;
+
+function formatSyncMessage(code, message) {
+    const normalizedMessage = String(message || '').trim();
+    if (ERROR_CODE_PATTERN.test(normalizedMessage)) {
+        return normalizedMessage;
+    }
+
+    return `[${code}] ${normalizedMessage}`;
+}
+
+function createSyncError(code, error, fallbackMessage) {
     const message = error?.message || error?.details || fallbackMessage;
     const syncError = new Error(message);
+    syncError.message = formatSyncMessage(code, syncError.message);
     syncError.cause = error;
     return syncError;
 }
 
-async function executeSync(queryPromise, fallbackMessage) {
-    if (!supabase) throw new Error('Supabase client is not available.');
+async function executeSync(queryPromise, code, fallbackMessage) {
+    if (!supabase) throw new Error(formatSyncMessage('DEN-304', 'Ø¹Ù…ÙŠÙ„ Supabase ØºÙŠØ± Ù…ØªØ§Ø­.'));
     const { error } = await queryPromise;
-    if (error) throw createSyncError(error, fallbackMessage);
+    if (error) throw createSyncError(code, error, fallbackMessage);
 }
 
 function commitLog(action, actorId, details) {
@@ -38,7 +50,7 @@ function commitLog(action, actorId, details) {
         actor_id: logEntry.actorId,
         details: logEntry.details
     }]).then(({ error }) => {
-        if (error) console.error('Log sync error:', error);
+        if (error) console.error('[DEN-303] Log sync error:', error);
     });
 }
 
@@ -68,7 +80,8 @@ async function syncProduct(product) {
             low_stock_alert: product.lowStockAlert,
             updated_at: nowIso()
         }]),
-        'تعذر حفظ المنتج في قاعدة البيانات.'
+        'DEN-305',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù…Ù†ØªØ¬ ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 
     await syncProductRestockAlerts({
@@ -95,14 +108,16 @@ async function syncOrder(order) {
             notes: order.notes || null,
             metadata: order.metadata || {}
         }]),
-        'تعذر حفظ الطلب في قاعدة البيانات.'
+        'DEN-306',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ø·Ù„Ø¨ ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
 async function syncOrderItems(payload) {
     await executeSync(
         supabase.from('order_items').delete().eq('order_id', payload.orderId),
-        'تعذر تحديث عناصر الطلب.'
+        'DEN-307',
+        'ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ« Ø¹Ù†Ø§ØµØ± Ø§Ù„Ø·Ù„Ø¨.'
     );
 
     if (!Array.isArray(payload.items) || payload.items.length === 0) return;
@@ -116,14 +131,16 @@ async function syncOrderItems(payload) {
             price: item.price,
             snapshot: item.snapshot || {}
         }))),
-        'تعذر حفظ عناصر الطلب.'
+        'DEN-308',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø¹Ù†Ø§ØµØ± Ø§Ù„Ø·Ù„Ø¨.'
     );
 }
 
 async function syncOrderDelete(payload) {
     await executeSync(
         supabase.from('order_items').delete().eq('order_id', payload.id),
-        'تعذر حذف عناصر الطلب.'
+        'DEN-308',
+        'ØªØ¹Ø°Ø± Ø­Ø°Ù Ø¹Ù†Ø§ØµØ± Ø§Ù„Ø·Ù„Ø¨.'
     );
     await syncDelete('orders', payload.id);
 }
@@ -143,32 +160,8 @@ async function syncCategory(category) {
             show_in_navbar: category.showInNavbar !== false,
             updated_at: nowIso()
         }]),
-        'تعذر حفظ الفئة في قاعدة البيانات.'
-    );
-}
-
-async function syncDigitalService(service) {
-    await executeSync(
-        supabase.from('services').upsert([{
-            id: service.id,
-            name: service.name,
-            category_id: service.categoryId || null,
-            provider_service_id: service.providerServiceId || null,
-            subcategory_id: service.subcategoryId || service.categoryId || null,
-            price: service.price,
-            cost_price: service.costPrice || 0,
-            min_qty: service.minQty || 1,
-            max_qty: service.maxQty || 1000,
-            description: service.description || null,
-            speed: service.speed || null,
-            guarantee: service.guarantee || null,
-            image: service.image || null,
-            status: service.status || 'active',
-            sort_order: service.sortOrder || 0,
-            slug: service.slug || null,
-            updated_at: nowIso()
-        }]),
-        'تعذر حفظ الخدمة في قاعدة البيانات.'
+        'DEN-309',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„ÙØ¦Ø© ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
@@ -186,7 +179,8 @@ async function syncCoupon(coupon) {
             expires_at: coupon.expiresAt,
             created_at: coupon.createdAt || nowIso()
         }]),
-        'تعذر حفظ الكوبون في قاعدة البيانات.'
+        'DEN-311',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„ÙƒÙˆØ¨ÙˆÙ† ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
@@ -204,7 +198,8 @@ async function syncRepairService(service) {
             status: service.status,
             created_at: service.createdAt || nowIso()
         }]),
-        'تعذر حفظ خدمة الصيانة في قاعدة البيانات.'
+        'DEN-312',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø®Ø¯Ù…Ø© Ø§Ù„ØµÙŠØ§Ù†Ø© ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
@@ -225,7 +220,8 @@ async function syncRepairBooking(booking) {
             status: booking.status,
             created_at: booking.createdAt || nowIso()
         }]),
-        'تعذر حفظ طلب الصيانة في قاعدة البيانات.'
+        'DEN-313',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø·Ù„Ø¨ Ø§Ù„ØµÙŠØ§Ù†Ø© ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
@@ -241,7 +237,8 @@ async function syncContactMessage(message) {
             status: message.status,
             created_at: message.createdAt || nowIso()
         }]),
-        'تعذر حفظ الرسالة في قاعدة البيانات.'
+        'DEN-314',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ø±Ø³Ø§Ù„Ø© ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
@@ -257,21 +254,24 @@ async function syncUser(user) {
             password_hash: user.passwordHash,
             created_at: user.createdAt || nowIso()
         }]),
-        'تعذر حفظ المستخدم في قاعدة البيانات.'
+        'DEN-315',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
 async function syncSettings(settingsData) {
     await executeSync(
         supabase.from('settings').upsert([{ id: 1, data: settingsData }]),
-        'تعذر حفظ إعدادات الموقع.'
+        'DEN-316',
+        'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù…ÙˆÙ‚Ø¹.'
     );
 }
 
 async function syncDelete(table, id) {
     await executeSync(
         supabase.from(table).delete().eq('id', id),
-        'تعذر حذف العنصر من قاعدة البيانات.'
+        'DEN-317',
+        'ØªØ¹Ø°Ø± Ø­Ø°Ù Ø§Ù„Ø¹Ù†ØµØ± Ù…Ù† Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.'
     );
 }
 
@@ -283,11 +283,6 @@ const SYNC_HANDLERS = {
     order_items: syncOrderItems,
     category: syncCategory,
     category_delete: (payload) => syncDelete('categories', payload.id),
-    service: syncDigitalService,
-    digital_service: syncDigitalService,
-    service_delete: (payload) => syncDelete('services', payload.id),
-    digital_service_delete: (payload) => syncDelete('services', payload.id),
-    service_order_delete: (payload) => syncDelete('service_orders', payload.id),
     settings_update: syncSettings,
     coupon: syncCoupon,
     coupon_delete: (payload) => syncDelete('coupons', payload.id),
@@ -337,3 +332,4 @@ export async function syncOfflineQueue() {
     assertAdminRuntimeAccess();
     return syncQueuedCommits((queuedCommit) => executeSyncHandler(queuedCommit.resource));
 }
+

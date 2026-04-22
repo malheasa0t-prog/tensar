@@ -10,6 +10,14 @@
 import { Component } from 'react';
 import styles from './ErrorBoundary.module.css';
 
+const FALLBACK_ERROR_CODE = 'APP-501';
+const ERROR_CODE_PATTERN = /\[([A-Z]{2,4}-\d{3})\]/;
+
+function resolveBoundaryErrorCode(error) {
+  const match = String(error?.message || '').match(ERROR_CODE_PATTERN);
+  return match ? match[1] : FALLBACK_ERROR_CODE;
+}
+
 /* ─── Constants ─── */
 
 const ERROR_TITLE = 'عذراً، حدث خطأ غير متوقع';
@@ -49,7 +57,7 @@ export default class ErrorBoundary extends Component {
    */
   componentDidCatch(error, errorInfo) {
     if (typeof window !== 'undefined' && window.console) {
-      console.error('[ErrorBoundary]', error, errorInfo.componentStack);
+      console.error('[APP-501] React render boundary captured an unhandled exception:', error, errorInfo.componentStack);
     }
   }
 
@@ -115,7 +123,7 @@ export default class ErrorBoundary extends Component {
           {/* Error code (non-sensitive) */}
           <div className={styles.errorCode}>
             <span>رمز الخطأ:</span>
-            <code>{this.state.error?.name || 'UNKNOWN'}</code>
+            <code>{resolveBoundaryErrorCode(this.state.error)}</code>
           </div>
 
           {/* Action buttons */}

@@ -181,7 +181,7 @@ export {
 };
 
 if (!engineStatus.ready) {
-    console.error(engineStatus.error);
+    console.error('[DEN-500] Data engine init failed:', engineStatus.error);
     dispatchReadyEvent();
 } else if (DATA_SCOPE === 'admin') {
     registerOfflineSyncListeners(syncOfflineQueueIfAuthorized);
@@ -195,7 +195,7 @@ if (!engineStatus.ready) {
             registerOfflineSyncListeners(syncOfflineQueueIfAuthorized);
         })
         .catch((error) => {
-            console.error('Data engine bootstrap failed:', error);
+            console.error('[DEN-301] Data engine bootstrap failed:', error);
             fireDataUpdate('all');
         });
 }

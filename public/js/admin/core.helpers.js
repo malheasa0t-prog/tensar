@@ -14,7 +14,6 @@
         'subcategories',
         'services',
         'repair-services',
-        'serva-catalog',
         'customers',
         'messages',
         'contact-messages',
@@ -40,7 +39,6 @@
         subcategories: 'الفئات الفرعية',
         services: 'خدمات الصيانة',
         'repair-services': 'خدمات الصيانة',
-        'serva-catalog': 'كتالوج Serva-S',
         customers: 'العملاء',
         messages: 'رسائل التواصل',
         'contact-messages': 'رسائل التواصل',
@@ -164,9 +162,8 @@
     function updateOrdersBadge(TZ) {
         const productOrders = TZ.db.orders.filter((order) => ['pending', 'awaiting_delivery', 'confirmed', 'processing', 'shipped'].includes(order.status)).length;
         const repairOrders = TZ.db.repairBookings.filter((booking) => ['pending', 'awaiting_delivery', 'awaiting_device'].includes(booking.status)).length;
-        const digitalOrders = (TZ.db.serviceOrders || []).filter((order) => ['pending', 'processing', 'in_progress'].includes(order.status)).length;
         const badge = document.getElementById('ordersBadge');
-        const total = productOrders + repairOrders + digitalOrders;
+        const total = productOrders + repairOrders;
         if (!badge) return;
         badge.textContent = total;
         badge.style.display = total > 0 ? 'inline' : 'none';

@@ -83,7 +83,7 @@ test("buildInventoryAdjustments should reject quantities that are no longer avai
         products: [{ id: "p-3", quantity: 1, sold: 0, status: "active" }],
         aggregatedItems: [{ id: "p-3", qty: 2 }],
       }),
-    /تغير مخزون بعض المنتجات أثناء تنفيذ الطلب. حاول مرة أخرى\./
+    { message: INVENTORY_CONFLICT_ERROR_MESSAGE }
   );
 });
 
@@ -131,7 +131,7 @@ test("applyInventoryAdjustments should raise a conflict when an optimistic updat
         ],
         client,
       }),
-    new RegExp(INVENTORY_CONFLICT_ERROR_MESSAGE)
+    { message: INVENTORY_CONFLICT_ERROR_MESSAGE }
   );
 });
 
@@ -154,7 +154,7 @@ test("applyInventoryAdjustments should surface database update errors", async ()
         ],
         client,
       }),
-    new RegExp(INVENTORY_UPDATE_ERROR_MESSAGE)
+    { message: INVENTORY_UPDATE_ERROR_MESSAGE }
   );
 });
 

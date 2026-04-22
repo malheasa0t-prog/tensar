@@ -4,6 +4,7 @@
 
     const ADMIN_IMAGE_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
     const ADMIN_IMAGE_UPLOAD_LIMIT_LABEL = '4MB';
+    const Errors = window.AdminErrorCodes;
     const MODAL_TYPE_META = {
         danger: { icon: 'fa-trash-can', confirmClass: 'btn-danger', toneClass: 'modal-card--danger' },
         warning: { icon: 'fa-triangle-exclamation', confirmClass: 'btn-primary', toneClass: 'modal-card--warning' },
@@ -42,10 +43,15 @@
         }, 2500);
     }
 
+    function showErrorToast(code, message) {
+        const formatted = Errors && typeof Errors.formatError === 'function'
+            ? Errors.formatError(code, message)
+            : '[' + code + '] ' + String(message || '');
+        showToast(formatted);
+    }
+
     function showUndoToast(message, onUndo, onExpire) {
-        if (onExpire) {
-            onExpire();
-        }
+        if (onExpire) onExpire();
         showToast(message);
         void onUndo;
     }
@@ -163,7 +169,7 @@
         const notice = document.createElement('div');
         notice.id = 'legacyReadOnlyNotice';
         notice.style.cssText = 'margin:12px 16px 0;padding:12px 14px;border:1px solid rgba(241,196,15,.45);background:rgba(241,196,15,.12);border-radius:10px;color:#f5c542;font-size:.92rem;line-height:1.7';
-        notice.innerHTML = 'وضع آمن: لوحة الإدارة القديمة تعمل حاليًا بصلاحية قراءة فقط لمنع الكتابة المباشرة من المتصفح. لإجراء تعديلات فعلية استخدم الواجهة الإدارية الحديثة.';
+        notice.innerHTML = 'وضع آمن: لوحة الإدارة القديمة تعمل حالياً بصلاحية قراءة فقط لمنع الكتابة المباشرة من المتصفح. لإجراء تعديلات فعلية استخدم الواجهة الإدارية الحديثة.';
 
         const content = document.getElementById('adminContent');
         if (content && content.parentNode) {
@@ -180,7 +186,7 @@
     }
 
     function showAdminImageUploadLimitToast() {
-        showToast(`حجم الصورة يتجاوز ${getAdminImageUploadLimitText()}.`);
+        showErrorToast('COR-101', `حجم الصورة يتجاوز ${getAdminImageUploadLimitText()}.`);
     }
 
     window.AdminCoreUi = {
@@ -191,6 +197,7 @@
         renderSectionLoadingState,
         showAdminImageUploadLimitToast,
         showConfirmModal: showModernConfirmModal,
+        showErrorToast,
         showLegacyModeNotice,
         showModal: showModernModal,
         showToast,

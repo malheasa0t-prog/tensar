@@ -25,17 +25,15 @@ test("resolvePhysicalOrderSection should honor explicit accessories metadata", (
   assert.equal(section, "accessory-orders");
 });
 
-test("buildAdminSearchIndex should include physical and digital orders only", () => {
+test("buildAdminSearchIndex should include physical orders only", () => {
   const hooks = loadHooks();
   const index = hooks.buildAdminSearchIndex({
     orders: [{ id: "1234", customerName: "أحمد محمد", total: 45, status: "processing", items: [] }],
-    serviceOrders: [{ id: "srv-1", serviceName: "فحص جهاز", total: 12, status: "pending", userId: "user-1" }],
     helpers: { getProductById: () => null, isAccessoryProduct: () => false, isAccessoryProductCategoryId: () => false },
   });
 
-  assert.equal(index.length, 2);
+  assert.equal(index.length, 1);
   assert.equal(index.some((item) => item.kind === "order"), true);
-  assert.equal(index.some((item) => item.kind === "digital-order"), true);
 });
 
 test("searchAdminIndex should rank title prefix matches first", () => {
@@ -43,7 +41,7 @@ test("searchAdminIndex should rank title prefix matches first", () => {
   const results = hooks.searchAdminIndex(
     [
       { title: "طلب #1234", subtitle: "أحمد", meta: "processing", searchText: "أحمد محمد 1234" },
-      { title: "طلب رقمي #srv-1", subtitle: "فحص جهاز", meta: "pending", searchText: "srv-1 فحص جهاز" },
+      { title: "عميل أحمد", subtitle: "حساب نشط", meta: "active", searchText: "أحمد عميل" },
     ],
     "طلب #"
   );

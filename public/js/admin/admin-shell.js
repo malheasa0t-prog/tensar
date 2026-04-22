@@ -64,7 +64,7 @@
     function getAlertSnapshot() {
         return {
             offlineQueueCount: state.offlineQueueCount,
-            pendingOrders: (TZ.db.orders || []).filter(function (order) { return ['pending', 'processing', 'awaiting_delivery'].includes(order.status); }).length + (TZ.db.serviceOrders || []).filter(function (order) { return ['pending', 'processing', 'in_progress'].includes(order.status); }).length
+            pendingOrders: (TZ.db.orders || []).filter(function (order) { return ['pending', 'processing', 'awaiting_delivery'].includes(order.status); }).length
         };
     }
 

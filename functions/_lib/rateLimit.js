@@ -11,6 +11,7 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
 const RATE_LIMIT_POLICY = `${RATE_LIMIT_HEADER_NAME};q=${RATE_LIMIT_MAX_REQUESTS};w=60`;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_WINDOW_SECONDS = RATE_LIMIT_WINDOW_MS / 1000;
+const RATE_LIMIT_EXCEEDED_MESSAGE = "[RAT-201] تم تجاوز الحد الأقصى للطلبات. حاول مرة أخرى بعد قليل.";
 
 /**
  * Builds a stable request path for rate limiting.
@@ -164,7 +165,7 @@ function buildRateLimitExceededResponse(headers = {}) {
   return Response.json(
     {
       success: false,
-      error: "تم تجاوز الحد الأقصى للطلبات. حاول مرة أخرى بعد قليل.",
+      error: RATE_LIMIT_EXCEEDED_MESSAGE,
     },
     {
       status: 429,

@@ -16,6 +16,7 @@
     const ADMIN_BOOTSTRAP_ERROR_DESCRIPTION = 'إعدادات تشغيل لوحة الإدارة غير مكتملة على بيئة الإنتاج حاليًا.';
     const BASE_SCRIPT_PATHS = [
         'js/admin/core.helpers.js',
+        'js/admin/error-codes.js',
         'js/admin/core.ui.js',
         'js/admin/core.js',
         'js/admin/global-search.helpers.js',
@@ -55,8 +56,7 @@
         settings: ['js/admin/settings.js'],
         logs: ['js/admin/logs.js'],
         'audit-logs': ['js/admin/logs.js'],
-        accessories: ['js/admin/accessories.js'],
-        'serva-catalog': ['js/admin/serva-catalog.js']
+        accessories: ['js/admin/accessories.js']
     });
     const loadedScripts = new Set();
     const loadedExternalScripts = new Set();
@@ -155,11 +155,11 @@
         }
 
         if (!response.ok) {
-            throw new Error(payload?.error || `Failed to load admin runtime config (${response.status}).`);
+            throw new Error(payload?.error || `[BST-301] تعذر تحميل إعدادات تشغيل لوحة الإدارة (${response.status}).`);
         }
 
         if (!payload?.success) {
-            throw new Error(payload?.error || 'Admin runtime config is unavailable.');
+            throw new Error(payload?.error || '[BST-302] إعدادات تشغيل لوحة الإدارة غير متاحة حالياً.');
         }
 
         applyRuntimeConfig(payload);
@@ -177,7 +177,7 @@
 
         while (!window[globalKey]) {
             if (Date.now() - startedAt > SCRIPT_LOAD_TIMEOUT_MS) {
-                throw new Error(`Timed out waiting for global "${globalKey}"`);
+                throw new Error(`[BST-101] انتهت مهلة انتظار "${globalKey}"`);
             }
 
             await new Promise((resolve) => window.setTimeout(resolve, GLOBAL_POLL_INTERVAL_MS));
@@ -206,7 +206,7 @@
                 loadedScripts.add(assetPath);
                 resolve();
             };
-            script.onerror = () => reject(new Error(`Failed to load script: ${assetPath}`));
+            script.onerror = () => reject(new Error(`[BST-303] تعذر تحميل الملف: ${assetPath}`));
 
             document.body.appendChild(script);
         });
@@ -232,7 +232,7 @@
                 loadedExternalScripts.add(scriptUrl);
                 resolve();
             };
-            script.onerror = () => reject(new Error(`Failed to load external script: ${scriptUrl}`));
+            script.onerror = () => reject(new Error(`[BST-304] تعذر تحميل الملف الخارجي: ${scriptUrl}`));
 
             document.body.appendChild(script);
         });
@@ -304,7 +304,7 @@
         try {
             await navigator.serviceWorker.register(ADMIN_SERVICE_WORKER_PATH, { scope: ADMIN_SERVICE_WORKER_SCOPE });
         } catch (error) {
-            console.error('Failed to register admin service worker.', error);
+            console.error('[BST-401] Failed to register admin service worker.', error);
         }
     }
 
@@ -318,11 +318,11 @@
         const rawMessage = String(error?.message || '').trim();
 
         if (!rawMessage) {
-            return 'تعذر تحميل ملفات لوحة الإدارة. أعد المحاولة بعد تحديث الصفحة.';
+            return '[BST-500] تعذر تحميل ملفات لوحة الإدارة. أعد المحاولة بعد تحديث الصفحة.';
         }
 
         if (rawMessage.includes('NEXT_PUBLIC_SUPABASE_')) {
-            return 'مفاتيح Supabase العامة غير مضبوطة على بيئة Cloudflare. اضبط NEXT_PUBLIC_SUPABASE_URL و NEXT_PUBLIC_SUPABASE_ANON_KEY أو NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ثم أعد النشر.';
+            return '[BST-302] مفاتيح Supabase العامة غير مضبوطة على بيئة Cloudflare. اضبط NEXT_PUBLIC_SUPABASE_URL و NEXT_PUBLIC_SUPABASE_ANON_KEY أو NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ثم أعد النشر.';
         }
 
         return rawMessage;
@@ -403,7 +403,7 @@
             window.dispatchEvent(new Event('tz-admin-bootstrap-ready'));
             void loadSectionModules(getCurrentSectionFromUrl());
         } catch (error) {
-            console.error('Failed to bootstrap legacy admin assets.', error);
+            console.error('[BST-500] Failed to bootstrap legacy admin assets.', error);
             showBootstrapErrorState(error);
         }
     }

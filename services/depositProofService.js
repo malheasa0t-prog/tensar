@@ -1,15 +1,12 @@
 import { validateDepositProofFile } from "./depositProofUploadService.js";
 
-const INVALID_SESSION_MESSAGE = "تعذر التحقق من جلسة تسجيل الدخول لرفع إثبات الإيداع.";
-const PROOF_UPLOAD_ERROR_MESSAGE = "تعذر رفع صورة الإثبات حالياً.";
+const INVALID_SESSION_MESSAGE = "[DPT-201] تعذر التحقق من جلسة تسجيل الدخول لرفع إثبات الإيداع.";
+const PROOF_UPLOAD_ERROR_MESSAGE = "[DPT-301] تعذر رفع صورة الإثبات حالياً.";
 
 /**
  * Uploads a deposit proof image through the authenticated API endpoint.
  *
- * @param {{
- *   client: { auth: { getSession: () => Promise<{ data?: { session?: { access_token?: string } | null } }> } },
- *   proofFile?: File | null,
- * }} input
+ * @param {{ client: { auth: { getSession: () => Promise<{ data?: { session?: { access_token?: string } | null } }> } }, proofFile?: File | null }} input
  * @returns {Promise<string | null>}
  * @throws {Error}
  */

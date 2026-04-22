@@ -78,7 +78,7 @@ export default function ServiceDetailsPage() {
 
         setService(found);
       } catch (error) {
-        console.error('ServiceDetailsPage: failed to load', error);
+        console.error('[SPG-500] ServiceDetailsPage: failed to load', error);
       } finally {
         if (!cancelled) setLoading(false);
       }

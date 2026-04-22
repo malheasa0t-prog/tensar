@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState('');
   const [error, setError] = useState('');
+  const withAuthCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
   const loginSuccessMessage = useMemo(
     () => (searchParams.get('reset') === 'success' ? 'تم تحديث كلمة المرور. يمكنك تسجيل الدخول الآن.' : ''),
     [searchParams]
@@ -44,7 +45,7 @@ export default function LoginPage() {
 
     if (validationError) {
       setError(validationError);
-      showToast(validationError, { type: 'warning', title: 'تحقق من البيانات' });
+      showToast(withAuthCode('AUS-101', validationError), { type: 'warning', title: 'تحقق من البيانات' });
       return;
     }
 
@@ -55,7 +56,7 @@ export default function LoginPage() {
     if (authError) {
       const nextError = mapLoginAuthError(authError);
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر تسجيل الدخول' });
+      showToast(withAuthCode('AUS-301', nextError), { type: 'error', title: 'تعذر تسجيل الدخول' });
       setLoading(false);
       return;
     }
@@ -84,7 +85,7 @@ export default function LoginPage() {
         AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() || provider;
       const nextError = mapOAuthProviderError({ provider: providerLabel, error: providerError });
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر المتابعة' });
+      showToast(withAuthCode('AUS-302', nextError), { type: 'error', title: 'تعذر المتابعة' });
       setActiveProvider('');
     }
   }

@@ -26,7 +26,7 @@
         if (data.userId && data.userId !== 'all') {
             payload.user_id = data.userId;
             var res = await TZ.supabase.from('notifications').insert([payload]);
-            if (res.error) { A.showToast('فشل إرسال الإشعار'); return false; }
+        if (res.error) { A.showErrorToast('NTF-301', 'فشل إرسال الإشعار'); return false; }
             A.showToast('تم إرسال الإشعار للمستخدم');
             return true;
         }
@@ -39,9 +39,9 @@
             return { user_id: u.authUserId || u.id, title: payload.title, body: payload.body, type: payload.type };
         });
 
-        if (batch.length === 0) { A.showToast('لا يوجد مستخدمون لإرسال الإشعار إليهم'); return false; }
+        if (batch.length === 0) { A.showErrorToast('NTF-102', 'لا يوجد مستخدمون لإرسال الإشعار إليهم'); return false; }
         var res = await TZ.supabase.from('notifications').insert(batch);
-        if (res.error) { A.showToast('فشل الإرسال الجماعي'); return false; }
+        if (res.error) { A.showErrorToast('NTF-302', 'فشل الإرسال الجماعي'); return false; }
         A.showToast('تم إرسال الإشعار إلى ' + batch.length + ' مستخدم');
         return true;
     }
@@ -98,7 +98,7 @@
         document.getElementById('notifForm')?.addEventListener('submit', async function (e) {
             e.preventDefault();
             var title = document.getElementById('notifTitle').value.trim();
-            if (!title) { A.showToast('أدخل عنوان الإشعار'); return; }
+        if (!title) { A.showErrorToast('NTF-101', 'أدخل عنوان الإشعار'); return; }
             var btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';

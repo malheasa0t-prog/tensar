@@ -2,7 +2,6 @@
 
 import DashboardOrdersFilters from '@/components/dashboard-orders/DashboardOrdersFilters';
 import DashboardOrdersOverview from '@/components/dashboard-orders/DashboardOrdersOverview';
-import DigitalOrdersSection from '@/components/dashboard-orders/DigitalOrdersSection';
 import ProductOrdersSection from '@/components/dashboard-orders/ProductOrdersSection';
 import RepairBookingsSection from '@/components/dashboard-orders/RepairBookingsSection';
 import {
@@ -19,7 +18,6 @@ import { useDashboardOrders } from '@/hooks/useDashboardOrders';
 export default function OrdersPage() {
   const {
     productOrders,
-    serviceOrders,
     repairBookings,
     orderItemsMap,
     profile,
@@ -47,10 +45,6 @@ export default function OrdersPage() {
 
       {activeFilter === 'all' || activeFilter === 'products' ? (
         <ProductOrdersSection orders={productOrders} orderItemsMap={orderItemsMap} />
-      ) : null}
-
-      {activeFilter === 'all' || activeFilter === 'digital' ? (
-        <DigitalOrdersSection orders={serviceOrders} />
       ) : null}
 
       {activeFilter === 'all' || activeFilter === 'repairs' ? (

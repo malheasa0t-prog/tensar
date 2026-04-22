@@ -29,6 +29,7 @@ export default function RecoverPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const withAuthCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
 
   useEffect(() => {
     setEmail(initialEmail);
@@ -65,7 +66,7 @@ export default function RecoverPasswordPage() {
 
     if (validationError) {
       setError(validationError);
-      showToast(validationError, { type: 'warning', title: 'تحقق من البريد' });
+      showToast(withAuthCode('AUS-103', validationError), { type: 'warning', title: 'تحقق من البريد' });
       return;
     }
 
@@ -80,7 +81,7 @@ export default function RecoverPasswordPage() {
     if (recoveryError) {
       const nextError = mapRecoveryAuthError({ context: 'recovery', error: recoveryError });
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر إرسال الرابط' });
+      showToast(withAuthCode('AUS-303', nextError), { type: 'error', title: 'تعذر إرسال الرابط' });
       setLoading(false);
       return;
     }
@@ -106,7 +107,7 @@ export default function RecoverPasswordPage() {
 
     if (validationError) {
       setError(validationError);
-      showToast(validationError, { type: 'warning', title: 'تحقق من كلمة المرور' });
+      showToast(withAuthCode('AUS-104', validationError), { type: 'warning', title: 'تحقق من كلمة المرور' });
       return;
     }
 
@@ -118,7 +119,7 @@ export default function RecoverPasswordPage() {
     if (!sessionData?.session) {
       const nextError = 'رابط الاستعادة غير صالح أو انتهت صلاحيته.';
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر التحقق من الرابط' });
+      showToast(withAuthCode('AUS-304', nextError), { type: 'error', title: 'تعذر التحقق من الرابط' });
       setLoading(false);
       return;
     }
@@ -127,7 +128,7 @@ export default function RecoverPasswordPage() {
     if (updateError) {
       const nextError = mapRecoveryAuthError({ context: 'reset', error: updateError });
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر تحديث كلمة المرور' });
+      showToast(withAuthCode('AUS-305', nextError), { type: 'error', title: 'تعذر تحديث كلمة المرور' });
       setLoading(false);
       return;
     }

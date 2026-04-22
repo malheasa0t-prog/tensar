@@ -23,7 +23,6 @@
     function getSearchData() {
         return {
             orders: TZ.db.orders || [],
-            serviceOrders: TZ.db.serviceOrders || [],
             helpers: {
                 getProductById: TZ.getProductById,
                 isAccessoryProduct: TZ.isAccessoryProduct,
@@ -54,8 +53,7 @@
 
     function formatResultType(kind) {
         return {
-            order: 'طلب',
-            'digital-order': 'طلب رقمي'
+            order: 'طلب'
         }[kind] || 'نتيجة';
     }
 

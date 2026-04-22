@@ -1,14 +1,11 @@
 import { rollbackInventoryAdjustments } from "./checkoutInventoryService.js";
 
-export const CHECKOUT_ROLLBACK_ERROR_MESSAGE = "تعذر التراجع الكامل عن الطلب الحالي.";
+export const CHECKOUT_ROLLBACK_ERROR_MESSAGE = "[CKP-303] تعذر التراجع الكامل عن الطلب الحالي.";
 
 /**
  * Deletes a checkout order and confirms the row was removed.
  *
- * @param {{
- *   orderId: string,
- *   client: { from: (table: string) => { delete: () => { eq: (column: string, value: string) => any, select: (fields: string) => any, maybeSingle: () => Promise<{ data?: { id?: string } | null, error?: unknown }> } } },
- * }} input
+ * @param {{ orderId: string, client: { from: (table: string) => { delete: () => { eq: (column: string, value: string) => any, select: (fields: string) => any, maybeSingle: () => Promise<{ data?: { id?: string } | null, error?: unknown }> } } } }} input
  * @returns {Promise<void>}
  * @throws {Error}
  */
@@ -33,19 +30,7 @@ export async function deleteCheckoutOrder({ orderId, client }) {
 /**
  * Rolls back checkout side effects and reports any failures explicitly.
  *
- * @param {{
- *   orderId: string,
- *   appliedInventoryAdjustments: Array<{
- *     productId: string,
- *     previousQuantity: number,
- *     nextQuantity: number,
- *     previousSold: number,
- *     nextSold: number,
- *     previousStatus: string,
- *     nextStatus: string,
- *   }>,
- *   client: { from: (table: string) => any },
- * }} input
+ * @param {{ orderId: string, appliedInventoryAdjustments: Array<{ productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }>, client: { from: (table: string) => any } }} input
  * @returns {Promise<{ ok: boolean, failedInventoryProductIds: Array<string>, orderDeleteFailed: boolean }>}
  */
 export async function rollbackCheckoutState({ orderId, appliedInventoryAdjustments, client }) {

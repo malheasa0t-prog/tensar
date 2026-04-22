@@ -10,14 +10,10 @@
 import { createSupabaseClient, extractBearerToken, errorResponse } from '../_lib/supabase.js';
 import { handlePreflight, withCors } from '../_lib/cors.js';
 
-/* ─── Constants ─── */
-
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_RESPONSE_TOKENS = 500;
-
-/* ─── Helpers ─── */
 
 /**
  * Builds the system prompt with product/service context.
@@ -65,78 +61,70 @@ ${categoriesContext}
  */
 async function fetchDataContext(supabaseUrl, supabaseKey) {
   const headers = { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` };
-
   const [productsRes, servicesRes, categoriesRes] = await Promise.all([
     fetch(`${supabaseUrl}/rest/v1/products?status=eq.active&select=name,description,price,quantity,brand,category_id`, { headers })
-      .then((r) => r.json()).catch(() => []),
+      .then((response) => response.json())
+      .catch(() => []),
     fetch(`${supabaseUrl}/rest/v1/repair_services?status=eq.active&select=name,description,price,category,duration`, { headers })
-      .then((r) => r.json()).catch(() => []),
+      .then((response) => response.json())
+      .catch(() => []),
     fetch(`${supabaseUrl}/rest/v1/categories?status=eq.active&select=name,description`, { headers })
-      .then((r) => r.json()).catch(() => []),
+      .then((response) => response.json())
+      .catch(() => []),
   ]);
 
-  const products = Array.isArray(productsRes) && productsRes.length > 0
-    ? productsRes.map((p) => `• ${p.name} | ${p.price} د.أ | ${p.quantity > 0 ? 'متوفر' : 'نفد'}`).join('\n')
-    : 'لا توجد منتجات.';
-
-  const services = Array.isArray(servicesRes) && servicesRes.length > 0
-    ? servicesRes.map((s) => `• ${s.name} | ${s.price} د.أ | ${s.category || 'عام'}`).join('\n')
-    : 'لا توجد خدمات.';
-
-  const categories = Array.isArray(categoriesRes) && categoriesRes.length > 0
-    ? categoriesRes.map((c) => `• ${c.name}`).join('\n')
-    : 'لا توجد فئات.';
-
-  return { products, services, categories };
+  return {
+    products: Array.isArray(productsRes) && productsRes.length > 0
+      ? productsRes.map((item) => `• ${item.name} | ${item.price} د.أ | ${item.quantity > 0 ? 'متوفر' : 'نفد'}`).join('\n')
+      : 'لا توجد منتجات.',
+    services: Array.isArray(servicesRes) && servicesRes.length > 0
+      ? servicesRes.map((item) => `• ${item.name} | ${item.price} د.أ | ${item.category || 'عام'}`).join('\n')
+      : 'لا توجد خدمات.',
+    categories: Array.isArray(categoriesRes) && categoriesRes.length > 0
+      ? categoriesRes.map((item) => `• ${item.name}`).join('\n')
+      : 'لا توجد فئات.',
+  };
 }
-
-/* ─── Handler ─── */
 
 export async function onRequestPost(context) {
   const { env, request } = context;
 
   try {
-    /* ── Authentication — prevent unauthenticated abuse ── */
     const token = extractBearerToken(request);
     if (!token) {
-      return withCors(errorResponse('يجب تسجيل الدخول لاستخدام المحادثة.', 401), request);
+      return withCors(errorResponse('[BOT-201] يجب تسجيل الدخول لاستخدام المحادثة.', 401), request);
     }
 
     const supabase = createSupabaseClient(env);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return withCors(errorResponse('جلسة غير صالحة. أعد تسجيل الدخول.', 401), request);
+      return withCors(errorResponse('[BOT-202] جلسة غير صالحة. أعد تسجيل الدخول.', 401), request);
     }
 
-    /* ── Parse and validate input ── */
     const body = await request.json();
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     const history = Array.isArray(body?.history) ? body.history.slice(-MAX_HISTORY_MESSAGES) : [];
 
     if (!message) {
-      return withCors(errorResponse('الرجاء إدخال رسالة.', 400), request);
+      return withCors(errorResponse('[BOT-101] الرجاء إدخال رسالة.', 400), request);
     }
 
     if (message.length > 500) {
-      return withCors(errorResponse('الرسالة طويلة جداً. الحد الأقصى 500 حرف.', 400), request);
+      return withCors(errorResponse('[BOT-102] الرسالة طويلة جداً. الحد الأقصى 500 حرف.', 400), request);
     }
 
-    /* ── Groq API key ── */
     const apiKey = env.GROQ_API_KEY;
     if (!apiKey) {
-      return withCors(errorResponse('AI service not configured.', 500), request);
+      return withCors(errorResponse('[BOT-500] AI service not configured.', 500), request);
     }
 
-    /* ── Build context and call Groq ── */
     const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
     const supabaseKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY;
-
     const ctx = await fetchDataContext(supabaseUrl, supabaseKey);
     const systemPrompt = buildSystemPrompt(ctx.products, ctx.services, ctx.categories);
-
     const allMessages = [
       { role: 'system', content: systemPrompt },
-      ...history.map((msg) => ({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.content })),
+      ...history.map((item) => ({ role: item.role === 'assistant' ? 'assistant' : 'user', content: item.content })),
       { role: 'user', content: message },
     ];
 
@@ -155,19 +143,19 @@ export async function onRequestPost(context) {
     });
 
     if (!groqResponse.ok) {
-      return withCors(errorResponse('AI service error.', 502), request);
+      return withCors(errorResponse('[BOT-401] AI service error.', 502), request);
     }
 
     const data = await groqResponse.json();
     const reply = data?.choices?.[0]?.message?.content?.trim();
-
     if (!reply) {
-      return withCors(errorResponse('Empty AI response.', 502), request);
+      return withCors(errorResponse('[BOT-402] Empty AI response.', 502), request);
     }
 
     return withCors(Response.json({ reply }), request);
   } catch (error) {
-    return withCors(errorResponse('عذراً، حدث خطأ في المعالجة.', 500), request);
+    console.error('[BOT-500] Chat API error:', error);
+    return withCors(errorResponse('[BOT-500] عذراً، حدث خطأ في المعالجة.', 500), request);
   }
 }
 

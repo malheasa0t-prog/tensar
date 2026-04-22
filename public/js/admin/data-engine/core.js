@@ -6,7 +6,7 @@ const SUPABASE_PUBLISHABLE_KEY = window.__TZ_SUPABASE_PUBLISHABLE_KEY || '';
 const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY || window.__TZ_SUPABASE_ANON_KEY || '';
 const SESSION_STORAGE_KEY = 'tz_session';
 const CART_STORAGE_KEY = 'tz_cart';
-const ADMIN_ACCESS_ERROR = 'Legacy admin access requires a verified admin session.';
+const ADMIN_ACCESS_ERROR = '[DEN-201] يلزم وجود جلسة إدارة موثقة للوصول إلى البيانات.';
 
 export const isLegacyAdminPage = /(^|\/)admin(?:\.html)?$/i.test(window.location.pathname || '');
 export const legacyAdminWriteEnabled =
@@ -64,8 +64,7 @@ export const ADMIN_SECTIONS = [
     { id: 'chats', minLevel: 3, icon: 'fa-comments', label: 'الدردشات المباشرة' },
     { id: 'messages', minLevel: 3, icon: 'fa-envelope', label: 'رسائل التواصل' },
     { id: 'settings', minLevel: 10, icon: 'fa-cog', label: 'الإعدادات' },
-    { id: 'logs', minLevel: 10, icon: 'fa-history', label: 'سجل العمليات' },
-    { id: 'serva-catalog', minLevel: 8, icon: 'fa-cloud-download-alt', label: 'كتالوج Serva-S' }
+    { id: 'logs', minLevel: 10, icon: 'fa-history', label: 'سجل العمليات' }
 ];
 
 const DEFAULT_SETTINGS = {
@@ -126,9 +125,7 @@ export const db = {
     users: [],
     categories: [],
     products: [],
-    services: [],
     orders: [],
-    serviceOrders: [],
     deposits: [],
     coupons: [],
     settings: clone(DEFAULT_SETTINGS),
@@ -143,9 +140,7 @@ const ADMIN_DB_FALLBACK = Object.freeze({
     users: Object.freeze([]),
     categories: Object.freeze([]),
     products: Object.freeze([]),
-    services: Object.freeze([]),
     orders: Object.freeze([]),
-    serviceOrders: Object.freeze([]),
     deposits: Object.freeze([]),
     coupons: Object.freeze([]),
     settings: Object.freeze(clone(DEFAULT_SETTINGS)),
@@ -289,12 +284,12 @@ export const DATA_SCOPE = detectDataScope();
 const DATA_SCOPE_CONFIG = {
     admin: {
         queries: [
-            'profiles', 'legacyUsers', 'categories', 'products', 'digitalServices',
+            'profiles', 'legacyUsers', 'categories', 'products',
             'orders', 'orderItems', 'settings', 'coupons', 'repairServices',
-            'repairBookings', 'messages', 'logs', 'deposits', 'serviceOrders'
+            'repairBookings', 'messages', 'logs', 'deposits'
         ],
         realtime: [
-            'products', 'categories', 'services', 'service_orders', 'orders',
+            'products', 'categories', 'orders',
             'repair_services', 'repair_bookings', 'contact_messages', 'deposits',
             'coupons', 'settings'
         ]

@@ -8,12 +8,6 @@
 import { createSupabaseAdmin, createSupabaseClient, extractBearerToken, errorResponse, successResponse } from '../../_lib/supabase.js';
 import { handlePreflight, withCors } from '../../_lib/cors.js';
 
-/* ─── Constants ─── */
-
-/* CORS handled by shared _lib/cors.js module */
-
-/* ─── Helpers ─── */
-
 /**
  * Authenticates the request and returns the user object.
  *
@@ -24,14 +18,13 @@ import { handlePreflight, withCors } from '../../_lib/cors.js';
 async function getUserFromRequest(request, env) {
   const token = extractBearerToken(request);
   if (!token) {
-    return { user: null, error: 'Missing bearer token' };
+    return { user: null, error: '[PRF-201] Missing bearer token' };
   }
 
   const supabase = createSupabaseClient(env);
   const { data: { user }, error } = await supabase.auth.getUser(token);
-
   if (error || !user) {
-    return { user: null, error: 'Unauthorized' };
+    return { user: null, error: '[PRF-202] Unauthorized' };
   }
 
   return { user, error: null };
@@ -45,7 +38,6 @@ async function getUserFromRequest(request, env) {
  */
 function validateProfileInput(body) {
   const errors = [];
-
   const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : '';
   const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
   const avatarUrl = typeof body.avatar_url === 'string' ? body.avatar_url.trim() : '';
@@ -54,27 +46,13 @@ function validateProfileInput(body) {
   const preferredLanguage = typeof body.preferred_language === 'string' ? body.preferred_language.trim() : '';
   const preferredCurrency = typeof body.preferred_currency === 'string' ? body.preferred_currency.trim() : '';
 
-  if (fullName && (fullName.length < 2 || fullName.length > 120)) {
-    errors.push('الاسم يجب أن يكون بين حرفين و120 حرفاً');
-  }
-  if (phone && !/^[+0-9\s()-]{7,20}$/.test(phone)) {
-    errors.push('رقم الهاتف غير صالح');
-  }
-  if (avatarUrl && avatarUrl.length > 2048) {
-    errors.push('رابط الصورة طويل جداً');
-  }
-  if (country && country.length > 80) {
-    errors.push('اسم الدولة طويل جداً');
-  }
-  if (bio && bio.length > 500) {
-    errors.push('النبذة يجب ألا تتجاوز 500 حرف');
-  }
-  if (preferredLanguage && preferredLanguage.length > 12) {
-    errors.push('قيمة اللغة غير صالحة');
-  }
-  if (preferredCurrency && preferredCurrency.length > 8) {
-    errors.push('قيمة العملة غير صالحة');
-  }
+  if (fullName && (fullName.length < 2 || fullName.length > 120)) errors.push('[PRF-101] الاسم يجب أن يكون بين حرفين و120 حرفاً');
+  if (phone && !/^[+0-9\s()-]{7,20}$/.test(phone)) errors.push('[PRF-102] رقم الهاتف غير صالح');
+  if (avatarUrl && avatarUrl.length > 2048) errors.push('[PRF-103] رابط الصورة طويل جداً');
+  if (country && country.length > 80) errors.push('[PRF-104] اسم الدولة طويل جداً');
+  if (bio && bio.length > 500) errors.push('[PRF-105] النبذة يجب ألا تتجاوز 500 حرف');
+  if (preferredLanguage && preferredLanguage.length > 12) errors.push('[PRF-106] قيمة اللغة غير صالحة');
+  if (preferredCurrency && preferredCurrency.length > 8) errors.push('[PRF-107] قيمة العملة غير صالحة');
 
   return {
     errors,
@@ -91,8 +69,6 @@ function validateProfileInput(body) {
   };
 }
 
-/* ─── Handlers ─── */
-
 /**
  * GET handler — returns the authenticated user's profile.
  *
@@ -103,7 +79,7 @@ function validateProfileInput(body) {
 async function handleGet(request, env) {
   const { user, error } = await getUserFromRequest(request, env);
   if (error || !user) {
-    return errorResponse('Unauthorized', 401);
+    return errorResponse(error || '[PRF-202] Unauthorized', 401);
   }
 
   const admin = createSupabaseAdmin(env);
@@ -114,7 +90,7 @@ async function handleGet(request, env) {
     .maybeSingle();
 
   if (profileError) {
-    return errorResponse('Failed to load profile', 500);
+    return errorResponse('[PRF-301] Failed to load profile', 500);
   }
 
   return successResponse({
@@ -137,14 +113,15 @@ async function handleGet(request, env) {
 async function handlePatch(request, env) {
   const { user, error } = await getUserFromRequest(request, env);
   if (error || !user) {
-    return errorResponse('Unauthorized', 401);
+    return errorResponse(error || '[PRF-202] Unauthorized', 401);
   }
 
   let body;
   try {
     body = await request.json();
-  } catch {
-    return errorResponse('بيانات الطلب غير صالحة', 400);
+  } catch (parseError) {
+    console.error('[PRF-108] Failed to parse profile payload:', parseError);
+    return errorResponse('[PRF-108] بيانات الطلب غير صالحة', 400);
   }
 
   const { errors, payload } = validateProfileInput(body || {});
@@ -159,13 +136,11 @@ async function handlePatch(request, env) {
     .eq('user_id', user.id);
 
   if (updateError) {
-    return errorResponse('Failed to update profile', 500);
+    return errorResponse('[PRF-302] Failed to update profile', 500);
   }
 
   return successResponse({ message: 'تم تحديث الملف الشخصي بنجاح' });
 }
-
-/* ─── Entry Point ─── */
 
 export async function onRequest(context) {
   if (context.request.method === 'OPTIONS') {
@@ -180,7 +155,7 @@ export async function onRequest(context) {
   } else if (method === 'PATCH') {
     response = await handlePatch(context.request, context.env);
   } else {
-    response = errorResponse('Method not allowed', 405);
+    response = errorResponse('[PRF-203] Method not allowed', 405);
   }
 
   return withCors(response, context.request, 'GET, PATCH, OPTIONS');

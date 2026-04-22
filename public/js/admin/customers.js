@@ -58,7 +58,7 @@
         var result = await TZ.supabase.from('user_profiles').update({
             status: newStatus, updated_at: new Date().toISOString()
         }).eq('user_id', userId);
-        if (result.error) { A.showToast('فشل تحديث حالة العميل'); return; }
+        if (result.error) { A.showErrorToast('CUS-301', 'فشل تحديث حالة العميل'); return; }
         A.showToast('تم تحديث حالة العميل');
         await TZ.refreshData();
         renderCustomers();

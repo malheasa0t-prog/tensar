@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
+const WALLET_LOAD_ERROR = '[WLT-301] تعذر تحميل بيانات المحفظة';
+
 /**
  * Loads the authenticated wallet snapshot and transaction history.
  *
@@ -42,7 +44,7 @@ async function fetchWalletSnapshot() {
     wallet: walletRes.data || null,
     transactions: transactionsRes.data || [],
     error:
-      walletRes.error || transactionsRes.error ? 'تعذر تحميل بيانات المحفظة' : '',
+      walletRes.error || transactionsRes.error ? WALLET_LOAD_ERROR : '',
   };
 }
 

@@ -17,10 +17,9 @@ import {
     mapCoupon,
     mapDeposit,
     mapOrder,
-    mapRepairBooking,
-    mapServiceOrder
+    mapRepairBooking
 } from './orders.js';
-import { mapCategory, mapDigitalService, mapProduct, mapRepairService } from './products.js';
+import { mapCategory, mapProduct, mapRepairService } from './products.js';
 import { mergeUsers } from './users.js';
 
 const QUERY_BUILDERS = {
@@ -28,7 +27,6 @@ const QUERY_BUILDERS = {
     legacyUsers: () => supabase.from('app_users').select('*'),
     categories: () => supabase.from('categories').select('*').order('sort_order', { ascending: true }),
     products: () => supabase.from('products').select('*'),
-    digitalServices: () => supabase.from('services').select('*'),
     orders: () => supabase.from('orders').select('*').order('created_at', { ascending: false }),
     orderItems: () => supabase.from('order_items').select('*'),
     settings: () => supabase.from('settings').select('*').limit(1),
@@ -37,8 +35,7 @@ const QUERY_BUILDERS = {
     repairBookings: () => supabase.from('repair_bookings').select('*').order('created_at', { ascending: false }),
     messages: () => supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
     logs: () => supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
-    deposits: () => supabase.from('deposits').select('*').order('created_at', { ascending: false }),
-    serviceOrders: () => supabase.from('service_orders').select('*').order('created_at', { ascending: false })
+    deposits: () => supabase.from('deposits').select('*').order('created_at', { ascending: false })
 };
 
 function buildScopedQueries(queryKeys) {
@@ -64,7 +61,6 @@ function hydrateUsers(results) {
 function hydrateCatalog(results) {
     if (results.categories?.data) db.categories = results.categories.data.map(mapCategory);
     if (results.products?.data) db.products = results.products.data.map(mapProduct);
-    if (results.digitalServices?.data) db.services = results.digitalServices.data.map(mapDigitalService);
     if (results.repairServices?.data) db.repairServices = results.repairServices.data.map(mapRepairService);
 }
 
@@ -73,7 +69,6 @@ function hydrateOrders(results) {
         const itemsByOrder = buildItemsByOrder(results.orderItems?.data || []);
         db.orders = results.orders.data.map((order) => mapOrder(order, itemsByOrder[order.id] || []));
     }
-    if (results.serviceOrders?.data) db.serviceOrders = results.serviceOrders.data.map(mapServiceOrder);
     if (results.repairBookings?.data) db.repairBookings = results.repairBookings.data.map(mapRepairBooking);
     if (results.deposits?.data) db.deposits = results.deposits.data.map(mapDeposit);
 }
@@ -110,7 +105,7 @@ export async function loadDataFromSupabaseByScope() {
         const results = await resolveScopedQueries(queries);
         hydrateDb(results);
     } catch (error) {
-        console.error('Scoped Supabase fetch failed:', error);
+        console.error('[DEN-301] Scoped Supabase fetch failed:', error);
         updateHealthStatus({ supabase: 'error' });
     }
 

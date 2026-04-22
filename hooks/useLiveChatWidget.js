@@ -157,7 +157,7 @@ export function useLiveChatWidget({ isOpen }) {
    */
   async function sendDraft() {
     if (!user) {
-      return "سجل الدخول أولاً لبدء المحادثة المباشرة.";
+      return "[LCH-201] سجل الدخول أولاً لبدء المحادثة المباشرة.";
     }
 
     setSending(true);

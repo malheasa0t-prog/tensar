@@ -12,7 +12,6 @@ import { filterVisibleNotifications } from '@/lib/dashboardNotificationsModel';
  *   userId: string,
  *   recentOrders: Array<Record<string, unknown>>,
  *   notifications: Array<Record<string, unknown>>,
- *   syncMeta: { active: number, lastUpdate: number | null },
  * }>}
  */
 async function fetchDashboardHomeSnapshot() {
@@ -25,16 +24,16 @@ async function fetchDashboardHomeSnapshot() {
       userId: '',
       recentOrders: [],
       notifications: [],
-      syncMeta: { active: 0, lastUpdate: null },
     };
   }
 
   const [ordersRes, notificationsRes] = await Promise.all([
     supabase
-      .from('service_orders')
+      .from('orders')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(5),
     supabase
       .from('notifications')
       .select('*')
@@ -43,30 +42,10 @@ async function fetchDashboardHomeSnapshot() {
       .limit(10),
   ]);
 
-  const orders = ordersRes.data || [];
-  const recentNotifications = filterVisibleNotifications(notificationsRes.data || []).slice(0, 3);
-  const activeSyncOrders = orders.filter(
-    (order) =>
-      order.external_order_id &&
-      ['pending', 'processing', 'in_progress', 'partial'].includes(order.status)
-  );
-
-  const latestOrderTs =
-    orders
-      .map((order) => order.updated_at || order.created_at)
-      .filter(Boolean)
-      .map((timestamp) => new Date(timestamp).getTime())
-      .filter(Boolean)
-      .sort((first, second) => second - first)[0] || null;
-
   return {
     userId: user.id,
-    recentOrders: orders.slice(0, 5),
-    notifications: recentNotifications,
-    syncMeta: {
-      active: activeSyncOrders.length,
-      lastUpdate: latestOrderTs,
-    },
+    recentOrders: ordersRes.data || [],
+    notifications: filterVisibleNotifications(notificationsRes.data || []).slice(0, 3),
   };
 }
 
@@ -74,23 +53,12 @@ export default function DashboardHome() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [syncMeta, setSyncMeta] = useState({ active: 0, lastUpdate: null });
 
   useEffect(() => {
     let active = true;
     let cleanupOrders = () => {};
     let cleanupNotifications = () => {};
 
-    /**
-     * Refreshes the dashboard cards without recreating realtime channels.
-     *
-     * @returns {Promise<{
-     *   userId: string,
-     *   recentOrders: Array<Record<string, unknown>>,
-     *   notifications: Array<Record<string, unknown>>,
-     *   syncMeta: { active: number, lastUpdate: number | null },
-     * } | null>}
-     */
     async function refreshSnapshot() {
       const snapshot = await fetchDashboardHomeSnapshot();
 
@@ -100,17 +68,11 @@ export default function DashboardHome() {
 
       setRecentOrders(snapshot.recentOrders);
       setNotifications(snapshot.notifications);
-      setSyncMeta(snapshot.syncMeta);
       setLoading(false);
 
       return snapshot;
     }
 
-    /**
-     * Loads the initial dashboard snapshot once, then binds realtime updates.
-     *
-     * @returns {Promise<void>}
-     */
     async function initialize() {
       const snapshot = await refreshSnapshot();
 
@@ -125,7 +87,7 @@ export default function DashboardHome() {
           {
             event: '*',
             schema: 'public',
-            table: 'service_orders',
+            table: 'orders',
             filter: `user_id=eq.${snapshot.userId}`,
           },
           () => {
@@ -171,16 +133,13 @@ export default function DashboardHome() {
   const STATUS_MAP = {
     pending: { label: 'انتظار', color: '#f39c12' },
     processing: { label: 'معالجة', color: '#3498db' },
-    in_progress: { label: 'تنفيذ', color: '#9b59b6' },
+    shipped: { label: 'شحن', color: '#2980b9' },
+    delivered: { label: 'تم التسليم', color: '#2ecc71' },
     completed: { label: 'مكتمل', color: '#2ecc71' },
     failed: { label: 'فشل', color: '#e74c3c' },
-    refunded: { label: 'مسترجع', color: '#1abc9c' },
     cancelled: { label: 'ملغي', color: '#95a5a6' },
-    partial: { label: 'جزئي', color: '#e67e22' },
   };
 
-  const syncHealth = syncMeta.active > 0 ? 'جارية' : 'مستقرة';
-  const syncTone = syncMeta.active > 0 ? 'var(--tz-amber)' : 'var(--tz-emerald)';
   const unreadNotifications = notifications.filter((item) => !item.is_read).length;
 
   return (
@@ -188,22 +147,20 @@ export default function DashboardHome() {
       <div className="dash-home-top">
         <div className="dash-sync-panel">
           <div className="dash-sync-title-row">
-            <span className="dash-sync-dot" style={{ background: syncTone }} />
-            <h3>حالة المزامنة</h3>
+            <span className="dash-sync-dot" style={{ background: 'var(--tz-emerald)' }} />
+            <h3>ملخص الطلبات</h3>
           </div>
           <p>
-            الحالة الآن: <strong style={{ color: syncTone }}>{syncHealth}</strong>
+            لديك الآن <strong style={{ color: 'var(--tz-emerald)' }}>{recentOrders.length}</strong> طلبات حديثة
           </p>
           <div className="dash-sync-metrics">
             <div>
-              <span>طلبات قيد المتابعة</span>
-              <strong>{syncMeta.active}</strong>
+              <span>أحدث الطلبات</span>
+              <strong>{recentOrders.length}</strong>
             </div>
             <div>
-              <span>آخر تحديث</span>
-              <strong>
-                {syncMeta.lastUpdate ? new Date(syncMeta.lastUpdate).toLocaleString('ar-JO') : 'لا يوجد'}
-              </strong>
+              <span>الإشعارات الجديدة</span>
+              <strong>{unreadNotifications}</strong>
             </div>
           </div>
         </div>
@@ -211,11 +168,11 @@ export default function DashboardHome() {
         <div className="dash-quick-actions">
           <h3>إجراءات سريعة</h3>
           <div className="dash-actions-row">
-            <Link href="/services" className="btn btn-secondary btn-lg">
-              ⚡ طلب خدمة جديدة
+            <Link href="/products" className="btn btn-secondary btn-lg">
+              🛍️ تصفح المنتجات
             </Link>
-            <Link href="/dashboard/deposit" className="btn btn-warning btn-lg">
-              💳 شحن الرصيد
+            <Link href="/services" className="btn btn-warning btn-lg">
+              🛠️ اطلب صيانة
             </Link>
           </div>
         </div>
@@ -307,8 +264,7 @@ export default function DashboardHome() {
             <table className="dash-orders-table">
               <thead>
                 <tr>
-                  <th>الخدمة</th>
-                  <th>الكمية</th>
+                  <th>رقم الطلب</th>
                   <th>المبلغ</th>
                   <th>الحالة</th>
                   <th>التاريخ</th>
@@ -317,9 +273,8 @@ export default function DashboardHome() {
               <tbody>
                 {recentOrders.map((order) => (
                   <tr key={order.id}>
-                    <td>{order.service_name}</td>
-                    <td className="dash-center">{order.quantity}</td>
-                    <td className="dash-center dash-price">{Number(order.total).toFixed(2)} د.أ</td>
+                    <td>{order.id}</td>
+                    <td className="dash-center dash-price">{Number(order.total || 0).toFixed(2)} د.أ</td>
                     <td className="dash-center">
                       <span
                         className="dash-status-pill"

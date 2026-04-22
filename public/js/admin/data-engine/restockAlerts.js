@@ -1,7 +1,11 @@
 export const RESTOCK_SUBSCRIPTION_REFERENCE_TYPE = "restock_subscription";
 const RESTOCK_NOTIFICATION_REFERENCE_TYPE = "product";
-const ON_DEMAND_PRODUCT_TYPES = new Set(["digital", "service", "subscription"]);
+const ON_DEMAND_PRODUCT_TYPES = new Set(["service"]);
 const EXISTING_PRODUCT_SELECT_FIELDS = "id,name,status,quantity,product_type";
+const EXISTING_PRODUCT_LOAD_ERROR = "[DEN-318] تعذر تحميل حالة المنتج الحالية.";
+const RESTOCK_SUBSCRIPTIONS_LOAD_ERROR = "[DEN-319] تعذر تحميل مشتركي تنبيه التوفر.";
+const RESTOCK_NOTIFICATIONS_INSERT_ERROR = "[DEN-320] تعذر إرسال إشعارات عودة المنتج.";
+const RESTOCK_SUBSCRIPTIONS_DELETE_ERROR = "[DEN-321] تعذر تنظيف اشتراكات تنبيه التوفر.";
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -56,7 +60,7 @@ export async function fetchExistingProductSnapshot({ productId, supabase }) {
     .maybeSingle();
 
   if (response.error) {
-    throw new Error("تعذر تحميل حالة المنتج الحالية.");
+    throw new Error(EXISTING_PRODUCT_LOAD_ERROR);
   }
 
   return response.data || null;
@@ -74,7 +78,7 @@ export async function syncProductRestockAlerts({ executeSync, previousProduct, p
     .eq("reference_id", product.id);
 
   if (subscriptionsResponse.error) {
-    throw new Error("تعذر تحميل مشتركي تنبيه التوفر.");
+    throw new Error(RESTOCK_SUBSCRIPTIONS_LOAD_ERROR);
   }
 
   const subscriptions = Array.isArray(subscriptionsResponse.data) ? subscriptionsResponse.data : [];
@@ -91,12 +95,12 @@ export async function syncProductRestockAlerts({ executeSync, previousProduct, p
   if (notificationRows.length > 0) {
     await executeSync(
       supabase.from("notifications").insert(notificationRows),
-      "تعذر إرسال إشعارات عودة المنتج."
+      RESTOCK_NOTIFICATIONS_INSERT_ERROR
     );
   }
 
   await executeSync(
     supabase.from("notifications").delete().in("id", subscriptions.map((item) => item.id).filter(Boolean)),
-    "تعذر تنظيف اشتراكات تنبيه التوفر."
+    RESTOCK_SUBSCRIPTIONS_DELETE_ERROR
   );
 }

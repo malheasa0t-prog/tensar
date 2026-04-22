@@ -15,7 +15,6 @@ const ALLOWED_ADMIN_SECTIONS = new Set([
     'subcategories',
     'services',
     'repair-services',
-    'serva-catalog',
     'customers',
     'messages',
     'contact-messages',

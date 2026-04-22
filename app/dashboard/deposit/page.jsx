@@ -34,6 +34,7 @@ const feedbackBaseStyle = {
  */
 export default function DepositPage() {
   const { showToast } = useToast();
+  const withDepositCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
   const [userId, setUserId] = useState('');
   const [amount, setAmount] = useState('');
   const [proofFile, setProofFile] = useState(null);
@@ -67,7 +68,7 @@ export default function DepositPage() {
         return snapshot;
       } catch (snapshotError) {
         if (active) {
-          setError(snapshotError instanceof Error ? snapshotError.message : 'تعذر تحميل صفحة الإيداع.');
+          setError(snapshotError instanceof Error ? snapshotError.message : '[DPG-301] تعذر تحميل صفحة الإيداع.');
         }
         return null;
       }
@@ -118,7 +119,7 @@ export default function DepositPage() {
     const amountValidationError = validateDepositAmount(amount);
     if (amountValidationError) {
       setError(amountValidationError);
-      showToast(amountValidationError, { type: 'warning', title: 'تحقق من المبلغ' });
+      showToast(withDepositCode('DPG-101', amountValidationError), { type: 'warning', title: 'تحقق من المبلغ' });
       return;
     }
 
@@ -140,7 +141,7 @@ export default function DepositPage() {
     } catch (submitError) {
       const nextError = submitError instanceof Error ? submitError.message : 'تعذر إرسال طلب الإيداع.';
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر الإرسال' });
+      showToast(withDepositCode('DPG-302', nextError), { type: 'error', title: 'تعذر الإرسال' });
     } finally {
       setLoading(false);
     }

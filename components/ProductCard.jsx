@@ -21,6 +21,8 @@ import { buildProductCardSnapshot } from "@/lib/productCardModel";
 import { buildRevealClassName, getStaggeredRevealDelay, resolveRevealDelay } from "@/lib/scrollRevealModel";
 
 const PRODUCT_PLACEHOLDER_IMAGE = "/images/product-placeholder.svg";
+const CART_ADD_ERROR_MESSAGE = "[CRT-301] تعذر إضافة المنتج حالياً.";
+const COMPARISON_LIMIT_MESSAGE = "[CMP-101] يمكنك مقارنة أربعة منتجات كحد أقصى في نفس الوقت.";
 
 function buildCardActionState({ cartFeedbackActive, isOutOfStock, stockAlertActive, stockAlertPending }) {
   if (isOutOfStock) {
@@ -65,7 +67,8 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
   const [hasImageError, setHasImageError] = useState(false);
 
   const href = product.link || `/products/${product.id}`;
-  const productName = typeof product?.name === "string" && product.name.trim() ? product.name.trim() : "المنتج";
+  const productName =
+    typeof product?.name === "string" && product.name.trim() ? product.name.trim() : "المنتج";
   const image = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "";
   const snapshot = buildProductCardSnapshot(product);
   const isFav = isFavorite(product.id);
@@ -120,7 +123,7 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
     });
 
     if (!result?.ok) {
-      showToast(result?.message || "تعذر إضافة المنتج حالياً", { type: "error" });
+      showToast(result?.message || CART_ADD_ERROR_MESSAGE, { type: "error" });
       return;
     }
 
@@ -158,13 +161,14 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
     });
 
     if (result.isAtLimit) {
-      showToast("يمكنك مقارنة أربعة منتجات كحد أقصى في نفس الوقت.", { type: "warning" });
+      showToast(COMPARISON_LIMIT_MESSAGE, { type: "warning" });
       return;
     }
 
-    showToast(result.isCompared ? "تمت إضافة المنتج إلى المقارنة" : "تمت إزالة المنتج من المقارنة", {
-      type: "info",
-    });
+    showToast(
+      result.isCompared ? "تمت إضافة المنتج إلى المقارنة" : "تمت إزالة المنتج من المقارنة",
+      { type: "info" }
+    );
   }
 
   function handlePointerMove(event) {
@@ -215,7 +219,9 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
           </div>
         </Link>
 
-        {snapshot.hasDiscount ? <div className={enhancedStyles.discountRibbon}>خصم {snapshot.discountPercentage}%</div> : null}
+        {snapshot.hasDiscount ? (
+          <div className={enhancedStyles.discountRibbon}>خصم {snapshot.discountPercentage}%</div>
+        ) : null}
 
         <button
           type="button"
@@ -270,7 +276,9 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
         <div className={styles.bottom}>
           <div className={styles.priceStack}>
             <span className={styles.price}>{formatCurrency(snapshot.finalPrice)}</span>
-            {snapshot.hasDiscount ? <span className={styles.oldPrice}>{formatCurrency(snapshot.originalPrice)}</span> : null}
+            {snapshot.hasDiscount ? (
+              <span className={styles.oldPrice}>{formatCurrency(snapshot.originalPrice)}</span>
+            ) : null}
           </div>
 
           <div className={styles.actionsRow}>

@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabaseClient.js";
 
 const FAVORITE_PRODUCTS_SELECT_FIELDS =
   "id,name,price,discount_price,images,status,quantity,category_id,icon,brand,description,rating,review_count,reviews_count,sold,product_type,created_at";
-const FAVORITES_REFRESH_ERROR_MESSAGE = "تعذر تحميل المفضلة حالياً.";
+const FAVORITES_REFRESH_ERROR_MESSAGE = "[FAV-301] تعذر تحميل المفضلة حالياً.";
 const FAVORITES_CATEGORY_FALLBACK = "منتجات عامة";
 
 /**

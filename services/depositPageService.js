@@ -1,26 +1,14 @@
 import { loadSiteSettingsClient } from "../lib/siteSettingsClient.js";
-import {
-  validateDepositAmount,
-} from "../lib/depositPageModel.js";
+import { validateDepositAmount } from "../lib/depositPageModel.js";
 import { uploadDepositProof } from "./depositProofService.js";
 
-export const LOGIN_REQUIRED_MESSAGE = "يجب تسجيل الدخول أولًا";
-const LOAD_DEPOSITS_ERROR_MESSAGE = "تعذر تحميل سجل الإيداعات.";
+export const LOGIN_REQUIRED_MESSAGE = "[DPG-201] يجب تسجيل الدخول أولاً";
+const LOAD_DEPOSITS_ERROR_MESSAGE = "[DPG-301] تعذر تحميل سجل الإيداعات.";
 
 /**
  * Loads the authenticated user's deposit history and current deposit settings.
  *
- * @param {{
- *   client: {
- *     auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> },
- *     from: (table: string) => { select: (columns: string) => {
- *       eq: (column: string, value: string) => {
- *         order: (column: string, options: { ascending: boolean }) => Promise<{ data?: unknown[], error?: { message?: string } | null }>
- *       }
- *     } }
- *   },
- *   loadSettings?: typeof loadSiteSettingsClient,
- * }} input
+ * @param {{ client: { auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> }, from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => { order: (column: string, options: { ascending: boolean }) => Promise<{ data?: unknown[], error?: { message?: string } | null }> } } } }, loadSettings?: typeof loadSiteSettingsClient }} input
  * @returns {Promise<{ userId: string, deposits: unknown[], depositTransfer: Record<string, unknown> }>}
  * @throws {Error}
  */
@@ -63,15 +51,7 @@ export async function fetchDepositPageSnapshot({
 /**
  * Creates a manual deposit request for the authenticated user.
  *
- * @param {{
- *   client: {
- *     auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> },
- *     from: (table: string) => { insert: (rows: unknown[]) => Promise<{ error?: { message?: string } | null }> }
- *   },
- *   amount: unknown,
- *   proofFile?: File | null,
- *   uploadProof?: typeof uploadDepositProof,
- * }} input
+ * @param {{ client: { auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> }, from: (table: string) => { insert: (rows: unknown[]) => Promise<{ error?: { message?: string } | null }> } }, amount: unknown, proofFile?: File | null, uploadProof?: typeof uploadDepositProof }} input
  * @returns {Promise<{ userId: string }>}
  * @throws {Error}
  */
@@ -111,7 +91,7 @@ export async function createDepositRequest({
   ]);
 
   if (error) {
-    throw new Error(`فشل إنشاء طلب الإيداع: ${error.message || "خطأ غير معروف."}`);
+    throw new Error(`[DPG-302] فشل إنشاء طلب الإيداع: ${error.message || "خطأ غير معروف."}`);
   }
 
   return { userId: user.id };

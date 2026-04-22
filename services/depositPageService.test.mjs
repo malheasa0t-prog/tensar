@@ -113,7 +113,7 @@ test("createDepositRequest should reject guests", async () => {
         amount: 5,
         proofFile: null,
       }),
-    new RegExp(LOGIN_REQUIRED_MESSAGE)
+    { message: LOGIN_REQUIRED_MESSAGE }
   );
 });
 

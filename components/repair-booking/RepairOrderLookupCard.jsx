@@ -10,6 +10,28 @@ const LOOKUP_TYPE_OPTIONS = [
   { value: "repair", label: "الصيانة" },
   { value: "delivery", label: "التوصيل" },
 ];
+const LOOKUP_REQUEST_ERROR = "[OLK-301] تعذر إتمام الاستعلام حالياً.";
+const LOOKUP_NETWORK_ERROR = "[OLK-401] تعذر الاتصال بالخادم حالياً.";
+const ERROR_CODE_PATTERN = /\[[A-Z]{2,4}-\d{3}\]/;
+
+/**
+ * Normalizes lookup errors so the customer always sees a traceable error code.
+ *
+ * @param {unknown} message
+ * @param {string} fallbackMessage
+ * @returns {string}
+ */
+function resolveLookupErrorMessage(message, fallbackMessage) {
+  const normalizedMessage = String(message || "").trim();
+
+  if (!normalizedMessage) {
+    return fallbackMessage;
+  }
+
+  return ERROR_CODE_PATTERN.test(normalizedMessage)
+    ? normalizedMessage
+    : `${fallbackMessage} ${normalizedMessage}`;
+}
 
 /**
  * Renders one detail row in the order lookup result card.
@@ -83,17 +105,15 @@ export default function RepairOrderLookupCard() {
 
       if (!response.ok) {
         setResult(null);
-        setError(payload?.error || "تعذر إتمام الاستعلام حالياً.");
+        setError(resolveLookupErrorMessage(payload?.error, LOOKUP_REQUEST_ERROR));
         return;
       }
 
       setResult(payload);
     } catch (requestError) {
-      const message = requestError instanceof Error
-        ? requestError.message
-        : "تعذر الاتصال بالخادم حالياً.";
+      const message = requestError instanceof Error ? requestError.message : "";
       setResult(null);
-      setError(message);
+      setError(resolveLookupErrorMessage(message, LOOKUP_NETWORK_ERROR));
     } finally {
       setLoading(false);
     }

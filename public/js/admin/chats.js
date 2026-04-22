@@ -37,7 +37,7 @@
 
     async function sendReply(conversationId, body) {
         var authUser = await TZ.getSupabaseUser();
-        if (!authUser) { A.showToast('يجب تسجيل الدخول'); return; }
+        if (!authUser) { A.showErrorToast('CHT-201', 'يجب تسجيل الدخول'); return; }
 
         var result = await TZ.supabase.from('support_chat_messages').insert([{
             conversation_id: conversationId,
@@ -48,7 +48,7 @@
             is_read_by_admin: true
         }]);
 
-        if (result.error) { A.showToast('فشل إرسال الرد'); return; }
+        if (result.error) { A.showErrorToast('CHT-301', 'فشل إرسال الرد'); return; }
 
         await TZ.supabase.from('support_conversations').update({
             last_message_preview: body.substring(0, 100),

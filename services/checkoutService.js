@@ -39,10 +39,7 @@ export async function fetchCheckoutOptions() {
 /**
  * Submits the checkout request to the API, forwarding the auth token when available.
  *
- * @param {{
- *   items: Array<{ id: string, qty: number }>,
- *   form: Record<string, string>,
- * }} params
+ * @param {{ items: Array<{ id: string, qty: number }>, form: Record<string, string> }} params
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function submitCheckoutOrder({ items, form }) {
@@ -63,7 +60,7 @@ export async function submitCheckoutOrder({ items, form }) {
 
   const json = await response.json();
   if (!response.ok || !json?.success) {
-    throw new Error(json?.error || 'تعذر إتمام الطلب حالياً');
+    throw new Error(json?.error || '[CKP-304] تعذر إتمام الطلب حالياً');
   }
 
   return json?.data || {};

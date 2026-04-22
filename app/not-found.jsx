@@ -6,7 +6,6 @@ import { usePageSeo } from "@/hooks/usePageSeo";
 const SUGGESTED_LINKS = [
   { href: "/products", label: "المنتجات الأكثر زيارة", icon: "shopping-bag" },
   { href: "/services", label: "خدمات الصيانة", icon: "wrench" },
-  { href: "/subscriptions", label: "الاشتراكات والشحن", icon: "wallet" },
 ];
 
 export default function NotFound() {

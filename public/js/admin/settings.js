@@ -17,7 +17,7 @@
 
     async function saveSettings(data) {
         var result = await TZ.supabase.from('settings').update({ data: data, updated_at: new Date().toISOString() }).eq('id', 1);
-        if (result.error) { A.showToast('فشل حفظ الإعدادات: ' + (result.error.message || '')); return false; }
+        if (result.error) { A.showErrorToast('STG-301', 'فشل حفظ الإعدادات: ' + (result.error.message || '')); return false; }
         A.showToast('تم حفظ الإعدادات بنجاح');
         return true;
     }

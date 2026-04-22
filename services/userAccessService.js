@@ -1,5 +1,5 @@
 export const BANNED_ACCOUNT_MESSAGE = "حسابك محظور. تواصل مع الإدارة.";
-const USER_ACCESS_LOOKUP_ERROR = "تعذر التحقق من حالة المستخدم.";
+const USER_ACCESS_LOOKUP_ERROR = "[UAS-301] تعذر التحقق من حالة المستخدم.";
 const BANNED_PROFILE_STATUS = "banned";
 
 /**

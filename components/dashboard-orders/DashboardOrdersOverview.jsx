@@ -5,7 +5,7 @@ import { panelStyle } from '@/components/dashboard-orders/dashboardOrdersStyles'
  *
  * @param {{
  *   profile: { full_name?: string } | null,
- *   stats: { total: number, products: number, digital: number, repairs: number },
+ *   stats: { total: number, products: number, repairs: number },
  * }} props
  * @returns {JSX.Element}
  */
@@ -24,7 +24,7 @@ export default function DashboardOrdersOverview({ profile, stats }) {
         <div>
           <h3 style={{ fontSize: '1.15rem', marginBottom: '6px' }}>📋 مركز الطلبات</h3>
           <p style={{ margin: 0, color: 'var(--text-muted)' }}>
-            {profile?.full_name ? `مرحبًا ${profile.full_name}،` : 'هنا'} تجد طلبات المنتجات والطلبات الرقمية وحجوزات الصيانة في مكان واحد.
+            {profile?.full_name ? `مرحبًا ${profile.full_name}،` : 'هنا'} تجد طلبات المنتجات وحجوزات الصيانة في مكان واحد.
           </p>
         </div>
         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -46,10 +46,6 @@ export default function DashboardOrdersOverview({ profile, stats }) {
         <div style={{ background: 'var(--bg-lighter)', borderRadius: '14px', padding: '14px' }}>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>طلبات المنتجات</div>
           <strong style={{ fontSize: '1.45rem' }}>{stats.products}</strong>
-        </div>
-        <div style={{ background: 'var(--bg-lighter)', borderRadius: '14px', padding: '14px' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>الطلبات الرقمية</div>
-          <strong style={{ fontSize: '1.45rem' }}>{stats.digital}</strong>
         </div>
         <div style={{ background: 'var(--bg-lighter)', borderRadius: '14px', padding: '14px' }}>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>حجوزات الصيانة</div>

@@ -132,7 +132,7 @@ async function syncQueuedCommits(processQueuedCommit) {
             syncedCount += 1;
         } catch (error) {
             if (isRetryableNetworkError(error)) break;
-            console.error('Failed to sync queued admin commit.', error);
+            console.error('[DEN-302] Failed to sync queued admin commit.', error);
         }
     }
 

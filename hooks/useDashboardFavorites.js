@@ -10,7 +10,8 @@ import {
   mapFavoriteProductsForDisplay,
 } from "@/services/favoritesService";
 
-const FAVORITES_LOAD_ERROR_MESSAGE = "تعذر تحميل تفاصيل المفضلة حالياً.";
+const FAVORITES_LOAD_ERROR_MESSAGE = "[FAV-302] تعذر تحميل تفاصيل المفضلة حالياً.";
+const FAVORITES_MOVE_TO_CART_ERROR_MESSAGE = "[FAV-303] تعذر نقل المنتج إلى السلة حالياً.";
 
 /**
  * Manages the current-device favorites dashboard state and actions.
@@ -114,7 +115,7 @@ export function useDashboardFavorites() {
       });
 
       if (!result?.ok) {
-        showToast(result?.message || "تعذر نقل المنتج إلى السلة حالياً", { type: "error" });
+        showToast(result?.message || FAVORITES_MOVE_TO_CART_ERROR_MESSAGE, { type: "error" });
         return;
       }
 

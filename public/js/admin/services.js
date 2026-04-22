@@ -24,7 +24,7 @@
         var result;
         if (isEdit) result = await TZ.supabase.from('repair_services').update(payload).eq('id', data.id);
         else result = await TZ.supabase.from('repair_services').insert([payload]);
-        if (result.error) { A.showToast('فشل حفظ الخدمة'); return false; }
+        if (result.error) { A.showErrorToast('SVC-301', 'فشل حفظ الخدمة'); return false; }
         A.showToast(isEdit ? 'تم تحديث الخدمة' : 'تم إضافة الخدمة');
         return true;
     }
@@ -32,7 +32,7 @@
     async function deleteService(id) {
         if (!confirm('هل أنت متأكد من حذف هذه الخدمة؟')) return;
         var result = await TZ.supabase.from('repair_services').delete().eq('id', id);
-        if (result.error) { A.showToast('فشل حذف الخدمة'); return; }
+        if (result.error) { A.showErrorToast('SVC-302', 'فشل حذف الخدمة'); return; }
         A.showToast('تم حذف الخدمة');
         await TZ.refreshData();
         renderServices();
@@ -64,7 +64,7 @@
 
         document.getElementById('saveSvcBtn').addEventListener('click', async function () {
             var name = document.getElementById('svcName').value.trim();
-            if (!name) { A.showToast('أدخل اسم الخدمة'); return; }
+        if (!name) { A.showErrorToast('SVC-101', 'أدخل اسم الخدمة'); return; }
             this.disabled = true;
             var ok = await saveService({
                 id: isEdit ? s.id : null, name: name,

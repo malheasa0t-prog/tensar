@@ -33,10 +33,9 @@
 
     function buildAdminSearchIndex(input) {
         const orders = Array.isArray(input?.orders) ? input.orders : [];
-        const serviceOrders = Array.isArray(input?.serviceOrders) ? input.serviceOrders : [];
         const helpers = input?.helpers || {};
 
-        const physicalOrderResults = orders.map(function (order) {
+        return orders.map(function (order) {
             const section = resolvePhysicalOrderSection(order, helpers);
             return {
                 id: `order:${order.id}`,
@@ -51,23 +50,6 @@
                 searchText: buildSearchText([order.id, order.customerName, order.customerPhone, order.customerEmail])
             };
         });
-
-        const digitalOrderResults = serviceOrders.map(function (order) {
-            return {
-                id: `digital-order:${order.id}`,
-                entityId: order.id,
-                section: 'orders',
-                rowSelector: `[data-service-order-id="${order.id}"]`,
-                kind: 'digital-order',
-                icon: 'fa-bolt',
-                title: `طلب رقمي #${order.id}`,
-                subtitle: `${order.serviceName || order.serviceId || 'خدمة رقمية'} • ${Number(order.total || 0).toFixed(2)} د.أ`,
-                meta: order.status || 'pending',
-                searchText: buildSearchText([order.id, order.serviceName, order.serviceId, order.userId])
-            };
-        });
-
-        return physicalOrderResults.concat(digitalOrderResults);
     }
 
     function scoreSearchItem(item, query) {

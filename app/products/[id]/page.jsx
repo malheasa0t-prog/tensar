@@ -19,17 +19,14 @@ import {
 import { formatCurrency } from '@/lib/formatCurrency';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
-import {
-  buildProductStructuredData,
-  buildServiceStructuredData,
-} from '@/lib/seo';
+import { buildProductStructuredData } from '@/lib/seo';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
- * Attempts to find a product or digital service by id.
+ * Attempts to find an active product by id.
  *
  * @param {string} id
- * @returns {Promise<{ data: Record<string, unknown> | null, isService: boolean }>}
+ * @returns {Promise<Record<string, unknown> | null>}
  */
 async function findItem(id) {
   const { data: product } = await supabase
@@ -37,39 +34,10 @@ async function findItem(id) {
     .select('*')
     .eq('id', id)
     .eq('status', 'active')
+    .or('product_type.is.null,product_type.eq.physical')
     .maybeSingle();
 
-  if (product) {
-    return { data: product, isService: false };
-  }
-
-  const { data: service } = await supabase
-    .from('services')
-    .select('*')
-    .eq('id', id)
-    .eq('status', 'active')
-    .maybeSingle();
-
-  return { data: service || null, isService: true };
-}
-
-/**
- * Normalizes digital service data into the product detail view model.
- *
- * @param {Record<string, unknown>} item
- * @returns {Record<string, unknown>}
- */
-function normalizeServiceAsProduct(item) {
-  return {
-    ...item,
-    images: item.image ? [item.image] : [],
-    quantity: item.max_qty || 999,
-    discount_price: null,
-    brand: null,
-    specs: [],
-    variants: [],
-    product_type: 'digital',
-  };
+  return product || null;
 }
 
 /**
@@ -102,26 +70,11 @@ function buildBreadcrumbItems({ category, categoryId, isAccessoryProduct, name }
  * @param {{
  *   categoryLabel: string,
  *   id: string,
- *   image: string,
- *   isService: boolean,
  *   product: Record<string, unknown>,
  * }} input
  * @returns {Array<Record<string, unknown>>}
  */
-function buildDetailStructuredData({ categoryLabel, id, image, isService, product }) {
-  if (isService) {
-    return [
-      buildServiceStructuredData({
-        pathname: `/products/${id}`,
-        service: {
-          ...product,
-          category: categoryLabel,
-          image,
-        },
-      }),
-    ];
-  }
-
+function buildDetailStructuredData({ categoryLabel, id, product }) {
   return [
     buildProductStructuredData({
       pathname: `/products/${id}`,
@@ -132,16 +85,15 @@ function buildDetailStructuredData({ categoryLabel, id, image, isService, produc
 }
 
 /**
- * Renders the product/service details page.
+ * Renders the product details page.
  *
- * @returns {JSX.Element}
+ * @returns {JSX.Element | null}
  */
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [category, setCategory] = useState(null);
-  const [isService, setIsService] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const isAccessoryProduct = product ? isAccessoryProductCategoryId(product.category_id) : false;
@@ -156,7 +108,7 @@ export default function ProductDetailPage() {
       product.description ||
       `اطلع على سعر ${product.name} ومواصفاته وحالة التوفر وخطوات الشراء لدى TechZone.`,
     image,
-    type: isService ? 'website' : 'product',
+    type: 'product',
     canonicalPath: `/products/${id}`,
     breadcrumbItems: buildBreadcrumbItems({
       category,
@@ -168,8 +120,6 @@ export default function ProductDetailPage() {
     structuredData: buildDetailStructuredData({
       categoryLabel,
       id,
-      image,
-      isService,
       product,
     }),
   } : null);
@@ -179,21 +129,16 @@ export default function ProductDetailPage() {
 
     async function loadProduct() {
       try {
-        const result = await findItem(id);
+        const item = await findItem(id);
 
         if (cancelled) return;
 
-        if (!result.data) {
+        if (!item) {
           navigate('/not-found', { replace: true });
           return;
         }
 
-        const item = result.isService
-          ? normalizeServiceAsProduct(result.data)
-          : result.data;
-
         setProduct(item);
-        setIsService(result.isService);
 
         const isAccessory = isAccessoryProductCategoryId(item.category_id);
         if (!isAccessory && item.category_id) {
@@ -208,7 +153,7 @@ export default function ProductDetailPage() {
           }
         }
       } catch (error) {
-        console.error('ProductDetailPage: failed to load', error);
+        console.error('[PPG-500] ProductDetailPage: failed to load', error);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -233,11 +178,7 @@ export default function ProductDetailPage() {
   const finalPrice = Number(product.discount_price || product.price || 0);
   const originalPrice = Number(product.price || 0);
   const hasDiscount = Number(product.discount_price || 0) > 0 && finalPrice < originalPrice;
-  const stockLabel = isService
-    ? 'خدمة رقمية فورية'
-    : Number(product.quantity || 0) > 0
-      ? 'متوفر'
-      : 'حسب الطلب';
+  const stockLabel = Number(product.quantity || 0) > 0 ? 'متوفر' : 'حسب الطلب';
   const specs = Array.isArray(product.specs) ? product.specs.filter(Boolean) : [];
   const brandLabel = product.brand || 'بدون علامة محددة';
   const breadcrumbItems = buildBreadcrumbItems({

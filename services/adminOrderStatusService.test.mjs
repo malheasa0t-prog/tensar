@@ -6,15 +6,13 @@ import {
   updateAdminOrderStatus,
 } from './adminOrderStatusService.js';
 
-function createAdminClient({ selectResponses = {}, updateResponses = {}, insertErrors = {}, rpcResponse } = {}) {
+function createAdminClient({ selectResponses = {}, updateResponses = {}, insertErrors = {} } = {}) {
   const updates = [];
   const inserts = [];
-  const rpcCalls = [];
 
   return {
     updates,
     inserts,
-    rpcCalls,
     client: {
       from(tableName) {
         return {
@@ -56,10 +54,6 @@ function createAdminClient({ selectResponses = {}, updateResponses = {}, insertE
           },
         };
       },
-      async rpc(name, args) {
-        rpcCalls.push({ name, args });
-        return typeof rpcResponse === 'function' ? rpcResponse(name, args) : rpcResponse;
-      },
     },
   };
 }
@@ -67,7 +61,9 @@ function createAdminClient({ selectResponses = {}, updateResponses = {}, insertE
 test('normalizeAdminOrderStatusPayload should reject unsupported target types', () => {
   assert.throws(
     () => normalizeAdminOrderStatusPayload({ targetType: 'repair_booking', orderId: '1', status: 'completed' }),
-    (error) => error instanceof AdminOrderStatusError && error.statusCode === 400
+    (error) => error instanceof AdminOrderStatusError
+      && error.statusCode === 400
+      && error.message.startsWith('[ORM-103]')
   );
 });
 
@@ -93,50 +89,28 @@ test('updateAdminOrderStatus should update physical orders through the server cl
   assert.equal(inserts[0].rows[0].target_table, 'orders');
 });
 
-test('updateAdminOrderStatus should refund digital orders through the transactional RPC', async () => {
-  const { client, inserts, rpcCalls } = createAdminClient({
+test('updateAdminOrderStatus should return early when the order is already in the same status', async () => {
+  const { client, updates, inserts } = createAdminClient({
     selectResponses: {
-      service_orders: [{
-        data: {
-          id: 'so-1',
-          user_id: 'user-1',
-          service_name: 'Instagram Followers',
-          status: 'processing',
-          total: 20,
-        },
-        error: null,
-      }],
-    },
-    rpcResponse: {
-      data: [{ applied: true, final_status: 'refunded', refund_amount: 20 }],
-      error: null,
+      orders: [{ data: { id: 'ord-1', status: 'completed' }, error: null }],
     },
   });
 
   const result = await updateAdminOrderStatus({
     client,
     actor: { id: 'admin-1', email: 'admin@example.com' },
-    payload: { targetType: 'service_order', orderId: 'so-1', status: 'cancelled' },
+    payload: { targetType: 'physical_order', orderId: 'ord-1', status: 'completed' },
   });
 
-  assert.equal(result.status, 'refunded');
-  assert.equal(result.refundAmount, 20);
-  assert.equal(rpcCalls[0].name, 'sync_service_order_status_tx');
-  assert.equal(inserts[0].tableName, 'notifications');
-  assert.equal(inserts[1].tableName, 'audit_logs');
+  assert.equal(result.status, 'completed');
+  assert.equal(updates.length, 0);
+  assert.equal(inserts.length, 0);
 });
 
-test('updateAdminOrderStatus should reject stale digital updates', async () => {
+test('updateAdminOrderStatus should reject missing physical orders', async () => {
   const { client } = createAdminClient({
     selectResponses: {
-      service_orders: [{
-        data: { id: 'so-1', user_id: 'user-1', service_name: 'Likes', status: 'processing', total: 10 },
-        error: null,
-      }],
-    },
-    rpcResponse: {
-      data: [{ applied: false, final_status: 'completed', refund_amount: 0 }],
-      error: null,
+      orders: [{ data: null, error: null }],
     },
   });
 
@@ -145,8 +119,10 @@ test('updateAdminOrderStatus should reject stale digital updates', async () => {
       updateAdminOrderStatus({
         client,
         actor: { id: 'admin-1' },
-        payload: { targetType: 'service_order', orderId: 'so-1', status: 'completed' },
+        payload: { targetType: 'physical_order', orderId: 'ord-404', status: 'completed' },
       }),
-    (error) => error instanceof AdminOrderStatusError && error.statusCode === 409
+    (error) => error instanceof AdminOrderStatusError
+      && error.statusCode === 404
+      && error.message.startsWith('[ORM-302]')
   );
 });

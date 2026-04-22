@@ -1,15 +1,5 @@
 /**
- * TechZone AI Chatbot - Chat Widget Component
- *
- * هذا المكوّن هو "الواجهة" التي يراها العميل.
- * فقاعة شات تظهر في أسفل الصفحة، يمكن فتحها وإغلاقها.
- *
- * --- كيف يعمل؟ ---
- * 1. العميل يضغط على أيقونة الشات ← تفتح نافذة المحادثة
- * 2. يكتب سؤال ويضغط إرسال
- * 3. الرسالة تُرسل إلى /api/chat (الـ API Route)
- * 4. يظهر رد البوت في المحادثة
- * 5. تاريخ المحادثة يُحفظ في الـ state ويُرسل مع كل رسالة جديدة
+ * TechZone AI Chatbot widget.
  */
 
 'use client';
@@ -18,53 +8,51 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { loadSupabaseClient } from '../lib/loadSupabaseClient';
 import styles from './AiChatbot.module.css';
 
-/* ─────────────── الإعدادات الثابتة ─────────────── */
-
-/** رسالة الترحيب الأولية */
 const WELCOME_MESSAGE = {
   role: 'assistant',
-  content: 'مرحباً! 👋 أنا تيك، مساعدك الذكي في TechZone.\nكيف يمكنني مساعدتك اليوم؟',
+  content: 'مرحباً! أنا تيك، مساعدك الذكي في TechZone.\nكيف يمكنني مساعدتك اليوم؟',
 };
-
-/** أسئلة سريعة جاهزة يضغط عليها العميل */
 const QUICK_QUESTIONS = [
   'ما المنتجات المتوفرة؟',
   'أريد صيانة جهازي',
   'ما طرق الدفع؟',
   'كيف أتواصل معكم؟',
 ];
-
-/** الحد الأقصى لطول الرسالة */
 const MAX_MESSAGE_LENGTH = 500;
-
-/* ─────────────── المكوّن الرئيسي ─────────────── */
+const CHAT_LOGIN_REQUIRED_MESSAGE = '[BOT-201] يجب تسجيل الدخول أولاً لاستخدام المحادثة الذكية.';
+const CHAT_SERVER_ERROR_MESSAGE = '[BOT-401] فشل الاتصال بالخادم.';
+const CHAT_UNEXPECTED_ERROR_MESSAGE = '[BOT-500] عذراً، حدث خطأ غير متوقع. حاول مرة أخرى.';
 
 /**
- * مكوّن الشات بوت الذكي.
- * يُعرض كفقاعة عائمة في أسفل يسار الصفحة.
+ * Builds the fallback chatbot error message shown to customers.
+ *
+ * @param {unknown} error
+ * @returns {string}
+ */
+function resolveChatbotErrorMessage(error) {
+  return error instanceof Error && error.message ? error.message : CHAT_UNEXPECTED_ERROR_MESSAGE;
+}
+
+/**
+ * Renders the floating chatbot widget.
  *
  * @returns {JSX.Element}
  */
 export default function AiChatbot() {
-  // ── الحالة (State) ──
-  const [isOpen, setIsOpen] = useState(false);        // هل نافذة الشات مفتوحة؟
-  const [messages, setMessages] = useState([WELCOME_MESSAGE]); // قائمة الرسائل
-  const [inputValue, setInputValue] = useState('');    // نص حقل الإدخال
-  const [isLoading, setIsLoading] = useState(false);   // هل ينتظر رد من API؟
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
-  // ── المراجع (Refs) ──
-  const messagesEndRef = useRef(null);  // للتمرير التلقائي لآخر رسالة
-  const inputRef = useRef(null);        // للتركيز على حقل الإدخال
-
-  // ── التمرير التلقائي عند إضافة رسالة جديدة ──
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── التركيز على حقل الإدخال عند فتح الشات ──
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+      window.setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
 
@@ -75,43 +63,43 @@ export default function AiChatbot() {
   }, [isOpen]);
 
   /**
-   * يُرسل رسالة إلى الـ API ويعرض الرد.
+   * Sends the customer message to the chat API and appends the reply.
    *
-   * @param {string} messageText - نص الرسالة
+   * @param {string} messageText
+   * @returns {Promise<void>}
    */
   const sendMessage = useCallback(async (messageText) => {
     const trimmed = messageText.trim();
     if (!trimmed || isLoading) return;
 
-    // إضافة رسالة العميل إلى المحادثة
     const userMessage = { role: 'user', content: trimmed };
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      // تجهيز تاريخ المحادثة (بدون رسالة الترحيب)
       const history = messages
         .filter((msg) => msg !== WELCOME_MESSAGE)
         .map((msg) => ({ role: msg.role, content: msg.content }));
 
-      // الحصول على توكن المصادقة
       const supabase = await loadSupabaseClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.access_token) {
-        setMessages((prev) => [...prev, {
-          role: 'assistant',
-          content: 'يجب تسجيل الدخول أولاً لاستخدام المحادثة الذكية. 🔐',
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: CHAT_LOGIN_REQUIRED_MESSAGE },
+        ]);
         return;
       }
 
-      // إرسال الطلب إلى API Route مع التوكن
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           message: trimmed,
@@ -122,16 +110,14 @@ export default function AiChatbot() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'فشل الاتصال بالخادم');
+        throw new Error(data.error || CHAT_SERVER_ERROR_MESSAGE);
       }
 
-      // إضافة رد البوت إلى المحادثة
       setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
     } catch (error) {
-      // في حالة خطأ، نعرض رسالة خطأ للعميل
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'عذراً، حدث خطأ. حاول مرة أخرى. 🔄' },
+        { role: 'assistant', content: resolveChatbotErrorMessage(error) },
       ]);
     } finally {
       setIsLoading(false);
@@ -139,9 +125,10 @@ export default function AiChatbot() {
   }, [isLoading, messages]);
 
   /**
-   * يعالج ضغط Enter لإرسال الرسالة.
+   * Sends the message when the customer presses Enter without Shift.
    *
    * @param {React.KeyboardEvent} event
+   * @returns {void}
    */
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -151,18 +138,17 @@ export default function AiChatbot() {
   }, [inputValue, sendMessage]);
 
   /**
-   * يعالج الضغط على سؤال سريع.
+   * Sends a pre-filled quick question.
    *
    * @param {string} question
+   * @returns {void}
    */
   const handleQuickQuestion = useCallback((question) => {
     sendMessage(question);
   }, [sendMessage]);
 
-  // ── العرض (Render) ──
   return (
     <>
-      {/* ══════ زر فتح/إغلاق الشات ══════ */}
       <button
         className={`${styles.chatToggle} ${isOpen ? styles.chatToggleOpen : ''}`}
         onClick={() => setIsOpen((prev) => !prev)}
@@ -182,15 +168,13 @@ export default function AiChatbot() {
         {!isOpen && <span className={styles.chatBadge}>AI</span>}
       </button>
 
-      {/* ══════ نافذة المحادثة ══════ */}
       {isOpen && (
         <div className={styles.chatWindow}>
-          {/* ── الهيدر ── */}
           <div className={styles.chatHeader}>
             <div className={styles.chatHeaderInfo}>
-              <div className={styles.chatAvatar}>🤖</div>
+              <div className={styles.chatAvatar}>AI</div>
               <div>
-                <h3 className={styles.chatTitle}>تيك — المساعد الذكي</h3>
+                <h3 className={styles.chatTitle}>تيك - المساعد الذكي</h3>
                 <span className={styles.chatStatus}>
                   <span className={styles.statusDot} /> متصل الآن
                 </span>
@@ -201,11 +185,10 @@ export default function AiChatbot() {
               onClick={() => setIsOpen(false)}
               aria-label="إغلاق"
             >
-              ✕
+              ×
             </button>
           </div>
 
-          {/* ── منطقة الرسائل ── */}
           <div className={styles.chatMessages}>
             {messages.map((msg, index) => (
               <div
@@ -215,20 +198,19 @@ export default function AiChatbot() {
                 }`}
               >
                 {msg.role === 'assistant' && (
-                  <span className={styles.messageAvatar}>🤖</span>
+                  <span className={styles.messageAvatar}>AI</span>
                 )}
                 <div className={styles.messageContent}>
-                  {msg.content.split('\n').map((line, i) => (
-                    <p key={i}>{line}</p>
+                  {msg.content.split('\n').map((line, lineIndex) => (
+                    <p key={lineIndex}>{line}</p>
                   ))}
                 </div>
               </div>
             ))}
 
-            {/* مؤشر الكتابة أثناء انتظار الرد */}
             {isLoading && (
               <div className={`${styles.messageBubble} ${styles.botMessage}`}>
-                <span className={styles.messageAvatar}>🤖</span>
+                <span className={styles.messageAvatar}>AI</span>
                 <div className={styles.typingIndicator}>
                   <span />
                   <span />
@@ -240,7 +222,6 @@ export default function AiChatbot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ── أسئلة سريعة (تظهر فقط في البداية) ── */}
           {messages.length <= 1 && (
             <div className={styles.quickQuestions}>
               {QUICK_QUESTIONS.map((question) => (
@@ -256,14 +237,13 @@ export default function AiChatbot() {
             </div>
           )}
 
-          {/* ── حقل الإدخال ── */}
           <div className={styles.chatInputArea}>
             <input
               ref={inputRef}
               type="text"
               className={styles.chatInput}
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+              onChange={(event) => setInputValue(event.target.value.slice(0, MAX_MESSAGE_LENGTH))}
               onKeyDown={handleKeyDown}
               placeholder="اكتب سؤالك هنا..."
               disabled={isLoading}
@@ -281,9 +261,8 @@ export default function AiChatbot() {
             </button>
           </div>
 
-          {/* ── فوتر ── */}
           <div className={styles.chatFooter}>
-            مدعوم بالذكاء الاصطناعي — Groq AI
+            مدعوم بالذكاء الاصطناعي
           </div>
         </div>
       )}

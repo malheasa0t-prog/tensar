@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabaseClient';
 
+const PRODUCT_ORDERS_LOAD_ERROR = '[DOR-301] تعذر تحميل طلبات المنتجات';
+const REPAIR_BOOKINGS_LOAD_ERROR = '[DOR-303] تعذر تحميل بعض حجوزات الصيانة';
+
 /**
  * Loads the current signed-in user and profile snapshot used by the dashboard orders page.
  *
@@ -83,25 +86,6 @@ async function getProductOrdersSnapshot(userId) {
 }
 
 /**
- * Loads the customer's digital service orders.
- *
- * @param {string} userId
- * @returns {Promise<{ orders: Array<Record<string, unknown>>, error: { message?: string } | null }>}
- */
-async function getDigitalOrdersSnapshot(userId) {
-  const response = await supabase
-    .from('service_orders')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  return {
-    orders: response.data || [],
-    error: response.error,
-  };
-}
-
-/**
  * Loads repair bookings linked to the user directly, by email, or by phone.
  *
  * @param {{ userId: string, userEmail: string, profilePhone: string }} params
@@ -161,7 +145,6 @@ async function getRepairBookingsSnapshot({ userId, userEmail, profilePhone }) {
  *   isAuthenticated: boolean,
  *   profile: { full_name?: string, phone?: string } | null,
  *   productOrders: Array<Record<string, unknown>>,
- *   serviceOrders: Array<Record<string, unknown>>,
  *   repairBookings: Array<Record<string, unknown>>,
  *   orderItemsMap: Record<string, Array<Record<string, unknown>>>,
  *   error: string
@@ -175,16 +158,14 @@ export async function loadDashboardOrdersSnapshot() {
       isAuthenticated: false,
       profile: null,
       productOrders: [],
-      serviceOrders: [],
       repairBookings: [],
       orderItemsMap: {},
       error: '',
     };
   }
 
-  const [productOrdersSnapshot, digitalOrdersSnapshot, repairBookingsSnapshot] = await Promise.all([
+  const [productOrdersSnapshot, repairBookingsSnapshot] = await Promise.all([
     getProductOrdersSnapshot(identity.user.id),
-    getDigitalOrdersSnapshot(identity.user.id),
     getRepairBookingsSnapshot({
       userId: identity.user.id,
       userEmail: identity.userEmail,
@@ -193,16 +174,14 @@ export async function loadDashboardOrdersSnapshot() {
   ]);
 
   const partialErrors = [
-    productOrdersSnapshot.error ? 'تعذر تحميل طلبات المنتجات' : '',
-    digitalOrdersSnapshot.error ? 'تعذر تحميل الطلبات الرقمية' : '',
-    repairBookingsSnapshot.error ? 'تعذر تحميل بعض حجوزات الصيانة' : '',
+    productOrdersSnapshot.error ? PRODUCT_ORDERS_LOAD_ERROR : '',
+    repairBookingsSnapshot.error ? REPAIR_BOOKINGS_LOAD_ERROR : '',
   ].filter(Boolean);
 
   return {
     isAuthenticated: true,
     profile: identity.profile,
     productOrders: productOrdersSnapshot.orders,
-    serviceOrders: digitalOrdersSnapshot.orders,
     repairBookings: repairBookingsSnapshot.bookings,
     orderItemsMap: productOrdersSnapshot.orderItemsMap,
     error: partialErrors.join('، '),
@@ -220,10 +199,6 @@ export function subscribeToDashboardOrders(onChange) {
     supabase
       .channel('dashboard-orders-products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, onChange)
-      .subscribe(),
-    supabase
-      .channel('dashboard-orders-digital')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_orders' }, onChange)
       .subscribe(),
     supabase
       .channel('dashboard-orders-repairs')

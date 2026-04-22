@@ -17,8 +17,8 @@ import {
   submitCheckoutOrder,
 } from '@/services/checkoutService';
 
-const DEFAULT_CHECKOUT_ERROR_MESSAGE = 'حدث خطأ غير متوقع أثناء إتمام الطلب';
-const INCOMPLETE_CHECKOUT_MESSAGE = 'أكمل الاسم ورقم الهاتف قبل تأكيد الطلب.';
+const DEFAULT_CHECKOUT_ERROR_MESSAGE = '[CKP-500] حدث خطأ غير متوقع أثناء إتمام الطلب';
+const INCOMPLETE_CHECKOUT_MESSAGE = '[CKP-101] أكمل الاسم ورقم الهاتف قبل تأكيد الطلب.';
 
 /**
  * Handles dynamic checkout options, form state, and order submission.
@@ -131,7 +131,9 @@ export function useCheckoutPage() {
 
     try {
       const response = await submitCheckoutOrder({ items, form });
-      const nextSuccess = response.order_id ? response : { ...response, order_id: 'N/A', total: checkoutTotal };
+      const nextSuccess = response.order_id
+        ? response
+        : { ...response, order_id: 'N/A', total: checkoutTotal };
 
       trackPurchase({
         config: PUBLIC_ANALYTICS_CONFIG,

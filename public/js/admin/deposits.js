@@ -19,7 +19,7 @@
         var authUser = await TZ.getSupabaseUser();
         var adminId = authUser ? authUser.id : TZ.getSession()?.userId;
         var userId = deposit.user_id || deposit.userId;
-        if (!adminId || !userId) { A.showToast('تعذر تحديد المدير أو المستخدم'); return; }
+        if (!adminId || !userId) { A.showErrorToast('DPM-201', 'تعذر تحديد المدير أو المستخدم'); return; }
 
         var adjustRes = await TZ.supabase.rpc('admin_adjust_wallet_balance', {
             p_admin_user_id: adminId,
@@ -27,12 +27,12 @@
             p_amount: Number(deposit.amount),
             p_reason: 'موافقة على طلب إيداع #' + deposit.id
         });
-        if (adjustRes.error) { A.showToast('فشل إضافة الرصيد إلى المحفظة'); return; }
+        if (adjustRes.error) { A.showErrorToast('DPM-301', 'فشل إضافة الرصيد إلى المحفظة'); return; }
 
         var updateRes = await TZ.supabase.from('deposits').update({
             status: 'approved', reviewed_by: adminId, reviewed_at: new Date().toISOString()
         }).eq('id', deposit.id);
-        if (updateRes.error) { A.showToast('فشل تحديث حالة الإيداع'); return; }
+        if (updateRes.error) { A.showErrorToast('DPM-302', 'فشل تحديث حالة الإيداع'); return; }
 
         /* Note: admin_adjust_wallet_balance RPC already sends a notification to the user */
 
@@ -52,7 +52,7 @@
             reviewed_at: new Date().toISOString()
         }).eq('id', deposit.id);
 
-        if (result.error) { A.showToast('تعذر رفض الإيداع'); return; }
+        if (result.error) { A.showErrorToast('DPM-303', 'تعذر رفض الإيداع'); return; }
 
         await TZ.supabase.from('notifications').insert([{
             user_id: deposit.user_id || deposit.userId,

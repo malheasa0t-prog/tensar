@@ -151,7 +151,7 @@
                         selectedIds = [];
                         updateToolbar();
                     }).catch(function (error) {
-                        A.showToast(error?.message || 'تعذر تنفيذ العملية الجماعية.');
+                        A.showErrorToast('BLK-301', error?.message || 'تعذر تنفيذ العملية الجماعية.');
                     });
                 });
                 return;
@@ -163,7 +163,7 @@
                         selectedIds = [];
                         updateToolbar();
                     }).catch(function (error) {
-                        A.showToast(error?.message || 'تعذر تنفيذ العملية الجماعية.');
+                        A.showErrorToast('BLK-301', error?.message || 'تعذر تنفيذ العملية الجماعية.');
                     });
                 });
             }

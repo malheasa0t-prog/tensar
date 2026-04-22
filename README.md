@@ -25,9 +25,6 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GROQ_API_KEY`
-- `PROVIDER_API_BASE_URL`
-- `PROVIDER_API_KEY`
-- `PROVIDER_API_TIMEOUT_MS`
 - `CRON_SECRET`
 
 4. لوحة الإدارة القديمة أصبحت تولّد ملف `admin-config.js` تلقائيًا أثناء `vite build`
@@ -70,7 +67,6 @@ http://localhost:5173
 - `/api/health` فحص الحالة
 - `/api/chat` وكيل الدردشة
 - `/api/checkout` إنشاء طلب منتج
-- `/api/orders/create` إنشاء طلب مباشر
 - `/api/deposits/proof` رفع إثبات التحويل
 - `/api/account/profile` تحديث الملف الشخصي
 - `/api/account/password` تحديث كلمة المرور
@@ -119,9 +115,6 @@ npm run deploy:cloudflare
 - `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GROQ_API_KEY`
-- `PROVIDER_API_BASE_URL`
-- `PROVIDER_API_KEY`
-- `PROVIDER_API_TIMEOUT_MS`
 - `ENABLE_LEGACY_ADMIN_WRITE`
 - `CRON_SECRET`
 

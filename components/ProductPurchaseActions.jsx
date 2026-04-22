@@ -5,6 +5,8 @@ import Button from "./Button";
 import { useCart } from "./CartProvider";
 import { useToast } from "./ToastProvider";
 
+const CART_ADD_ERROR_MESSAGE = "[CRT-301] تعذر إضافة المنتج حالياً.";
+
 export default function ProductPurchaseActions({ product }) {
   const { addToCart, openSidebar } = useCart();
   const { showToast } = useToast();
@@ -25,7 +27,7 @@ export default function ProductPurchaseActions({ product }) {
     });
 
     if (!result?.ok) {
-      showToast(result?.message || "تعذر إضافة المنتج حالياً", { type: "error" });
+      showToast(result?.message || CART_ADD_ERROR_MESSAGE, { type: "error" });
       return;
     }
 

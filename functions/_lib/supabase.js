@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { buildErrorPayload } from './errorCodes.js';
 
 /**
  * Creates a public (anon) Supabase client.
@@ -18,7 +19,7 @@ export function createSupabaseClient(env) {
   const key = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    throw new Error('Missing Supabase URL or Anon Key in environment');
+    throw new Error('[SUP-500] Missing Supabase URL or Anon Key in environment');
   }
 
   return createClient(url, key, {
@@ -37,7 +38,7 @@ export function createSupabaseAdmin(env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    throw new Error('Missing Supabase URL or Service Role Key in environment');
+    throw new Error('[SUP-501] Missing Supabase URL or Service Role Key in environment');
   }
 
   return createClient(url, key, {
@@ -64,7 +65,7 @@ export function extractBearerToken(request) {
  * @returns {Response}
  */
 export function errorResponse(error, status = 400) {
-  return Response.json({ success: false, error }, { status });
+  return Response.json(buildErrorPayload(error), { status });
 }
 
 /**

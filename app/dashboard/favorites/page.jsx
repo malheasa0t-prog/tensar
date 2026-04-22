@@ -15,6 +15,7 @@ import styles from "./favoritesPage.module.css";
  */
 export default function DashboardFavoritesPage() {
   const { showToast } = useToast();
+  const withFavoritesCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
   const {
     clearAllFavorites,
     error,
@@ -39,7 +40,7 @@ export default function DashboardFavoritesPage() {
     });
 
     if (!shareUrl) {
-      showToast("أضف منتجات إلى المفضلة أولاً حتى تتمكن من مشاركتها.", { type: "info" });
+      showToast(withFavoritesCode('FAV-101', "أضف منتجات إلى المفضلة أولاً حتى تتمكن من مشاركتها."), { type: "info" });
       return;
     }
 
@@ -67,12 +68,12 @@ export default function DashboardFavoritesPage() {
         showToast("تم نسخ رابط المفضلة للمشاركة.", { type: "success" });
         return;
       } catch {
-        showToast("تعذر النسخ التلقائي على هذا المتصفح حالياً.", { type: "warning" });
+      showToast(withFavoritesCode('FAV-301', "تعذر النسخ التلقائي على هذا المتصفح حالياً."), { type: "warning" });
         return;
       }
     }
 
-    showToast("تعذر النسخ التلقائي على هذا المتصفح حالياً.", { type: "warning" });
+      showToast(withFavoritesCode('FAV-301', "تعذر النسخ التلقائي على هذا المتصفح حالياً."), { type: "warning" });
   }
 
   if (loading || !hasHydratedFavorites) {

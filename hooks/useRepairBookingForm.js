@@ -13,6 +13,9 @@ import {
   getRepairBookingAccountSnapshot,
 } from "@/services/repairBookingService";
 
+const REPAIR_BOOKING_SUBMIT_ERROR = "[RBK-301] تعذر إرسال طلب الصيانة حالياً. حاول مرة أخرى.";
+const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات الحساب لحجز الصيانة.";
+
 /**
  * @typedef {Object} RepairBookingFormState
  * @property {string} name
@@ -93,19 +96,23 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
      * @returns {Promise<void>}
      */
     async function hydrateFromAccount() {
-      const accountSnapshot = await getRepairBookingAccountSnapshot();
+      try {
+        const accountSnapshot = await getRepairBookingAccountSnapshot();
 
-      if (!isMounted || !accountSnapshot.userId) {
-        return;
+        if (!isMounted || !accountSnapshot.userId) {
+          return;
+        }
+
+        setCurrentUserId(accountSnapshot.userId);
+        setIsAccountPrefilled(accountSnapshot.isAccountPrefilled);
+        setForm((prev) => ({
+          ...prev,
+          name: prev.name || accountSnapshot.name,
+          phone: prev.phone || accountSnapshot.phone,
+        }));
+      } catch (loadError) {
+        console.error(`${REPAIR_BOOKING_PREFILL_ERROR} Failed to hydrate account snapshot:`, loadError);
       }
-
-      setCurrentUserId(accountSnapshot.userId);
-      setIsAccountPrefilled(accountSnapshot.isAccountPrefilled);
-      setForm((prev) => ({
-        ...prev,
-        name: prev.name || accountSnapshot.name,
-        phone: prev.phone || accountSnapshot.phone,
-      }));
     }
 
     hydrateFromAccount();
@@ -159,7 +166,7 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
     setLoading(false);
 
     if (response.error) {
-      setError("تعذر إرسال الطلب حالياً. حاول مرة أخرى.");
+      setError(response.error.message || REPAIR_BOOKING_SUBMIT_ERROR);
       return;
     }
 

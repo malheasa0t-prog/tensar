@@ -91,7 +91,7 @@ test("deleteCheckoutOrder should throw when the rollback delete fails", async ()
 
   await assert.rejects(
     () => deleteCheckoutOrder({ orderId: "ord-2", client }),
-    new RegExp(CHECKOUT_ROLLBACK_ERROR_MESSAGE)
+    { message: CHECKOUT_ROLLBACK_ERROR_MESSAGE }
   );
 });
 

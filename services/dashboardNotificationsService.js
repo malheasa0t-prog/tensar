@@ -1,6 +1,10 @@
 import { filterVisibleNotifications } from "../lib/dashboardNotificationsModel.js";
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 
+const NOTIFICATIONS_LOAD_ERROR = "[NTF-401] تعذر تحميل الإشعارات حالياً";
+const NOTIFICATION_MARK_ERROR = "[NTF-402] تعذر تحديث الإشعار";
+const NOTIFICATIONS_MARK_ALL_ERROR = "[NTF-403] تعذر تعليم جميع الإشعارات كمقروءة";
+
 /**
  * Resolves the Supabase client used by notification helpers.
  *
@@ -51,7 +55,7 @@ export async function fetchNotificationsSnapshot(userId, client) {
 
   return {
     notifications: filterVisibleNotifications(response.data || []),
-    error: response.error ? "تعذر تحميل الإشعارات حالياً" : "",
+    error: response.error ? NOTIFICATIONS_LOAD_ERROR : "",
   };
 }
 
@@ -71,7 +75,7 @@ export async function markNotificationAsRead({ userId, notificationId }, client)
     .eq("user_id", userId)
     .eq("is_read", false);
 
-  return response.error ? "تعذر تحديث الإشعار" : "";
+  return response.error ? NOTIFICATION_MARK_ERROR : "";
 }
 
 /**
@@ -93,7 +97,7 @@ export async function markAllNotificationsAsRead({ userId, notificationIds }, cl
     .eq("user_id", userId)
     .in("id", notificationIds);
 
-  return response.error ? "تعذر تعليم جميع الإشعارات كمقروءة" : "";
+  return response.error ? NOTIFICATIONS_MARK_ALL_ERROR : "";
 }
 
 /**

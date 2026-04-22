@@ -47,7 +47,7 @@ export default function App() {
         setSiteSettings(snapshot.siteSettings);
         setDynamicLinks(snapshot.dynamicLinks);
       } catch (error) {
-        console.error('Failed to load site data:', error);
+        console.error('[APP-500] Failed to load site data:', error);
       }
     }
 

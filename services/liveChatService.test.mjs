@@ -124,5 +124,5 @@ test('sendCustomerChatMessage should return a validation error for blank drafts'
     })
   );
 
-  assert.match(snapshot.error, /اكتب رسالتك أولاً/);
+  assert.match(snapshot.error, /\[LCH-103\]/);
 });

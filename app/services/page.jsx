@@ -1,5 +1,5 @@
 /**
- * Services Page — Client-side version.
+ * Services Page - Client-side version.
  *
  * Fetches repair services and site settings on mount,
  * then renders the booking form, FAQs, and service packages.
@@ -22,7 +22,6 @@ import { formatCurrency } from '@/lib/formatCurrency';
 import { getSiteSettings } from '@/lib/siteSettings';
 import { supabase } from '@/lib/supabaseClient';
 
-/** Booking side steps. */
 const REPAIR_BOOKING_STEPS = [
   'بيانات التواصل',
   'الخدمة المطلوبة',
@@ -71,7 +70,7 @@ export default function ServicesPage() {
 
         setServices(sorted);
       } catch (err) {
-        console.error('ServicesPage: failed to load', err);
+        console.error('[SVG-500] ServicesPage: failed to load', err);
         if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
@@ -79,7 +78,9 @@ export default function ServicesPage() {
     }
 
     loadData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -95,7 +96,7 @@ export default function ServicesPage() {
             icon="refresh-cw"
             eyebrow="تعذر تحميل خدمات الصيانة"
             title="حدث خطأ أثناء تحميل الخدمات"
-            description="تعذر عرض باقات الصيانة حالياً. حاول مرة أخرى بعد قليل أو تواصل معنا مباشرة."
+            description="[SVG-500] تعذر عرض باقات الصيانة حالياً. حاول مرة أخرى بعد قليل أو تواصل معنا مباشرة."
           />
         </div>
       </section>

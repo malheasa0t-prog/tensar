@@ -1,5 +1,28 @@
 import { supabase } from "@/lib/supabaseClient";
 
+const REPAIR_BOOKING_SAVE_ERROR = "[RBK-301] تعذر إرسال طلب الصيانة حالياً. حاول مرة أخرى.";
+const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات الحساب لحجز الصيانة.";
+const ERROR_CODE_PATTERN = /\[[A-Z]{2,4}-\d{3}\]/;
+
+/**
+ * Builds a normalized repair booking error result.
+ *
+ * @param {unknown} error
+ * @returns {{ error: { message: string } }}
+ */
+function createRepairBookingErrorResult(error) {
+  const message = String(error?.message || '').trim();
+  const normalizedMessage = ERROR_CODE_PATTERN.test(message)
+    ? message
+    : REPAIR_BOOKING_SAVE_ERROR;
+
+  return {
+    error: {
+      message: normalizedMessage,
+    },
+  };
+}
+
 /**
  * Generates a short client-side identifier for repair bookings.
  *
@@ -31,7 +54,12 @@ function shouldRetryWithoutUserId(error) {
 export async function getRepairBookingAccountSnapshot() {
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error(`${REPAIR_BOOKING_PREFILL_ERROR} Failed to load authenticated user:`, userError);
+  }
 
   if (!user) {
     return {
@@ -47,6 +75,10 @@ export async function getRepairBookingAccountSnapshot() {
     .select("full_name, phone")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  if (profileResponse.error) {
+    console.error(`${REPAIR_BOOKING_PREFILL_ERROR} Failed to load profile snapshot:`, profileResponse.error);
+  }
 
   return {
     userId: user.id || "",
@@ -68,11 +100,13 @@ export async function createRepairBooking(payload, userId = "") {
     const response = await supabase.from("repair_bookings").insert([{ ...payload, user_id: userId }]);
 
     if (response.error && shouldRetryWithoutUserId(response.error)) {
-      return supabase.from("repair_bookings").insert([payload]);
+      const retryResponse = await supabase.from("repair_bookings").insert([payload]);
+      return retryResponse.error ? createRepairBookingErrorResult(retryResponse.error) : retryResponse;
     }
 
-    return response;
+    return response.error ? createRepairBookingErrorResult(response.error) : response;
   }
 
-  return supabase.from("repair_bookings").insert([payload]);
+  const response = await supabase.from("repair_bookings").insert([payload]);
+  return response.error ? createRepairBookingErrorResult(response.error) : response;
 }

@@ -9,6 +9,7 @@ import FriendlyEmptyState from "@/components/FriendlyEmptyState";
 import { useToast } from "@/components/ToastProvider";
 import styles from "./ComparePageClient.module.css";
 
+const CART_ADD_ERROR_MESSAGE = "[CRT-301] تعذر إضافة المنتج حالياً.";
 const COMPARISON_ROWS = [
   { key: "category", label: "الفئة", type: "text" },
   { key: "price", label: "السعر الحالي", type: "price" },
@@ -58,7 +59,7 @@ export default function ComparePageClient() {
     });
 
     if (!result?.ok) {
-      showToast(result?.message || "تعذر إضافة المنتج حاليًا", { type: "error" });
+      showToast(result?.message || CART_ADD_ERROR_MESSAGE, { type: "error" });
       return;
     }
 
@@ -73,7 +74,7 @@ export default function ComparePageClient() {
           tone="contrast"
           icon="compare"
           eyebrow="المقارنة جاهزة متى أردت"
-          title="لا توجد منتجات في لوحة المقارنة حاليًا"
+          title="لا توجد منتجات في لوحة المقارنة حالياً"
           description="أضف منتجين أو أكثر من الكتالوج عبر زر المقارنة داخل البطاقة، وسنرتب لك الفروقات هنا بشكل واضح."
           actions={
             <Button href="/products" variant="secondary">

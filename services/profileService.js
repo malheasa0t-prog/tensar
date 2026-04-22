@@ -32,7 +32,7 @@ export async function fetchProfileSnapshot() {
 
   const json = await response.json();
   if (!response.ok || !json?.success) {
-    throw new Error(json?.error || 'تعذر تحميل الملف الشخصي');
+    throw new Error(json?.error || '[ACP-301] تعذر تحميل الملف الشخصي');
   }
 
   return {
@@ -50,7 +50,7 @@ export async function fetchProfileSnapshot() {
 export async function saveProfileSnapshot(form) {
   const token = await getProfileAccessToken();
   if (!token) {
-    throw new Error('انتهت الجلسة، سجل الدخول مرة أخرى');
+    throw new Error('[ACP-201] انتهت الجلسة، سجل الدخول مرة أخرى');
   }
 
   const response = await fetch('/api/account/profile', {
@@ -64,7 +64,7 @@ export async function saveProfileSnapshot(form) {
 
   const json = await response.json();
   if (!response.ok || !json?.success) {
-    throw new Error(json?.error || 'تعذر حفظ البيانات');
+    throw new Error(json?.error || '[ACP-302] تعذر حفظ البيانات');
   }
 
   return json?.message || 'تم حفظ التغييرات بنجاح';
@@ -79,7 +79,7 @@ export async function saveProfileSnapshot(form) {
 export async function saveProfilePassword(form) {
   const token = await getProfileAccessToken();
   if (!token) {
-    throw new Error('انتهت الجلسة، سجل الدخول مرة أخرى');
+    throw new Error('[ACP-201] انتهت الجلسة، سجل الدخول مرة أخرى');
   }
 
   const response = await fetch('/api/account/password', {
@@ -93,7 +93,7 @@ export async function saveProfilePassword(form) {
 
   const json = await response.json();
   if (!response.ok || !json?.success) {
-    throw new Error(json?.error || 'تعذر تغيير كلمة المرور');
+    throw new Error(json?.error || '[ACP-303] تعذر تغيير كلمة المرور');
   }
 
   return json?.message || 'تم تغيير كلمة المرور بنجاح';

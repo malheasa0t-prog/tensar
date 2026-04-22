@@ -1,11 +1,20 @@
 import { supabase } from '../lib/supabaseClient.js';
 import {
   LIVE_CHAT_OPEN_STATUS,
+  LIVE_CHAT_ERROR_MESSAGES,
   buildLiveChatConversationPayload,
   buildLiveChatConversationUpdate,
   buildLiveChatMessagePayload,
   resolveLiveChatProfile,
 } from '../lib/liveChatModel.js';
+
+const LIVE_CHAT_SNAPSHOT_ERROR = '[LCH-301] تعذر تحميل المحادثة الحالية.';
+const LIVE_CHAT_MESSAGES_ERROR = '[LCH-302] تعذر تحميل الرسائل حالياً.';
+const LIVE_CHAT_LOGIN_REQUIRED_ERROR = '[LCH-201] سجل الدخول أولاً لبدء المحادثة.';
+const LIVE_CHAT_OPEN_ERROR = '[LCH-303] تعذر فتح المحادثة المباشرة حالياً.';
+const LIVE_CHAT_SEND_ERROR = '[LCH-304] تعذر إرسال الرسالة حالياً.';
+const LIVE_CHAT_REFRESH_ERROR = '[LCH-305] تم إرسال الرسالة لكن تعذر تحديث المحادثة.';
+const LIVE_CHAT_READ_SYNC_ERROR = '[LCH-306] تعذر تحديث حالة الردود الجديدة.';
 
 /**
  * Loads the authenticated user and the best matching profile data for live chat.
@@ -59,7 +68,7 @@ export async function fetchLatestCustomerConversation(userId, client = supabase)
 
   return {
     conversation: response.data || null,
-    error: response.error ? 'تعذر تحميل المحادثة الحالية.' : '',
+    error: response.error ? LIVE_CHAT_SNAPSHOT_ERROR : '',
   };
 }
 
@@ -83,7 +92,7 @@ export async function fetchConversationMessages(conversationId, client = supabas
 
   return {
     messages: response.data || [],
-    error: response.error ? 'تعذر تحميل الرسائل حالياً.' : '',
+    error: response.error ? LIVE_CHAT_MESSAGES_ERROR : '',
   };
 }
 
@@ -98,7 +107,7 @@ export async function ensureCustomerConversation(input, client = supabase) {
   const userId = String(input?.user?.id || '').trim();
 
   if (!userId) {
-    return { conversation: null, error: 'سجل الدخول أولاً لبدء المحادثة.' };
+    return { conversation: null, error: LIVE_CHAT_LOGIN_REQUIRED_ERROR };
   }
 
   const existingResponse = await client
@@ -123,7 +132,7 @@ export async function ensureCustomerConversation(input, client = supabase) {
 
   return {
     conversation: createResponse.data || null,
-    error: createResponse.error ? 'تعذر فتح المحادثة المباشرة حالياً.' : '',
+    error: createResponse.error ? LIVE_CHAT_OPEN_ERROR : '',
   };
 }
 
@@ -144,7 +153,7 @@ export async function sendCustomerChatMessage(input, client = supabase) {
     : await ensureCustomerConversation({ user, profile }, client);
 
   if (ensuredConversation.error || !ensuredConversation.conversation) {
-    return { conversation: null, message: null, error: ensuredConversation.error || 'تعذر فتح المحادثة.' };
+    return { conversation: null, message: null, error: ensuredConversation.error || LIVE_CHAT_OPEN_ERROR };
   }
 
   let messagePayload;
@@ -157,7 +166,11 @@ export async function sendCustomerChatMessage(input, client = supabase) {
       body: input?.body,
     });
   } catch (error) {
-    return { conversation: ensuredConversation.conversation, message: null, error: error.message || 'تعذر تجهيز الرسالة.' };
+    return {
+      conversation: ensuredConversation.conversation,
+      message: null,
+      error: error?.message || LIVE_CHAT_ERROR_MESSAGES.emptyBody,
+    };
   }
 
   const insertResponse = await client
@@ -167,7 +180,7 @@ export async function sendCustomerChatMessage(input, client = supabase) {
     .single();
 
   if (insertResponse.error) {
-    return { conversation: ensuredConversation.conversation, message: null, error: 'تعذر إرسال الرسالة حالياً.' };
+    return { conversation: ensuredConversation.conversation, message: null, error: LIVE_CHAT_SEND_ERROR };
   }
 
   const updateResponse = await client
@@ -180,7 +193,7 @@ export async function sendCustomerChatMessage(input, client = supabase) {
   return {
     conversation: updateResponse.data || ensuredConversation.conversation,
     message: insertResponse.data || null,
-    error: updateResponse.error ? 'تم إرسال الرسالة لكن تعذر تحديث المحادثة.' : '',
+    error: updateResponse.error ? LIVE_CHAT_REFRESH_ERROR : '',
   };
 }
 
@@ -203,7 +216,7 @@ export async function markAdminRepliesAsRead(conversationId, client = supabase) 
     .eq('sender_role', 'admin')
     .eq('is_read_by_customer', false);
 
-  return response.error ? 'تعذر تحديث حالة الردود الجديدة.' : '';
+  return response.error ? LIVE_CHAT_READ_SYNC_ERROR : '';
 }
 
 /**

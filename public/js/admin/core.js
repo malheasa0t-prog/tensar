@@ -170,7 +170,7 @@
                 adminContent.innerHTML = '<div class="empty-state"><i class="fas fa-tools"></i><p>قسم قيد التطوير</p></div>';
             }
         } catch (error) {
-            console.error('Failed to render admin section.', error);
+            console.error('[COR-500] Failed to render admin section.', error);
             if (renderToken !== sectionRenderToken) return;
             ui.renderSectionErrorState(adminContent, error);
         } finally {
@@ -256,7 +256,7 @@
         const section = A.currentSection;
         if (section === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
         if (section === 'analytics' && A.sections.analytics) A.sections.analytics();
-        if (section === 'orders' && ['orders', 'service_orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
+        if (section === 'orders' && ['orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
         if (section === 'product-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['product-orders']) A.sections['product-orders']();
         if (section === 'accessory-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['accessory-orders']) A.sections['accessory-orders']();
         if (section === 'accessories' && ['products', 'categories', 'all'].includes(table) && A.sections.accessories) A.sections.accessories();
@@ -336,6 +336,7 @@
     sidebarClose.addEventListener('click', () => sidebar.classList.remove('open'));
 
     A.showConfirmModal = ui.showConfirmModal;
+    A.showErrorToast = ui.showErrorToast;
     A.showModal = ui.showModal;
     A.showUndoToast = ui.showUndoToast;
     A.showToast = ui.showToast;

@@ -1,4 +1,5 @@
 import { buildCorsHeaders } from '../_lib/cors.js';
+import { buildErrorPayload } from '../_lib/errorCodes.js';
 
 /**
  * Cloudflare Pages Function - Image proxy and lightweight transformer.
@@ -9,7 +10,7 @@ import { buildCorsHeaders } from '../_lib/cors.js';
  * @param {EventContext} context
  */
 
-const ALLOWED_HOSTS = ['serva-s.com', 'www.serva-s.com'];
+const ALLOWED_HOSTS = [];
 const CACHE_MAX_AGE = 7 * 24 * 60 * 60;
 const DEFAULT_IMAGE_WIDTH = 1200;
 const DEFAULT_IMAGE_QUALITY = 80;
@@ -84,41 +85,51 @@ async function fetchUpstreamImage(imageUrl, requestUrl) {
   });
 }
 
+/**
+ * Builds a JSON error response for the image proxy route.
+ *
+ * @param {string} errorMessage
+ * @param {number} status
+ * @returns {Response}
+ */
+function imageErrorResponse(errorMessage, status) {
+  return Response.json(buildErrorPayload(errorMessage), { status });
+}
+
 export async function onRequestGet(context) {
   const requestUrl = new URL(context.request.url);
   const rawUrl = requestUrl.searchParams.get('url');
 
   if (!rawUrl) {
-    return Response.json({ error: 'Missing url parameter' }, { status: 400 });
+    return imageErrorResponse('[IMG-101] Missing url parameter', 400);
   }
 
   let parsed;
   try {
     parsed = new URL(rawUrl);
-  } catch {
-    return Response.json({ error: 'Invalid URL' }, { status: 400 });
+  } catch (error) {
+    console.error('[IMG-102] Invalid image proxy URL:', error);
+    return imageErrorResponse('[IMG-102] Invalid URL', 400);
   }
 
   if (parsed.protocol !== 'https:') {
-    return Response.json({ error: 'Only HTTPS allowed' }, { status: 400 });
+    return imageErrorResponse('[IMG-103] Only HTTPS allowed', 400);
   }
 
   if (!ALLOWED_HOSTS.includes(parsed.hostname)) {
-    return Response.json({ error: 'Domain not allowed' }, { status: 403 });
+    return imageErrorResponse('[IMG-201] Domain not allowed', 403);
   }
 
   try {
     const response = await fetchUpstreamImage(parsed.toString(), requestUrl);
-
     if (!response.ok) {
-      return Response.json({ error: `Upstream ${response.status}` }, { status: 502 });
+      return imageErrorResponse(`[IMG-401] Upstream ${response.status}`, 502);
     }
 
     const contentType = response.headers.get('content-type') || 'image/webp';
     const imageBuffer = await response.arrayBuffer();
-
     if (imageBuffer.byteLength > MAX_IMAGE_SIZE) {
-      return Response.json({ error: 'Image too large' }, { status: 413 });
+      return imageErrorResponse('[IMG-402] Image too large', 413);
     }
 
     return new Response(imageBuffer, {
@@ -128,7 +139,8 @@ export async function onRequestGet(context) {
         ...buildCorsHeaders(context.request, 'GET, OPTIONS'),
       },
     });
-  } catch {
-    return Response.json({ error: 'Failed to fetch image' }, { status: 500 });
+  } catch (error) {
+    console.error('[IMG-500] Failed to fetch image:', error);
+    return imageErrorResponse('[IMG-500] Failed to fetch image', 500);
   }
 }

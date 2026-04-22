@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const withAuthCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
 
   /**
    * Creates a new auth account after validating the registration form.
@@ -44,7 +45,7 @@ export default function RegisterPage() {
     });
     if (validationError) {
       setError(validationError);
-      showToast(validationError, { type: 'warning', title: 'تحقق من البيانات' });
+      showToast(withAuthCode('AUS-105', validationError), { type: 'warning', title: 'تحقق من البيانات' });
       setLoading(false);
       return;
     }
@@ -62,14 +63,14 @@ export default function RegisterPage() {
       if (authError) {
         const nextError = mapRegisterAuthError(authError);
         setError(nextError);
-        showToast(nextError, { type: 'error', title: 'تعذر إنشاء الحساب' });
+        showToast(withAuthCode('AUS-306', nextError), { type: 'error', title: 'تعذر إنشاء الحساب' });
         setLoading(false);
         return;
       }
     } catch (err) {
       const nextError = mapRegisterAuthError(err);
       setError(nextError);
-      showToast(nextError, { type: 'error', title: 'تعذر إنشاء الحساب' });
+      showToast(withAuthCode('AUS-306', nextError), { type: 'error', title: 'تعذر إنشاء الحساب' });
       setLoading(false);
       return;
     }

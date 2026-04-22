@@ -1,8 +1,8 @@
 const ACTIVE_PRODUCT_STATUS = "active";
 const OUT_OF_STOCK_PRODUCT_STATUS = "out_of_stock";
 
-export const INVENTORY_CONFLICT_ERROR_MESSAGE = "تغير مخزون بعض المنتجات أثناء تنفيذ الطلب. حاول مرة أخرى.";
-export const INVENTORY_UPDATE_ERROR_MESSAGE = "تعذر تحديث مخزون المنتجات.";
+export const INVENTORY_CONFLICT_ERROR_MESSAGE = "[CKP-302] تغيّر مخزون بعض المنتجات أثناء تنفيذ الطلب. حاول مرة أخرى.";
+export const INVENTORY_UPDATE_ERROR_MESSAGE = "[CKP-301] تعذر تحديث مخزون المنتجات.";
 
 /**
  * Converts a value to a non-negative integer when possible.
@@ -28,19 +28,8 @@ function normalizeProductStatus(status) {
 /**
  * Builds optimistic inventory updates from the current product snapshots.
  *
- * @param {{
- *   products: Array<Record<string, unknown>>,
- *   aggregatedItems: Array<{ id: string, qty: number }>,
- * }} input
- * @returns {Array<{
- *   productId: string,
- *   previousQuantity: number,
- *   nextQuantity: number,
- *   previousSold: number,
- *   nextSold: number,
- *   previousStatus: string,
- *   nextStatus: string,
- * }>}
+ * @param {{ products: Array<Record<string, unknown>>, aggregatedItems: Array<{ id: string, qty: number }> }} input
+ * @returns {Array<{ productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }>}
  * @throws {Error}
  */
 export function buildInventoryAdjustments({ products, aggregatedItems }) {
@@ -80,19 +69,7 @@ export function buildInventoryAdjustments({ products, aggregatedItems }) {
 /**
  * Applies one optimistic inventory update.
  *
- * @param {{
- *   adjustment: {
- *     productId: string,
- *     previousQuantity: number,
- *     nextQuantity: number,
- *     previousSold: number,
- *     nextSold: number,
- *     previousStatus: string,
- *     nextStatus: string,
- *   },
- *   client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } },
- *   restoring?: boolean,
- * }} input
+ * @param {{ adjustment: { productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }, client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } }, restoring?: boolean }} input
  * @returns {Promise<boolean>}
  * @throws {Error}
  */
@@ -133,27 +110,8 @@ async function runInventoryUpdate({ adjustment, client, restoring = false }) {
 /**
  * Applies product inventory updates sequentially using optimistic concurrency checks.
  *
- * @param {{
- *   adjustments: Array<{
- *     productId: string,
- *     previousQuantity: number,
- *     nextQuantity: number,
- *     previousSold: number,
- *     nextSold: number,
- *     previousStatus: string,
- *     nextStatus: string,
- *   }>,
- *   client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } },
- * }} input
- * @returns {Promise<Array<{
- *   productId: string,
- *   previousQuantity: number,
- *   nextQuantity: number,
- *   previousSold: number,
- *   nextSold: number,
- *   previousStatus: string,
- *   nextStatus: string,
- * }>>}
+ * @param {{ adjustments: Array<{ productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }>, client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } } }} input
+ * @returns {Promise<Array<{ productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }>>}
  * @throws {Error}
  */
 export async function applyInventoryAdjustments({ adjustments, client }) {
@@ -174,18 +132,7 @@ export async function applyInventoryAdjustments({ adjustments, client }) {
 /**
  * Rolls back previously applied inventory changes in reverse order.
  *
- * @param {{
- *   adjustments: Array<{
- *     productId: string,
- *     previousQuantity: number,
- *     nextQuantity: number,
- *     previousSold: number,
- *     nextSold: number,
- *     previousStatus: string,
- *     nextStatus: string,
- *   }>,
- *   client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } },
- * }} input
+ * @param {{ adjustments: Array<{ productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }>, client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } } }} input
  * @returns {Promise<Array<string>>}
  */
 export async function rollbackInventoryAdjustments({ adjustments, client }) {

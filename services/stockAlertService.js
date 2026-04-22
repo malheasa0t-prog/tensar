@@ -1,8 +1,8 @@
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 import { normalizeStockAlertProductId } from "../lib/stockAlertModel.js";
 
-const INVALID_SESSION_MESSAGE = "سجل الدخول أولاً لتفعيل تنبيه التوفر.";
-const STOCK_ALERT_ERROR_MESSAGE = "تعذر تفعيل تنبيه التوفر حالياً.";
+const INVALID_SESSION_MESSAGE = "[SAL-201] سجل الدخول أولاً لتفعيل تنبيه التوفر.";
+const STOCK_ALERT_ERROR_MESSAGE = "[SAL-301] تعذر تفعيل تنبيه التوفر حالياً.";
 
 /**
  * Resolves the browser client used by stock-alert requests.

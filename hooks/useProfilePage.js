@@ -12,6 +12,10 @@ import {
   saveProfileSnapshot,
 } from '@/services/profileService';
 
+const PROFILE_LOAD_ERROR_MESSAGE = '[ACP-301] تعذر تحميل الملف الشخصي';
+const PROFILE_SAVE_ERROR_MESSAGE = '[ACP-302] تعذر حفظ البيانات';
+const PROFILE_PASSWORD_ERROR_MESSAGE = '[ACP-303] تعذر تغيير كلمة المرور';
+
 /**
  * Handles profile loading, editing, and password updates.
  *
@@ -60,10 +64,13 @@ export function useProfilePage() {
 
         setEmail(snapshot.email);
         setForm(createProfileFormState(snapshot.profile));
-      } catch {
+      } catch (err) {
         if (!active) {
           return;
         }
+
+        const nextError = err instanceof Error ? err.message : PROFILE_LOAD_ERROR_MESSAGE;
+        setError(nextError);
       } finally {
         if (active) {
           setLoading(false);
@@ -127,7 +134,7 @@ export function useProfilePage() {
       const message = await saveProfileSnapshot(form);
       setSuccess(message);
     } catch (err) {
-      setError(err.message || 'تعذر حفظ البيانات');
+      setError(err instanceof Error ? err.message : PROFILE_SAVE_ERROR_MESSAGE);
     } finally {
       setSaving(false);
     }
@@ -149,7 +156,7 @@ export function useProfilePage() {
       setPasswordForm(PASSWORD_FORM_DEFAULTS);
       setPasswordMessage(message);
     } catch (err) {
-      setPasswordMessage(err.message || 'تعذر تغيير كلمة المرور');
+      setPasswordMessage(err instanceof Error ? err.message : PROFILE_PASSWORD_ERROR_MESSAGE);
     } finally {
       setPasswordLoading(false);
     }

@@ -75,7 +75,7 @@
     function buildInsights(db) {
         var timeline = getTimeline(DAYS_RANGE);
         var revenueByDay = {}, ordersByDay = {};
-        var allOrders = (db.orders || []).concat(db.serviceOrders || []);
+        var allOrders = TZ.clone(db.orders || []);
 
         allOrders.forEach(function (o) {
             var k = toDayKey(o.createdAt || o.created_at);
@@ -97,7 +97,6 @@
             totalCustomers: (db.users || []).filter(function (u) { return TZ.isCustomerUser(u); }).length,
             pendingOrders:
                 (db.orders || []).filter(function (o) { return PENDING_STATUSES[o.status]; }).length
-                + (db.serviceOrders || []).filter(function (o) { return PENDING_STATUSES[o.status]; }).length
                 + (db.repairBookings || []).filter(function (b) { return PENDING_STATUSES[b.status]; }).length,
             lowStock: (db.products || []).filter(function (p) { return p.quantity > 0 && p.quantity <= (p.lowStockAlert || 5); }).length,
             outOfStock: (db.products || []).filter(function (p) { return p.quantity <= 0; }).length,

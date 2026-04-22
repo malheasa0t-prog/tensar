@@ -12,20 +12,18 @@ import {
  *
  * @returns {{
  *   productOrders: Array<Record<string, unknown>>,
- *   serviceOrders: Array<Record<string, unknown>>,
  *   repairBookings: Array<Record<string, unknown>>,
  *   orderItemsMap: Record<string, Array<Record<string, unknown>>>,
  *   profile: { full_name?: string, phone?: string } | null,
  *   activeFilter: string,
  *   loading: boolean,
  *   error: string,
- *   stats: { total: number, products: number, digital: number, repairs: number },
+ *   stats: { total: number, products: number, repairs: number },
  *   setActiveFilter: (value: string) => void,
  * }}
  */
 export function useDashboardOrders() {
   const [productOrders, setProductOrders] = useState([]);
-  const [serviceOrders, setServiceOrders] = useState([]);
   const [repairBookings, setRepairBookings] = useState([]);
   const [orderItemsMap, setOrderItemsMap] = useState({});
   const [profile, setProfile] = useState(null);
@@ -36,11 +34,6 @@ export function useDashboardOrders() {
   useEffect(() => {
     let isMounted = true;
 
-    /**
-     * Refreshes the dashboard state from Supabase while guarding against stale updates.
-     *
-     * @returns {Promise<void>}
-     */
     async function refreshDashboardOrders() {
       setLoading(true);
       setError('');
@@ -53,7 +46,6 @@ export function useDashboardOrders() {
 
       setProfile(snapshot.profile);
       setProductOrders(snapshot.productOrders);
-      setServiceOrders(snapshot.serviceOrders);
       setRepairBookings(snapshot.repairBookings);
       setOrderItemsMap(snapshot.orderItemsMap);
       setError(snapshot.error);
@@ -76,15 +68,13 @@ export function useDashboardOrders() {
     () =>
       buildDashboardOrdersStats({
         productOrders,
-        serviceOrders,
         repairBookings,
       }),
-    [productOrders, repairBookings, serviceOrders]
+    [productOrders, repairBookings]
   );
 
   return {
     productOrders,
-    serviceOrders,
     repairBookings,
     orderItemsMap,
     profile,

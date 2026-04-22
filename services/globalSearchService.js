@@ -10,7 +10,7 @@ import {
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
-const GLOBAL_SEARCH_ERROR_MESSAGE = "تعذر تحميل بيانات البحث حالياً.";
+const GLOBAL_SEARCH_ERROR_MESSAGE = "[GSR-301] تعذر تحميل بيانات البحث حالياً.";
 
 let cachedSnapshot = null;
 let cacheExpiryTimestamp = 0;

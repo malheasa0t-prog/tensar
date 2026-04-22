@@ -21,7 +21,7 @@ import '@/app/techfix-footer.css';
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
-  throw new Error('Root element #root not found in index.html');
+  throw new Error('[APP-101] Root element #root not found in index.html');
 }
 
 void registerServiceWorker();
