@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
  *   checkoutTotal: number,
  *   error: string,
  *   form: Record<string, string>,
+ *   hasDigitalItems: boolean,
  *   isWalletTransferModalOpen: boolean,
  *   isWalletTransferUnavailable: boolean,
  *   loading: boolean,
@@ -28,6 +29,7 @@ export default function CheckoutFormCard({
   checkoutTotal,
   error,
   form,
+  hasDigitalItems,
   isWalletTransferModalOpen,
   isWalletTransferUnavailable,
   loading,
@@ -78,6 +80,27 @@ export default function CheckoutFormCard({
             />
           </div>
         </div>
+
+        {hasDigitalItems ? (
+          <div className="form-field">
+            <label htmlFor="customer_contact_link">
+              رقم الواتساب أو وسيلة التواصل *
+            </label>
+            <input
+              id="customer_contact_link"
+              className="form-input"
+              name="customer_contact_link"
+              value={form.customer_contact_link || ''}
+              onChange={onFieldChange}
+              required
+              dir="ltr"
+              placeholder="مثال: 962790000000+"
+            />
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
+              مطلوب للخدمات الرقمية — سيتم التواصل معك لتسليم الطلب.
+            </p>
+          </div>
+        ) : null}
 
         <div className="field-grid">
           <div className="form-field">

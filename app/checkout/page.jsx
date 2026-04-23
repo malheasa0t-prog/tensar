@@ -34,6 +34,8 @@ export default function CheckoutPage() {
     submitCheckout,
   } = useCheckoutPage();
 
+  const hasDigitalItems = items.some((item) => String(item.id || '').startsWith('srv-'));
+
   return (
     <>
       <SuccessConfetti activeKey={success?.order_id || ''} />
@@ -49,6 +51,7 @@ export default function CheckoutPage() {
             success={success}
             canSubmit={canSubmit}
             checkoutTotal={checkoutTotal}
+            hasDigitalItems={hasDigitalItems}
             walletTransferInstructions={walletTransferInstructions}
             isWalletTransferModalOpen={isWalletTransferModalOpen}
             isWalletTransferUnavailable={isWalletTransferUnavailable}

@@ -151,6 +151,7 @@ export async function onRequestPost(context) {
     const customerName = normalizeText(body?.customer_name);
     const customerPhone = normalizeText(body?.customer_phone);
     const customerEmail = normalizeText(body?.customer_email);
+    const customerContactLink = normalizeText(body?.customer_contact_link);
     const notes = normalizeText(body?.notes);
     const deliveryMethod = normalizeText(body?.delivery_method) || 'delivery';
     const paymentMethod = normalizeText(body?.payment_method) || 'cod';
@@ -166,6 +167,10 @@ export async function onRequestPost(context) {
 
     const serviceIds = items.filter((item) => item.id.startsWith('srv-')).map((item) => item.id);
     const physicalIds = items.filter((item) => !item.id.startsWith('srv-')).map((item) => item.id);
+
+    if (serviceIds.length > 0 && !customerContactLink && !customerPhone) {
+      return errorResponse('[CHK-112] رقم الواتساب أو وسيلة التواصل مطلوبة للخدمات الرقمية', 400);
+    }
 
     const [productsResult, servicesResult] = await Promise.all([
       physicalIds.length > 0
@@ -281,7 +286,7 @@ export async function onRequestPost(context) {
         const providerResult = await createProviderOrder(env, {
           serviceId: product.provider_service_id,
           quantity: item.qty,
-          link: notes || customerPhone,
+          link: customerContactLink || customerPhone,
         });
 
         const snapshotUpdate = providerResult.success && providerResult.orderId

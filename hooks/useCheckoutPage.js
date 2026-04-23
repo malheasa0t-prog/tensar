@@ -19,6 +19,7 @@ import {
 
 const DEFAULT_CHECKOUT_ERROR_MESSAGE = '[CKP-500] حدث خطأ غير متوقع أثناء إتمام الطلب';
 const INCOMPLETE_CHECKOUT_MESSAGE = '[CKP-101] أكمل الاسم ورقم الهاتف قبل تأكيد الطلب.';
+const MISSING_CONTACT_LINK_MESSAGE = '[CKP-102] أدخل رقم الواتساب أو وسيلة التواصل للخدمات الرقمية.';
 
 /**
  * Handles dynamic checkout options, form state, and order submission.
@@ -125,6 +126,13 @@ export function useCheckoutPage() {
       return;
     }
 
+    const cartHasDigitalItems = items.some((item) => String(item.id || '').startsWith('srv-'));
+    if (cartHasDigitalItems && !form.customer_contact_link?.trim()) {
+      setError(MISSING_CONTACT_LINK_MESSAGE);
+      showToast(MISSING_CONTACT_LINK_MESSAGE, { type: 'warning', title: 'بيانات ناقصة' });
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess(null);
@@ -160,10 +168,12 @@ export function useCheckoutPage() {
     }
   }
 
+  const hasDigitalItems = items.some((item) => String(item.id || '').startsWith('srv-'));
   const canSubmit =
     items.length > 0 &&
     Boolean(form.customer_name.trim()) &&
     Boolean(form.customer_phone.trim()) &&
+    !(hasDigitalItems && !form.customer_contact_link?.trim()) &&
     !(form.payment_method === 'wallet' && !checkoutOptions.walletTransferNumber?.trim());
   const { shippingFee, total: checkoutTotal } = calculateCheckoutTotals({
     subtotal: cartTotal,
