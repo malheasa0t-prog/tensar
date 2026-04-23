@@ -184,7 +184,7 @@ export async function onRequestPost(context) {
       serviceIds.length > 0
         ? admin
             .from('services')
-            .select('id,name,price,min_qty,max_qty,image,category_id,status,provider_service_id')
+            .select('id,name,price,min_qty,max_qty,image,category_id,status,provider_service_id,metadata')
             .in('id', serviceIds)
             .eq('status', 'active')
         : { data: [], error: null },
@@ -196,6 +196,9 @@ export async function onRequestPost(context) {
     const productMap = new Map((productsResult.data || []).map((product) => [product.id, product]));
 
     for (const service of (servicesResult.data || [])) {
+      const serviceMetadata = service.metadata || {};
+      const providerFields = Array.isArray(serviceMetadata.provider_fields) ? serviceMetadata.provider_fields : [];
+
       productMap.set(service.id, {
         id: service.id,
         name: service.name,
@@ -209,6 +212,8 @@ export async function onRequestPost(context) {
         brand: null,
         images: service.image ? [service.image] : [],
         provider_service_id: service.provider_service_id,
+        link_required: Boolean(serviceMetadata.link_required),
+        provider_fields: providerFields,
       });
     }
 
@@ -283,10 +288,21 @@ export async function onRequestPost(context) {
           })
           .eq('id', item.id);
       } else if (product.provider_service_id) {
+        const providerLink = customerContactLink || customerPhone;
+        const providerFieldDefs = Array.isArray(product.provider_fields) ? product.provider_fields : [];
+
+        const dynamicFields = {};
+        for (const fieldDef of providerFieldDefs) {
+          const fieldKey = fieldDef.key || fieldDef.label || '';
+          if (!fieldKey) continue;
+          dynamicFields[fieldKey] = providerLink;
+        }
+
         const providerResult = await createProviderOrder(env, {
           serviceId: product.provider_service_id,
           quantity: item.qty,
-          link: customerContactLink || customerPhone,
+          link: providerLink,
+          fields: Object.keys(dynamicFields).length > 0 ? dynamicFields : null,
         });
 
         const snapshotUpdate = providerResult.success && providerResult.orderId

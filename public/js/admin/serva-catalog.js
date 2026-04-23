@@ -114,6 +114,9 @@
      */
     async function addServiceToLocal(service, categoryId) {
         const price = parseFloat(service.rate) || 0;
+        const providerFields = Array.isArray(service.fields) ? service.fields : [];
+        const linkRequired = Boolean(service.link_required);
+
         const row = {
             id: generateId('srv-'),
             name: service.name_ar || service.name,
@@ -127,6 +130,12 @@
             description: service.name_en || (service.name_ar || service.name),
             status: 'active',
             sort_order: 0,
+            metadata: {
+                link_required: linkRequired,
+                provider_fields: providerFields,
+                pricing_type: service.pricing_type || 'default',
+                has_quantity: Boolean(service.has_quantity),
+            },
         };
 
         const { error } = await TZ.supabase.from(LOCAL_SERVICES_TABLE).insert(row);

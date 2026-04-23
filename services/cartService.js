@@ -55,7 +55,7 @@ export async function fetchCartProductSnapshots({ productIds, client }) {
       ? resolvedClient.from("products").select(CART_PRODUCT_SELECT_FIELDS).in("id", physicalIds)
       : { data: [], error: null },
     serviceIds.length > 0
-      ? resolvedClient.from("services").select("id,name,price,min_qty,max_qty,image,category_id,status").in("id", serviceIds)
+      ? resolvedClient.from("services").select("id,name,price,min_qty,max_qty,image,category_id,status,metadata").in("id", serviceIds)
       : { data: [], error: null }
   ]);
 
@@ -74,7 +74,9 @@ export async function fetchCartProductSnapshots({ productIds, client }) {
     status: service.status,
     quantity: service.max_qty || 9999,
     category_id: service.category_id,
-    product_type: 'digital'
+    product_type: 'digital',
+    provider_fields: service.metadata?.provider_fields || [],
+    link_required: Boolean(service.metadata?.link_required),
   }));
 
   return [...physicalProducts, ...digitalServices];
