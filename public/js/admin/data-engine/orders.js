@@ -4,6 +4,7 @@
 export function mapOrder(row, items) {
     return {
         id: row.id,
+        displayNumber: Number(row.display_number || 0) || null,
         userId: row.user_id,
         customerName: row.customer_name,
         customerPhone: row.customer_phone,

@@ -345,8 +345,10 @@
     A.canAccessSection = (section) => helpers.canAccessSection(A.currentUser, TZ, section);
     A.statusLabel = helpers.statusLabel;
     A.paymentLabel = helpers.paymentLabel;
+    A.deliveryLabel = helpers.deliveryLabel;
     A.formatDate = helpers.formatDate;
     A.formatDateTime = helpers.formatDateTime;
+    A.formatOrderNumber = helpers.formatOrderNumber;
     A.getAdminImageUploadLimitText = ui.getAdminImageUploadLimitText;
     A.isAdminImageUploadTooLarge = ui.isAdminImageUploadTooLarge;
     A.showAdminImageUploadLimitToast = ui.showAdminImageUploadLimitToast;

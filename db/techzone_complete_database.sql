@@ -178,8 +178,15 @@ CREATE TABLE IF NOT EXISTS public.services (
 );
 
 -- Orders
+CREATE SEQUENCE IF NOT EXISTS public.order_display_number_seq
+  AS bigint
+  START WITH 2000
+  INCREMENT BY 1
+  MINVALUE 2000;
+
 CREATE TABLE IF NOT EXISTS public.orders (
   id text PRIMARY KEY DEFAULT public.generate_prefixed_id('ord-'),
+  display_number bigint NOT NULL DEFAULT nextval('public.order_display_number_seq'),
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   customer_name text NOT NULL,
   customer_phone text,
@@ -387,6 +394,7 @@ CREATE INDEX IF NOT EXISTS idx_services_category_status ON public.services(categ
 CREATE UNIQUE INDEX IF NOT EXISTS idx_services_slug_unique ON public.services ((lower(slug))) WHERE slug IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_display_number ON public.orders(display_number);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id, id);
 CREATE INDEX IF NOT EXISTS idx_repair_bookings_status ON public.repair_bookings(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON public.contact_messages(status, created_at DESC);

@@ -51,6 +51,12 @@
         logs: 'سجل العمليات',
         'audit-logs': 'سجل العمليات'
     };
+    const DELIVERY_LABELS = {
+        delivery: 'توصيل للمنزل',
+        pickup: 'استلام من المحل',
+        store_pickup: 'استلام من المتجر',
+        express: 'توصيل سريع'
+    };
 
     function requestAdminRuntimeAccess(enabled) {
         window.dispatchEvent(new CustomEvent('tz-admin-runtime-access-request', {
@@ -204,6 +210,37 @@
         return labels[method] || method || '-';
     }
 
+    /**
+     * Formats a human-friendly order number for admin views.
+     *
+     * @param {number | string | { displayNumber?: number, display_number?: number, id?: string } | null | undefined} input
+     * @param {string} [fallbackId]
+     * @returns {string}
+     */
+    function formatOrderNumber(input, fallbackId) {
+        const rawDisplayNumber = typeof input === 'object' && input
+            ? input.displayNumber ?? input.display_number
+            : input;
+        const displayNumber = Number(rawDisplayNumber);
+
+        if (Number.isInteger(displayNumber) && displayNumber > 0) {
+            return `#${displayNumber}`;
+        }
+
+        const objectFallbackId = typeof input === 'object' && input ? String(input.id || '').trim() : '';
+        return String(fallbackId || objectFallbackId || '-').trim() || '-';
+    }
+
+    /**
+     * Resolves an Arabic label for the order delivery method.
+     *
+     * @param {string} method
+     * @returns {string}
+     */
+    function deliveryLabel(method) {
+        return DELIVERY_LABELS[method] || method || '-';
+    }
+
     function formatDate(iso) {
         if (!iso) return '-';
         return new Date(iso).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -219,8 +256,10 @@
         SECTION_TITLES,
         applySectionPermissions,
         canAccessSection,
+        deliveryLabel,
         formatDate,
         formatDateTime,
+        formatOrderNumber,
         getInitialSection,
         normalizeSection,
         paymentLabel,

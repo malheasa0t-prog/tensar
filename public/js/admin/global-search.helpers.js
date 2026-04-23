@@ -12,6 +12,20 @@
         return normalizeText((Array.isArray(parts) ? parts : []).filter(Boolean).join(' '));
     }
 
+    function formatOrderLabel(order) {
+        const helper = window.AdminCoreHelpers?.formatOrderNumber;
+        if (typeof helper === 'function') {
+            return helper(order);
+        }
+
+        const displayNumber = Number(order?.displayNumber ?? order?.display_number);
+        if (Number.isInteger(displayNumber) && displayNumber > 0) {
+            return `#${displayNumber}`;
+        }
+
+        return String(order?.id || '').trim();
+    }
+
     function resolvePhysicalOrderSection(order, helpers) {
         const metadataKind = normalizeText(order?.metadata?.catalog_kind || order?.metadata?.catalogKind);
         if (metadataKind === 'accessories') return 'accessory-orders';
@@ -37,6 +51,7 @@
 
         return orders.map(function (order) {
             const section = resolvePhysicalOrderSection(order, helpers);
+            const orderLabel = formatOrderLabel(order);
             return {
                 id: `order:${order.id}`,
                 entityId: order.id,
@@ -47,6 +62,7 @@
                 title: `طلب #${order.id}`,
                 subtitle: `${order.customerName || 'عميل'} • ${Number(order.total || 0).toFixed(2)} د.أ`,
                 meta: order.status || 'pending',
+                title: `طلب ${orderLabel}`,
                 searchText: buildSearchText([order.id, order.customerName, order.customerPhone, order.customerEmail])
             };
         });

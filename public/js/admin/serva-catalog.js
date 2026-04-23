@@ -130,6 +130,7 @@
             description: service.name_en || (service.name_ar || service.name),
             status: 'active',
             sort_order: 0,
+            image: service.image || service.icon || null, // <-- السطر الجديد لجلب الصورة
             metadata: {
                 link_required: linkRequired,
                 provider_fields: providerFields,

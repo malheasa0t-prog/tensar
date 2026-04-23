@@ -174,8 +174,15 @@ create table if not exists public.services (
   updated_at timestamptz not null default now()
 );
 
+create sequence if not exists public.order_display_number_seq
+  as bigint
+  start with 2000
+  increment by 1
+  minvalue 2000;
+
 create table if not exists public.orders (
   id text primary key default public.generate_prefixed_id('ord-'),
+  display_number bigint not null default nextval('public.order_display_number_seq'),
   user_id uuid references auth.users(id) on delete set null,
   customer_name text not null,
   customer_phone text,
@@ -393,6 +400,7 @@ create unique index if not exists idx_services_slug_unique
   where slug is not null;
 create index if not exists idx_orders_user_id on public.orders(user_id, created_at desc);
 create index if not exists idx_orders_status on public.orders(status, created_at desc);
+create unique index if not exists idx_orders_display_number on public.orders(display_number);
 create index if not exists idx_order_items_order_id on public.order_items(order_id, id);
 create index if not exists idx_order_items_product_id on public.order_items(product_id);
 create index if not exists idx_repair_services_status on public.repair_services(status, sort_order);
