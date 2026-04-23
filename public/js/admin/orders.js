@@ -28,9 +28,43 @@
     var filterStatus = '';
     var searchQuery = '';
     var currentPage = 1;
+    var ORDER_NOTES_PREVIEW_LENGTH = 96;
 
     function esc(value) {
         return TZ.escapeHtml(value == null ? '' : String(value));
+    }
+
+    function truncateText(value, maxLength) {
+        var normalizedValue = String(value || '').trim();
+        if (!normalizedValue || normalizedValue.length <= maxLength) return normalizedValue;
+        return normalizedValue.slice(0, Math.max(0, maxLength - 3)).trim() + '...';
+    }
+
+    function getOrderSearchTokens(order) {
+        var itemNames = Array.isArray(order.items)
+            ? order.items.map(function (item) { return item.productName || ''; }).join(' ')
+            : '';
+
+        return [
+            order.id,
+            order.displayNumber,
+            A.formatOrderNumber ? A.formatOrderNumber(order) : '',
+            order.customerName,
+            order.customer_name,
+            order.customerPhone,
+            order.customer_phone,
+            order.customerEmail,
+            order.customer_email,
+            order.name,
+            order.phone,
+            order.email,
+            order.device,
+            order.service_name,
+            order.serviceName,
+            order.notes,
+            order.description,
+            itemNames
+        ];
     }
 
     function getOrders() {
@@ -50,14 +84,7 @@
         return list.filter(function (order) {
             var matchesStatus = !filterStatus || order.status === filterStatus;
             var query = searchQuery.toLowerCase();
-            var matchesSearch = !query || [
-                order.id,
-                order.customerName,
-                order.customer_name,
-                order.name,
-                order.service_name,
-                order.serviceName
-            ].some(function (value) {
+            var matchesSearch = !query || getOrderSearchTokens(order).some(function (value) {
                 return String(value || '').toLowerCase().includes(query);
             });
             return matchesStatus && matchesSearch;
@@ -150,8 +177,8 @@
     }
 
     function getStatusOptions() {
-        if (activeTab === 'repair') return ['pending', 'confirmed', 'received', 'diagnosing', 'waiting_approval', 'in_progress', 'ready', 'completed', 'cancelled', 'rejected'];
-        return ['pending', 'awaiting_delivery', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled', 'failed', 'refunded'];
+        if (activeTab === 'repair') return ['pending', 'in_progress', 'ready', 'completed', 'cancelled'];
+        return ['pending', 'processing', 'completed', 'cancelled', 'refunded'];
     }
 
     function buildStatusDropdown(order) {
@@ -162,16 +189,136 @@
             + '</select>';
     }
 
-    function renderOrderRow(order) {
-        var date = A.formatDate(order.createdAt || order.created_at);
+    function buildMetaLine(label, value) {
+        var normalizedValue = String(value || '').trim();
+        if (!normalizedValue) return '';
+
+        return '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;">'
+            + '<strong style="color:var(--text-primary);">' + esc(label) + ':</strong> '
+            + esc(normalizedValue)
+            + '</div>';
+    }
+
+    function buildOrderNumberCell(order) {
+        var orderLabel = activeTab === 'repair'
+            ? String(order.id || '-')
+            : (A.formatOrderNumber ? A.formatOrderNumber(order) : String(order.id || '-'));
+        var rawId = String(order.id || '').trim();
+        var rawIdLine = activeTab !== 'repair' && rawId && orderLabel !== rawId
+            ? '<small style="color:var(--text-muted);">ID: ' + esc(rawId) + '</small>'
+            : '';
+
+        return '<td><div style="display:grid;gap:4px;">'
+            + '<strong style="font-size:1rem;color:var(--primary-light);">' + esc(orderLabel) + '</strong>'
+            + rawIdLine
+            + '</div></td>';
+    }
+
+    function buildCustomerCell(order) {
+        var customerName = order.customer_name || order.customerName || order.name || '-';
+        var phone = order.customer_phone || order.customerPhone || order.phone || '';
+        var email = order.customer_email || order.customerEmail || order.email || '';
+
+        return '<td><div style="display:grid;gap:4px;">'
+            + '<strong>' + esc(customerName) + '</strong>'
+            + buildMetaLine('الهاتف', phone)
+            + buildMetaLine('البريد', email)
+            + '</div></td>';
+    }
+
+    function getOrderItemCount(order) {
+        if (!Array.isArray(order.items)) return 0;
+        return order.items.reduce(function (total, item) {
+            return total + (Number(item.qty || 0) || 0);
+        }, 0);
+    }
+
+    function getOrderItemsPreview(order) {
+        if (!Array.isArray(order.items) || order.items.length === 0) return '';
+
+        return order.items.map(function (item) {
+            var productName = String(item.productName || '').trim();
+            var quantity = Number(item.qty || 0) || 0;
+            if (!productName) return '';
+            return quantity > 1 ? productName + ' ×' + quantity : productName;
+        }).filter(Boolean).slice(0, 3).join('، ');
+    }
+
+    function buildPhysicalDetailsCell(order) {
+        var itemCount = getOrderItemCount(order);
+        var itemsPreview = getOrderItemsPreview(order);
+        var deliveryMethodLabel = A.deliveryLabel
+            ? A.deliveryLabel(order.delivery_method || order.deliveryMethod)
+            : (order.delivery_method || order.deliveryMethod || '-');
+        var paymentMethodLabel = A.paymentLabel
+            ? A.paymentLabel(order.payment_method || order.paymentMethod)
+            : (order.payment_method || order.paymentMethod || '-');
+        var notes = truncateText(order.notes, ORDER_NOTES_PREVIEW_LENGTH);
+
+        return '<td><div style="display:grid;gap:4px;">'
+            + buildMetaLine('العناصر', itemCount > 0 ? itemCount + ' قطعة' : 'بدون عناصر')
+            + buildMetaLine('المنتجات', itemsPreview)
+            + buildMetaLine('التسليم', deliveryMethodLabel)
+            + buildMetaLine('الدفع', paymentMethodLabel)
+            + buildMetaLine('ملاحظات', notes)
+            + '</div></td>';
+    }
+
+    function buildRepairDetailsCell(order) {
+        var preferredDate = order.preferredDate ? A.formatDate(order.preferredDate) : '';
+        var description = truncateText(order.description, ORDER_NOTES_PREVIEW_LENGTH);
+
+        return '<td><div style="display:grid;gap:4px;">'
+            + buildMetaLine('الجهاز', order.device || '-')
+            + buildMetaLine('الخدمة', order.service_name || order.serviceName || '-')
+            + buildMetaLine('الموعد المفضل', preferredDate)
+            + buildMetaLine('الوصف', description)
+            + '</div></td>';
+    }
+
+    function buildAmountCell(order) {
+        var shippingFee = Number(order.shipping_fee || order.shippingFee || 0);
+        var shippingLabel = shippingFee > 0 ? TZ.formatPrice(shippingFee) : 'مجاني';
+
+        return '<td><div style="display:grid;gap:4px;">'
+            + '<strong style="font-weight:600;color:#00b894;">' + TZ.formatPrice(order.total || 0) + '</strong>'
+            + buildMetaLine('الشحن', shippingLabel)
+            + '</div></td>';
+    }
+
+    function renderRepairOrderRow(order) {
+        var date = A.formatDateTime ? A.formatDateTime(order.createdAt || order.created_at) : A.formatDate(order.createdAt || order.created_at);
         var badge = '<span class="status-badge ' + order.status + '">' + (ORDER_STATUSES[order.status] || order.status) + '</span>';
         var actions = buildStatusDropdown(order);
 
-        if (activeTab === 'repair') {
-            return '<tr><td><small>' + esc(order.id) + '</small></td><td>' + esc(order.name || '-') + '</td><td>' + esc(order.device || '-') + '</td><td>' + esc(order.service_name || order.serviceName || '-') + '</td><td>' + badge + '</td><td><small>' + date + '</small></td><td class="actions-cell">' + actions + '</td></tr>';
-        }
-        var paymentLabel = A.paymentLabel ? A.paymentLabel(order.payment_method || order.paymentMethod) : (order.payment_method || '-');
-        return '<tr><td><small>' + esc(order.id) + '</small></td><td>' + esc(order.customer_name || order.customerName || '-') + '</td><td style="font-weight:600;color:#00b894;">' + TZ.formatPrice(order.total || 0) + '</td><td>' + esc(paymentLabel) + '</td><td>' + badge + '</td><td><small>' + date + '</small></td><td class="actions-cell">' + actions + '</td></tr>';
+        return '<tr data-order-id="' + esc(order.id) + '">'
+            + buildOrderNumberCell(order)
+            + buildCustomerCell(order)
+            + buildRepairDetailsCell(order)
+            + '<td>' + badge + '</td>'
+            + '<td><small>' + esc(date) + '</small></td>'
+            + '<td class="actions-cell">' + actions + '</td>'
+            + '</tr>';
+    }
+
+    function renderPhysicalOrderRow(order) {
+        var date = A.formatDateTime ? A.formatDateTime(order.createdAt || order.created_at) : A.formatDate(order.createdAt || order.created_at);
+        var badge = '<span class="status-badge ' + order.status + '">' + (ORDER_STATUSES[order.status] || order.status) + '</span>';
+        var actions = buildStatusDropdown(order);
+
+        return '<tr data-order-id="' + esc(order.id) + '">'
+            + buildOrderNumberCell(order)
+            + buildCustomerCell(order)
+            + buildPhysicalDetailsCell(order)
+            + buildAmountCell(order)
+            + '<td>' + badge + '</td>'
+            + '<td><small>' + esc(date) + '</small></td>'
+            + '<td class="actions-cell">' + actions + '</td>'
+            + '</tr>';
+    }
+
+    function renderOrderRow(order) {
+        return activeTab === 'repair' ? renderRepairOrderRow(order) : renderPhysicalOrderRow(order);
     }
 
     function renderPagination(page) {
@@ -192,11 +339,15 @@
             return new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at);
         });
         var page = paginate(sorted);
+        var columnCount = activeTab === 'repair' ? 6 : 7;
         var sectionTitle = activeTab === 'repair' ? 'حجوزات الصيانة' : 'إدارة الطلبات';
         var summaryLabel = activeTab === 'repair' ? 'حجز' : 'طلب';
         var columns = activeTab === 'repair'
             ? '<th>#</th><th>العميل</th><th>الجهاز</th><th>الخدمة</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>'
             : '<th>#</th><th>العميل</th><th>المبلغ</th><th>الدفع</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>';
+        columns = activeTab === 'repair'
+            ? '<th>رقم الحجز</th><th>العميل</th><th>تفاصيل الطلب</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>'
+            : '<th>رقم الطلب</th><th>العميل</th><th>تفاصيل الطلب</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>';
         var tabsHtml = TAB_CONFIG.map(function (tab) {
             var previousTab = activeTab;
             activeTab = tab.key;
@@ -207,6 +358,9 @@
         var rowsHtml = page.items.length
             ? page.items.map(renderOrderRow).join('')
             : '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد طلبات مطابقة</p></div></td></tr>';
+        if (!page.items.length) {
+            rowsHtml = '<tr><td colspan="' + columnCount + '"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد طلبات مطابقة</p></div></td></tr>';
+        }
         var statusOptionsHtml = getStatusOptions().map(function (status) {
             return '<option value="' + status + '"' + (filterStatus === status ? ' selected' : '') + '>' + (ORDER_STATUSES[status] || status) + '</option>';
         }).join('');
@@ -220,6 +374,11 @@
             + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>'
             + renderPagination(page)
             + '</div>';
+
+        var ordersSearchInput = document.getElementById('ordersSearch');
+        if (ordersSearchInput) {
+            ordersSearchInput.placeholder = 'ابحث برقم الطلب مثل #2000 أو باسم العميل أو الهاتف...';
+        }
 
         bindEvents();
     }

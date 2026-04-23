@@ -33,11 +33,23 @@ function normalizeRole(role) {
     return normalizedRole === 'customer' ? 'user' : normalizedRole;
 }
 
+function normalizeUserMergeKey(user) {
+    const authUserId = String(user?.authUserId || user?.id || '').trim().toLowerCase();
+    if (authUserId) return authUserId;
+
+    const email = String(user?.email || '').trim().toLowerCase();
+    if (email) return email;
+
+    return String(user?.profileId || '').trim().toLowerCase();
+}
+
 export function mapUser(row) {
+    const authUserId = row.user_id || row.auth_user_id || row.id;
+
     return {
-        id: row.user_id || row.id,
+        id: authUserId,
         profileId: row.id,
-        authUserId: row.user_id || row.id,
+        authUserId: authUserId,
         fullName: row.full_name || row.name || row.email || 'مستخدم',
         email: row.email || '',
         phone: row.phone || '',
@@ -60,12 +72,12 @@ export function mergeUsers(profileRows = [], legacyRows = []) {
 
     profileRows.forEach((row) => {
         const mappedUser = mapUser(row);
-        mergedUsers.set(mappedUser.id, mappedUser);
+        mergedUsers.set(normalizeUserMergeKey(mappedUser), mappedUser);
     });
 
     legacyRows.forEach((row) => {
         const mappedUser = mapUser(row);
-        const mergeKey = mappedUser.authUserId || mappedUser.email || mappedUser.id;
+        const mergeKey = normalizeUserMergeKey(mappedUser);
         const existingUser = mergedUsers.get(mergeKey);
         if (!existingUser) {
             mergedUsers.set(mergeKey, mappedUser);
@@ -75,6 +87,9 @@ export function mergeUsers(profileRows = [], legacyRows = []) {
         mergedUsers.set(mergeKey, {
             ...mappedUser,
             ...existingUser,
+            id: existingUser.id || mappedUser.id,
+            authUserId: existingUser.authUserId || mappedUser.authUserId,
+            profileId: existingUser.profileId || mappedUser.profileId,
             email: existingUser.email || mappedUser.email || '',
             phone: existingUser.phone || mappedUser.phone || '',
             fullName: existingUser.fullName || mappedUser.fullName,

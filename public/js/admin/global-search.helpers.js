@@ -63,7 +63,14 @@
                 subtitle: `${order.customerName || 'عميل'} • ${Number(order.total || 0).toFixed(2)} د.أ`,
                 meta: order.status || 'pending',
                 title: `طلب ${orderLabel}`,
-                searchText: buildSearchText([order.id, order.customerName, order.customerPhone, order.customerEmail])
+                searchText: buildSearchText([
+                    order.id,
+                    order.displayNumber,
+                    orderLabel,
+                    order.customerName,
+                    order.customerPhone,
+                    order.customerEmail
+                ])
             };
         });
     }
@@ -109,6 +116,7 @@
     window.AdminGlobalSearchHelpers = {
         RESULT_LIMIT: RESULT_LIMIT,
         normalizeText: normalizeText,
+        formatOrderLabel: formatOrderLabel,
         buildSearchText: buildSearchText,
         resolvePhysicalOrderSection: resolvePhysicalOrderSection,
         buildAdminSearchIndex: buildAdminSearchIndex,

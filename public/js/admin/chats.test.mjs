@@ -68,3 +68,37 @@ test("buildAdminReplyNotification should create a chat notification payload", ()
     reference_id: "conv-1",
   });
 });
+
+test("filterAdminChatConversations should keep pending rows when requested", () => {
+  const hooks = loadChatHooks();
+  const conversations = hooks.filterAdminChatConversations({
+    conversations: [
+      { id: "conv-1", status: "open", last_message_sender_role: "customer", customer_name: "Ali" },
+      { id: "conv-2", status: "open", last_message_sender_role: "admin", customer_name: "Sara" },
+      { id: "conv-3", status: "closed", last_message_sender_role: "customer", customer_name: "Omar" },
+    ],
+    statusFilter: "pending",
+    searchQuery: "",
+  });
+
+  assert.deepEqual(
+    normalizeValue(conversations.map((item) => item.id)),
+    ["conv-1"]
+  );
+});
+
+test("buildAdminChatSummary should count open pending and closed conversations", () => {
+  const hooks = loadChatHooks();
+  const summary = hooks.buildAdminChatSummary([
+    { status: "open", last_message_sender_role: "customer" },
+    { status: "open", last_message_sender_role: "admin" },
+    { status: "closed", last_message_sender_role: "admin" },
+  ]);
+
+  assert.deepEqual(normalizeValue(summary), {
+    total: 3,
+    open: 1,
+    pending: 1,
+    closed: 1,
+  });
+});

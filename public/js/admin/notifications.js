@@ -77,17 +77,20 @@
             + '</form></div></div>';
 
         html += '<div class="admin-panel"><div class="panel-header"><h2><i class="fas fa-history"></i> آخر الإشعارات المرسلة</h2></div><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
-            + '<th>العنوان</th><th>النوع</th><th>القراءة</th><th>التاريخ</th></tr></thead><tbody>';
+            + '<th>العنوان</th><th>المستلم</th><th>النوع</th><th>التاريخ</th><th style="width: 80px;">إجراءات</th></tr></thead><tbody>';
 
         if (recent.length === 0) {
-            html += '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div></td></tr>';
+            html += '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-bell-slash"></i><p>لا توجد إشعارات</p></div></td></tr>';
         } else {
             recent.forEach(function (n) {
+                var recipientText = (n.user_id && n.user_id !== 'all') ? '<span class="status-badge" style="background: rgba(0, 184, 148, 0.1); color: #00b894;">مستخدم محدد</span>' : '<span class="status-badge" style="background: rgba(9, 132, 227, 0.1); color: #0984e3;">جميع المستخدمين</span>';
+                
                 html += '<tr>'
-                    + '<td><strong>' + esc(n.title) + '</strong>' + (n.body ? '<br><small style="color:var(--text-muted);">' + esc(n.body).substring(0, 60) + '</small>' : '') + '</td>'
-                    + '<td><span class="status-badge ' + (n.type || 'info') + '">' + (n.type || 'info') + '</span></td>'
-                    + '<td>' + (n.is_read ? '<i class="fas fa-check" style="color:#00b894;"></i>' : '<i class="fas fa-clock" style="color:#fdcb6e;"></i>') + '</td>'
-                    + '<td><small>' + new Date(n.created_at).toLocaleDateString('ar-JO') + '</small></td>'
+                    + '<td><div style="display: flex; flex-direction: column; gap: 4px;"><strong>' + esc(n.title) + '</strong>' + (n.body ? '<small style="color:var(--text-muted);">' + esc(n.body) + '</small>' : '') + '</div></td>'
+                    + '<td>' + recipientText + '</td>'
+                    + '<td><span class="status-badge ' + (n.type || 'info') + '">' + (n.type === 'error' ? 'خطأ' : n.type === 'warning' ? 'تنبيه' : n.type === 'success' ? 'نجاح' : 'معلومات') + '</span></td>'
+                    + '<td><small style="color:var(--text-muted);">' + new Date(n.created_at).toLocaleString('ar-JO') + '</small></td>'
+                    + '<td><button class="btn btn-icon delete-notif-btn" data-id="' + esc(n.id) + '" title="حذف" style="color: #ff7675; background: rgba(255,118,117,0.1); border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;"><i class="fas fa-trash"></i></button></td>'
                     + '</tr>';
             });
         }
@@ -98,7 +101,7 @@
         document.getElementById('notifForm')?.addEventListener('submit', async function (e) {
             e.preventDefault();
             var title = document.getElementById('notifTitle').value.trim();
-        if (!title) { A.showErrorToast('NTF-101', 'أدخل عنوان الإشعار'); return; }
+            if (!title) { A.showErrorToast('NTF-101', 'أدخل عنوان الإشعار'); return; }
             var btn = this.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
@@ -110,6 +113,23 @@
             });
             if (ok) { renderNotifications(); }
             else { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال'; }
+        });
+
+        // Delete handlers
+        document.querySelectorAll('.delete-notif-btn').forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+                var id = this.dataset.id;
+                if (!window.confirm('هل أنت متأكد من حذف هذا الإشعار؟')) return;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                var res = await TZ.supabase.from('notifications').delete().eq('id', id);
+                if (res.error) {
+                    A.showErrorToast('NTF-400', 'فشل حذف الإشعار');
+                    this.innerHTML = '<i class="fas fa-trash"></i>';
+                } else {
+                    A.showToast('تم الحذف بنجاح');
+                    renderNotifications();
+                }
+            });
         });
     }
 

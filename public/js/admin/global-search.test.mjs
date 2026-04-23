@@ -8,6 +8,11 @@ const SCRIPT_SOURCE = fs.readFileSync(new URL("./global-search.helpers.js", impo
 function loadHooks() {
   const window = {
     __ENABLE_ADMIN_GLOBAL_SEARCH_TEST_HOOKS__: true,
+    AdminCoreHelpers: {
+      formatOrderNumber(order) {
+        return order?.displayNumber ? `#${order.displayNumber}` : "#2000";
+      }
+    }
   };
   const context = { window };
   vm.createContext(context);
@@ -34,6 +39,8 @@ test("buildAdminSearchIndex should include physical orders only", () => {
 
   assert.equal(index.length, 1);
   assert.equal(index.some((item) => item.kind === "order"), true);
+  assert.equal(index[0].title, "طلب #2000");
+  assert.equal(index[0].searchText.includes("2000"), true);
 });
 
 test("searchAdminIndex should rank title prefix matches first", () => {

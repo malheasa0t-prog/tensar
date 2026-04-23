@@ -240,8 +240,9 @@
                 html += '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted);">لا توجد طلبات</td></tr>';
             } else {
                 ins.recentOrders.forEach(function (o) {
+                    var orderLabel = A.formatOrderNumber ? A.formatOrderNumber(o) : (o.id || '-');
                     html += '<tr>'
-                        + '<td><small>' + esc(o.id) + '</small></td>'
+                        + '<td><strong style="color:var(--primary-light);">' + esc(orderLabel) + '</strong></td>'
                         + '<td>' + esc(o.customerName || o.customer_name || '-') + '</td>'
                         + '<td style="font-weight:600;color:#00b894;">' + TZ.formatPrice(o.total) + '</td>'
                         + '<td><span class="status-badge ' + o.status + '">' + A.statusLabel(o.status) + '</span></td>'
