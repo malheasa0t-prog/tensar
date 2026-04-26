@@ -29,6 +29,23 @@
     var searchQuery = '';
     var currentPage = 1;
     var ORDER_NOTES_PREVIEW_LENGTH = 96;
+    var PHYSICAL_STATUS_OPTIONS = Object.freeze(['pending', 'processing', 'delivered', 'cancelled']);
+    var PHYSICAL_STATUS_ACTION_LABELS = Object.freeze({
+        pending: '\u0641\u064a \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',
+        processing: '\u0642\u064a\u062f \u0627\u0644\u062a\u0646\u0641\u064a\u0630',
+        delivered: '\u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645',
+        cancelled: '\u0645\u0644\u063a\u064a'
+    });
+    var REPAIR_STATUS_OPTIONS = Object.freeze(['pending', 'in_progress', 'ready', 'completed', 'cancelled']);
+    var LEGACY_PHYSICAL_STATUS_MAP = Object.freeze({
+        awaiting_delivery: 'processing',
+        confirmed: 'processing',
+        shipped: 'processing',
+        completed: 'delivered',
+        failed: 'cancelled',
+        refunded: 'cancelled'
+    });
+    var pendingStatusOrderIds = new Set();
 
     function esc(value) {
         return TZ.escapeHtml(value == null ? '' : String(value));
@@ -82,7 +99,7 @@
 
     function applyFilters(list) {
         return list.filter(function (order) {
-            var matchesStatus = !filterStatus || order.status === filterStatus;
+            var matchesStatus = !filterStatus || getOrderDisplayStatus(order, activeTab) === filterStatus;
             var query = searchQuery.toLowerCase();
             var matchesSearch = !query || getOrderSearchTokens(order).some(function (value) {
                 return String(value || '').toLowerCase().includes(query);
@@ -108,6 +125,87 @@
     function getAdminApiBaseUrl() {
         var currentPort = window.location.port;
         return (currentPort !== API_PORT && currentPort !== '') ? ('http://localhost:' + API_PORT) : '';
+    }
+
+    /**
+     * Returns whether the current tab represents repair bookings.
+     *
+     * @returns {boolean}
+     */
+    function isRepairTab() {
+        return activeTab === 'repair';
+    }
+
+    /**
+     * Maps legacy product-order statuses into the simplified workflow shown in the admin table.
+     *
+     * @param {string} status
+     * @returns {string}
+     */
+    function normalizePhysicalOrderStatus(status) {
+        var normalizedStatus = String(status || '').trim().toLowerCase();
+        return LEGACY_PHYSICAL_STATUS_MAP[normalizedStatus] || normalizedStatus;
+    }
+
+    /**
+     * Resolves the statuses available for the current admin tab.
+     *
+     * @param {string} tabKey
+     * @returns {string[]}
+     */
+    function getStatusOptionsForTab(tabKey) {
+        return tabKey === 'repair' ? REPAIR_STATUS_OPTIONS.slice() : PHYSICAL_STATUS_OPTIONS.slice();
+    }
+
+    /**
+     * Resolves the status used for badges, filtering, and action highlighting.
+     *
+     * @param {object} order
+     * @param {string} tabKey
+     * @returns {string}
+     */
+    function getOrderDisplayStatus(order, tabKey) {
+        var currentStatus = String(order?.status || '').trim().toLowerCase();
+        return tabKey === 'repair' ? currentStatus : normalizePhysicalOrderStatus(currentStatus);
+    }
+
+    /**
+     * Resolves the display label for a status in the current admin tab.
+     *
+     * @param {string} status
+     * @param {string} tabKey
+     * @returns {string}
+     */
+    function getStatusLabel(status, tabKey) {
+        if (tabKey === 'repair') return ORDER_STATUSES[status] || status;
+        return PHYSICAL_STATUS_ACTION_LABELS[status] || ORDER_STATUSES[status] || status;
+    }
+
+    /**
+     * Builds the physical-order status buttons shown in the actions column.
+     *
+     * @param {{ currentStatus: string, isPending: boolean, orderId: string }} options
+     * @returns {string}
+     */
+    function buildPhysicalStatusActionsMarkup(options) {
+        var orderId = String(options?.orderId || '').trim();
+        var currentStatus = normalizePhysicalOrderStatus(options?.currentStatus);
+        var isPending = options?.isPending === true;
+
+        return '<div class="order-status-actions" role="group" aria-label="Order status actions">'
+            + PHYSICAL_STATUS_OPTIONS.map(function (status) {
+                var isActive = currentStatus === status;
+                var isDisabled = isPending || isActive;
+                var buttonLabel = getStatusLabel(status, 'physical');
+                return '<button type="button" class="order-status-action order-status-action--' + status
+                    + (isActive ? ' is-active' : '')
+                    + '" data-order-id="' + esc(orderId)
+                    + '" data-status="' + status
+                    + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"'
+                    + (isDisabled ? ' disabled' : '')
+                    + '>' + esc(buttonLabel) + '</button>';
+            }).join('')
+            + '</div>';
     }
 
     function getOrderTargetType() {
@@ -164,29 +262,46 @@
     }
 
     async function changeOrderStatus(orderId, newStatus) {
+        var normalizedOrderId = String(orderId || '').trim();
+        if (!normalizedOrderId || pendingStatusOrderIds.has(normalizedOrderId)) return;
+
+        pendingStatusOrderIds.add(normalizedOrderId);
+        renderOrders();
+
         try {
-            if (activeTab === 'repair') await changeRepairOrderStatus(orderId, newStatus);
-            else await changeServerOrderStatus(orderId, newStatus);
+            if (isRepairTab()) await changeRepairOrderStatus(normalizedOrderId, newStatus);
+            else await changeServerOrderStatus(normalizedOrderId, newStatus);
 
             A.showToast('تم تحديث حالة الطلب بنجاح');
             await TZ.refreshData();
-            renderOrders();
         } catch (error) {
             showOrderStatusError(error?.message || '');
+        } finally {
+            pendingStatusOrderIds.delete(normalizedOrderId);
+            renderOrders();
         }
     }
 
     function getStatusOptions() {
-        if (activeTab === 'repair') return ['pending', 'in_progress', 'ready', 'completed', 'cancelled'];
-        return ['pending', 'processing', 'completed', 'cancelled', 'refunded'];
+        return getStatusOptionsForTab(activeTab);
     }
 
-    function buildStatusDropdown(order) {
+    function buildRepairStatusDropdown(order) {
         return '<select class="order-status-select" data-order-id="' + order.id + '" style="min-height:34px;padding:6px 10px;border-radius:8px;font-size:0.8rem;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-primary);cursor:pointer;">'
             + getStatusOptions().map(function (status) {
                 return '<option value="' + status + '"' + (order.status === status ? ' selected' : '') + '>' + (ORDER_STATUSES[status] || status) + '</option>';
             }).join('')
             + '</select>';
+    }
+
+    function buildStatusControl(order) {
+        if (isRepairTab()) return buildRepairStatusDropdown(order);
+
+        return buildPhysicalStatusActionsMarkup({
+            orderId: order.id,
+            currentStatus: order.status,
+            isPending: pendingStatusOrderIds.has(String(order.id || '').trim())
+        });
     }
 
     function buildMetaLine(label, value) {
@@ -286,10 +401,17 @@
             + '</div></td>';
     }
 
+    function buildStatusBadge(order) {
+        var displayStatus = getOrderDisplayStatus(order, activeTab);
+        var badgeLabel = getStatusLabel(displayStatus, activeTab);
+
+        return '<span class="status-badge ' + esc(displayStatus) + '">' + esc(badgeLabel) + '</span>';
+    }
+
     function renderRepairOrderRow(order) {
         var date = A.formatDateTime ? A.formatDateTime(order.createdAt || order.created_at) : A.formatDate(order.createdAt || order.created_at);
-        var badge = '<span class="status-badge ' + order.status + '">' + (ORDER_STATUSES[order.status] || order.status) + '</span>';
-        var actions = buildStatusDropdown(order);
+        var badge = buildStatusBadge(order);
+        var actions = buildStatusControl(order);
 
         return '<tr data-order-id="' + esc(order.id) + '">'
             + buildOrderNumberCell(order)
@@ -303,8 +425,8 @@
 
     function renderPhysicalOrderRow(order) {
         var date = A.formatDateTime ? A.formatDateTime(order.createdAt || order.created_at) : A.formatDate(order.createdAt || order.created_at);
-        var badge = '<span class="status-badge ' + order.status + '">' + (ORDER_STATUSES[order.status] || order.status) + '</span>';
-        var actions = buildStatusDropdown(order);
+        var badge = buildStatusBadge(order);
+        var actions = buildStatusControl(order);
 
         return '<tr data-order-id="' + esc(order.id) + '">'
             + buildOrderNumberCell(order)
@@ -362,7 +484,7 @@
             rowsHtml = '<tr><td colspan="' + columnCount + '"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد طلبات مطابقة</p></div></td></tr>';
         }
         var statusOptionsHtml = getStatusOptions().map(function (status) {
-            return '<option value="' + status + '"' + (filterStatus === status ? ' selected' : '') + '>' + (ORDER_STATUSES[status] || status) + '</option>';
+            return '<option value="' + status + '"' + (filterStatus === status ? ' selected' : '') + '>' + getStatusLabel(status, activeTab) + '</option>';
         }).join('');
 
         A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-shopping-cart"></i> ' + sectionTitle + '</h2><p>إجمالي ' + allOrders.length + ' ' + summaryLabel + '</p></div></div>'
@@ -431,9 +553,31 @@
                 void changeOrderStatus(orderId, newStatus);
             });
         });
+
+        document.querySelectorAll('.order-status-action[data-order-id][data-status]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var newStatus = button.dataset.status;
+                var orderId = button.dataset.orderId;
+
+                if (button.disabled || !newStatus || !orderId) return;
+                if (!window.confirm('Ù‡Ù„ ØªØ±ÙŠØ¯ ØªØºÙŠÙŠØ± Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨ Ø¥Ù„Ù‰ "' + getStatusLabel(newStatus, activeTab) + '"ØŸ')) return;
+
+                void changeOrderStatus(orderId, newStatus);
+            });
+        });
     }
 
     A.sections.orders = renderOrders;
     A.sections['product-orders'] = function () { activeTab = 'physical'; renderOrders(); };
     A.sections['accessory-orders'] = function () { activeTab = 'accessory'; renderOrders(); };
+
+    if (window.__ENABLE_ORDER_ADMIN_TEST_HOOKS__) {
+        window.__orderAdminTestHooks = {
+            buildPhysicalStatusActionsMarkup: buildPhysicalStatusActionsMarkup,
+            getOrderDisplayStatus: getOrderDisplayStatus,
+            getStatusLabel: getStatusLabel,
+            getStatusOptionsForTab: getStatusOptionsForTab,
+            normalizePhysicalOrderStatus: normalizePhysicalOrderStatus
+        };
+    }
 })();

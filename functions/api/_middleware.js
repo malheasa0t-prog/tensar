@@ -1,5 +1,6 @@
 import {
   applyApiRateLimit,
+  buildRateLimitConfigurationErrorResponse,
   buildRateLimitExceededResponse,
 } from "../_lib/rateLimit.js";
 import { withSecurityHeaders } from "../_lib/securityHeaders.js";
@@ -15,6 +16,12 @@ export async function onRequest(context) {
 
   if (request.method !== "OPTIONS") {
     const rateLimit = await applyApiRateLimit({ request, env });
+
+    if (rateLimit.configurationError) {
+      return withSecurityHeaders(
+        buildRateLimitConfigurationErrorResponse(rateLimit.headers)
+      );
+    }
 
     if (!rateLimit.allowed) {
       return withSecurityHeaders(

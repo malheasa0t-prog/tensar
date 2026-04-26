@@ -1,3 +1,4 @@
+import { buildErrorPayload } from "./errorCodes.js";
 /**
  * Shared API rate limiting helpers for Cloudflare Pages Functions.
  *
@@ -8,9 +9,15 @@ const LOCAL_RATE_LIMIT_STORE = new Map();
 const RATE_LIMIT_BINDING_NAME = "TECHZONE_API_RATE_LIMITER";
 const RATE_LIMIT_HEADER_NAME = '"api"';
 const RATE_LIMIT_MAX_REQUESTS = 100;
+const RATE_LIMIT_MODE_BINDING = "binding";
+const RATE_LIMIT_MODE_HEADER = "X-RateLimit-Mode";
+const RATE_LIMIT_MODE_LOCAL = "local";
 const RATE_LIMIT_POLICY = `${RATE_LIMIT_HEADER_NAME};q=${RATE_LIMIT_MAX_REQUESTS};w=60`;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_WINDOW_SECONDS = RATE_LIMIT_WINDOW_MS / 1000;
+const REQUIRE_EDGE_RATE_LIMIT_ENV = "REQUIRE_EDGE_RATE_LIMIT";
+const RATE_LIMIT_CONFIGURATION_ERROR =
+  "[RAT-101] API rate limiting binding is not configured for this environment.";
 const RATE_LIMIT_EXCEEDED_MESSAGE = "[RAT-201] تم تجاوز الحد الأقصى للطلبات. حاول مرة أخرى بعد قليل.";
 
 /**
@@ -26,7 +33,38 @@ function resolveRequestPath(request) {
     return "/api";
   }
 }
+/**
+ * Detects whether the current request is running on a local development host.
+ *
+ * @param {Request} request - The incoming request.
+ * @returns {boolean} True when the request target is localhost.
+ */
+function isLocalRateLimitRequest(request) {
+  try {
+    const hostname = new URL(request.url).hostname.trim().toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
+/**
+ * Determines whether the unsafe in-memory fallback is allowed for this runtime.
+ *
+ * @param {{ env?: Record<string, unknown>, request: Request }} input - Request context.
+ * @returns {boolean} True when the local fallback is acceptable.
+ */
+function canUseLocalRateLimitFallback(input) {
+  const env = input?.env || {};
+  if (env[REQUIRE_EDGE_RATE_LIMIT_ENV] !== "true") {
+    return true;
+  }
 
+  return (
+    env.ALLOW_LOCAL_RATE_LIMIT_FALLBACK === "true" ||
+    isLocalRateLimitRequest(input.request) ||
+    !env.ASSETS
+  );
+}
 /**
  * Selects the most stable request identifier available.
  *
@@ -51,7 +89,6 @@ function resolveActorSource(request) {
 
   return "anonymous";
 }
-
 /**
  * Creates a short digest for the rate limit key.
  *
@@ -139,9 +176,14 @@ function applyLocalRateLimit(input) {
 function buildRateLimitHeaders(input = {}) {
   const allowed = input?.allowed !== false;
   const remaining = Number.isInteger(input?.remaining) ? input.remaining : null;
+  const mode =
+    input?.mode === RATE_LIMIT_MODE_BINDING
+      ? RATE_LIMIT_MODE_BINDING
+      : RATE_LIMIT_MODE_LOCAL;
   const retryAfterSeconds = Math.max(1, Number(input?.retryAfterSeconds) || RATE_LIMIT_WINDOW_SECONDS);
   const headers = {
     "Ratelimit-Policy": RATE_LIMIT_POLICY,
+    [RATE_LIMIT_MODE_HEADER]: mode,
   };
 
   if (remaining !== null) {
@@ -163,12 +205,28 @@ function buildRateLimitHeaders(input = {}) {
  */
 function buildRateLimitExceededResponse(headers = {}) {
   return Response.json(
-    {
-      success: false,
-      error: RATE_LIMIT_EXCEEDED_MESSAGE,
-    },
+    buildErrorPayload(RATE_LIMIT_EXCEEDED_MESSAGE),
     {
       status: 429,
+      headers: {
+        "Cache-Control": "no-store",
+        ...headers,
+      },
+    }
+  );
+}
+
+/**
+ * Builds the JSON response returned when rate limiting is not configured safely.
+ *
+ * @param {Record<string, string>} [headers={}] - Additional response headers.
+ * @returns {Response} The HTTP 503 response.
+ */
+function buildRateLimitConfigurationErrorResponse(headers = {}) {
+  return Response.json(
+    buildErrorPayload(RATE_LIMIT_CONFIGURATION_ERROR),
+    {
+      status: 503,
       headers: {
         "Cache-Control": "no-store",
         ...headers,
@@ -188,6 +246,7 @@ async function applyCloudflareRateLimit(input) {
   if (!binding?.limit) {
     return {
       allowed: true,
+      mode: RATE_LIMIT_MODE_LOCAL,
       remaining: null,
       retryAfterSeconds: RATE_LIMIT_WINDOW_SECONDS,
     };
@@ -197,6 +256,7 @@ async function applyCloudflareRateLimit(input) {
 
   return {
     allowed: result?.success !== false,
+    mode: RATE_LIMIT_MODE_BINDING,
     remaining: null,
     retryAfterSeconds: RATE_LIMIT_WINDOW_SECONDS,
   };
@@ -213,12 +273,27 @@ async function applyApiRateLimit(input) {
   const env = input?.env || {};
   const key = await buildRateLimitKey(request);
   const binding = env[RATE_LIMIT_BINDING_NAME];
+  if (!binding?.limit && !canUseLocalRateLimitFallback({ env, request })) {
+    return {
+      allowed: false,
+      configurationError: true,
+      headers: {
+        "Cache-Control": "no-store",
+        [RATE_LIMIT_MODE_HEADER]: RATE_LIMIT_MODE_LOCAL,
+      },
+    };
+  }
+
   const result = binding?.limit
     ? await applyCloudflareRateLimit({ binding, key })
-    : applyLocalRateLimit({ key, nowMs: input?.nowMs });
+    : {
+        ...applyLocalRateLimit({ key, nowMs: input?.nowMs }),
+        mode: RATE_LIMIT_MODE_LOCAL,
+      };
 
   return {
     allowed: result.allowed,
+    configurationError: false,
     headers: buildRateLimitHeaders(result),
   };
 }
@@ -235,9 +310,13 @@ function resetLocalRateLimitStore() {
 export {
   RATE_LIMIT_BINDING_NAME,
   RATE_LIMIT_MAX_REQUESTS,
+  RATE_LIMIT_MODE_BINDING,
+  RATE_LIMIT_MODE_HEADER,
+  RATE_LIMIT_MODE_LOCAL,
   RATE_LIMIT_WINDOW_SECONDS,
   applyApiRateLimit,
   applyLocalRateLimit,
+  buildRateLimitConfigurationErrorResponse,
   buildRateLimitExceededResponse,
   buildRateLimitHeaders,
   buildRateLimitKey,

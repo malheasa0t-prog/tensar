@@ -80,6 +80,20 @@ test("getOptionalUserAccessState should return guest access when there is no tok
   assert.deepEqual(result, { userId: null, isBanned: false });
 });
 
+test("getOptionalUserAccessState should load clients from an explicit server-only loader", async () => {
+  const { serverClient, adminClient } = createUserAccessClients({
+    userId: "user-1",
+    profileStatus: "active",
+  });
+
+  const result = await getOptionalUserAccessState({
+    token: "token-123",
+    loadClients: async () => ({ serverClient, adminClient }),
+  });
+
+  assert.deepEqual(result, { userId: "user-1", isBanned: false });
+});
+
 test("getOptionalUserAccessState should return banned access for banned authenticated users", async () => {
   const lookedUpUserIds = [];
   const { serverClient, adminClient } = createUserAccessClients({
@@ -109,6 +123,13 @@ test("getOptionalUserAccessState should throw a user-friendly error when profile
   await assert.rejects(
     () => getOptionalUserAccessState({ token: "token-123", serverClient, adminClient }),
     /تعذر التحقق من حالة المستخدم\./
+  );
+});
+
+test("getOptionalUserAccessState should require explicit server-only clients", async () => {
+  await assert.rejects(
+    () => getOptionalUserAccessState({ token: "token-123" }),
+    /UAS-302/
   );
 });
 

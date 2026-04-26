@@ -10,7 +10,7 @@ insert into storage.buckets (
 values (
   'deposits',
   'deposits',
-  true,
+  false,
   5242880,
   array['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 )
@@ -21,9 +21,17 @@ set
   allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Public can read deposit proofs" on storage.objects;
-create policy "Public can read deposit proofs"
+drop policy if exists "Authenticated users can read own deposit proofs" on storage.objects;
+create policy "Authenticated users can read own deposit proofs"
 on storage.objects for select
-using (bucket_id = 'deposits');
+to authenticated
+using (
+  bucket_id = 'deposits'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_current_admin()
+  )
+);
 
 drop policy if exists "Authenticated users can upload own deposit proofs" on storage.objects;
 create policy "Authenticated users can upload own deposit proofs"

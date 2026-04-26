@@ -167,7 +167,7 @@ test("createDepositRequest should upload proof and insert the deposit request", 
     proofFile: { name: "receipt.png", type: "image/png" },
     uploadProof: async (input) => {
       uploadCalls.push(input);
-      return "https://cdn.example.com/proof.png";
+      return "user-1/proof.png";
     },
   });
 
@@ -179,7 +179,7 @@ test("createDepositRequest should upload proof and insert the deposit request", 
         user_id: "user-1",
         amount: 25,
         method: "manual",
-        proof_url: "https://cdn.example.com/proof.png",
+        proof_url: "user-1/proof.png",
         status: "pending",
       },
     ],

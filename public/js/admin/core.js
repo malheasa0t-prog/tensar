@@ -1,4 +1,4 @@
-// ===== TechZone Admin - Core =====
+﻿// ===== TechZone Admin - Core =====
 (function () {
     'use strict';
 
@@ -13,8 +13,7 @@
         editingCouponId: null,
         productImages: [],
         _undoTimer: null,
-        sections: {},
-        accessoryCatalog: (window.TZ && window.TZ.accessoryCatalog) || null
+        sections: {}
     };
 
     const A = window.AdminApp;
@@ -36,49 +35,18 @@
     let lastOfflineQueueCount = 0;
     let sectionRenderToken = 0;
 
-    async function resolveAdminUser(authUser) {
-        if (!authUser) return null;
-
-        const [profileRes, legacyRes] = await Promise.all([
-            TZ.supabase.from('user_profiles').select('*').eq('user_id', authUser.id).maybeSingle(),
-            authUser.email
-                ? TZ.supabase.from('app_users').select('*').ilike('email', authUser.email).maybeSingle()
-                : Promise.resolve({ data: null })
-        ]);
-
-        const candidates = [
-            profileRes.data ? {
-                id: profileRes.data.user_id || authUser.id,
-                fullName: profileRes.data.full_name || authUser.email || 'Admin',
-                role: profileRes.data.role || 'user',
-                status: profileRes.data.status || 'active'
-            } : null,
-            legacyRes.data ? {
-                id: legacyRes.data.id || authUser.id,
-                fullName: legacyRes.data.full_name || authUser.email || 'Admin',
-                role: legacyRes.data.role || 'user',
-                status: legacyRes.data.status || 'active'
-            } : null
-        ].filter(Boolean);
-
-        return candidates.find((candidate) => TZ.canAccessAdmin(candidate)) || null;
-    }
-
     async function checkAuth() {
         try {
-            const authUser = await TZ.getSupabaseUser();
-            if (authUser) {
-                const appUser = await resolveAdminUser(authUser);
-                if (appUser && TZ.canAccessAdmin(appUser)) {
-                    helpers.requestAdminRuntimeAccess(true);
-                    await TZ.refreshData();
-                    TZ.startRealtime?.();
-                    showAdmin(appUser);
-                    return;
-                }
+            const adminSession = await TZ.getAdminSessionUser({ baseClient: TZ.supabase });
+            if (adminSession.user && TZ.canAccessAdmin(adminSession.user)) {
+                helpers.requestAdminRuntimeAccess(true);
+                await TZ.refreshData();
+                TZ.startRealtime?.();
+                showAdmin(adminSession.user);
+                return;
             }
         } catch (error) {
-            void error;
+            console.error('[COR-501] Failed to validate admin session.', error);
         }
 
         showLogin();
@@ -167,7 +135,7 @@
                 A.sections[normalizedSection]();
                 adminContent.classList.add('is-section-ready');
             } else {
-                adminContent.innerHTML = '<div class="empty-state"><i class="fas fa-tools"></i><p>قسم قيد التطوير</p></div>';
+                adminContent.innerHTML = '<div class="empty-state"><i class="fas fa-tools"></i><p>\u0642\u0633\u0645 \u0642\u064A\u062F \u0627\u0644\u062A\u0637\u0648\u064A\u0631</p></div>';
             }
         } catch (error) {
             console.error('[COR-500] Failed to render admin section.', error);
@@ -194,23 +162,26 @@
                 const submitButton = loginForm.querySelector('button[type="submit"]');
                 const originalHtml = submitButton.innerHTML;
 
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تسجيل الدخول...';
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644...';
                 submitButton.disabled = true;
 
                 const result = await TZ.supabaseSignIn(email, password);
                 if (result.error) {
-                    loginError.textContent = result.error === 'Invalid login credentials' ? 'بيانات الدخول غير صحيحة' : result.error;
+                    loginError.textContent = result.error === 'Invalid login credentials'
+                        ? '\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629'
+                        : result.error;
                     loginError.style.display = 'block';
                     submitButton.innerHTML = originalHtml;
                     submitButton.disabled = false;
                     return;
                 }
 
-                const authUser = await TZ.getSupabaseUser();
-                const appUser = await resolveAdminUser(authUser);
+                const adminSession = await TZ.getAdminSessionUser({ baseClient: TZ.supabase });
+                const appUser = adminSession.user;
                 helpers.requestAdminRuntimeAccess(true);
                 if (!appUser || !TZ.canAccessAdmin(appUser)) {
-                    loginError.textContent = 'ليس لديك صلاحية الوصول إلى لوحة الإدارة';
+                    loginError.textContent = adminSession.error
+                        || '\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629';
                     loginError.style.display = 'block';
                     helpers.requestAdminRuntimeAccess(false);
                     await TZ.supabaseSignOut();
@@ -219,7 +190,7 @@
                     return;
                 }
 
-                TZ.commitDb('admin_login', appUser.id, `تسجيل دخول: ${appUser.fullName}`);
+                TZ.commitDb('admin_login', appUser.id, `\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644: ${appUser.fullName}`);
                 await TZ.refreshData();
                 TZ.startRealtime?.();
                 loginError.style.display = 'none';
@@ -258,8 +229,6 @@
         if (section === 'analytics' && A.sections.analytics) A.sections.analytics();
         if (section === 'orders' && ['orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
         if (section === 'product-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['product-orders']) A.sections['product-orders']();
-        if (section === 'accessory-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['accessory-orders']) A.sections['accessory-orders']();
-        if (section === 'accessories' && ['products', 'categories', 'all'].includes(table) && A.sections.accessories) A.sections.accessories();
         if (section === 'products' && ['products', 'all'].includes(table) && A.sections.products) A.sections.products();
         if (section === 'categories' && ['categories', 'all'].includes(table) && A.sections.categories) A.sections.categories();
         if (section === 'main-categories' && ['categories', 'all'].includes(table) && A.sections['main-categories']) A.sections['main-categories']();
@@ -282,7 +251,7 @@
         lastOfflineQueueCount = queueCount;
 
         if (queueIncreased && queueCount > 0 && navigator.onLine === false) {
-            ui.showToast('تم حفظ العملية محليًا وسيتم إرسالها عند عودة الاتصال.');
+            ui.showToast('\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0645\u062D\u0644\u064A\u064B\u0627 \u0648\u0633\u064A\u062A\u0645 \u0625\u0631\u0633\u0627\u0644\u0647\u0627 \u0639\u0646\u062F \u0639\u0648\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644.');
         }
 
         if (A.currentSection === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
@@ -290,7 +259,9 @@
 
     window.addEventListener('tz-offline-sync-complete', (event) => {
         const syncedCount = Number(event.detail?.syncedCount || 0);
-        if (syncedCount > 0) ui.showToast(`تمت مزامنة ${syncedCount} عملية مؤجلة بنجاح.`);
+        if (syncedCount > 0) {
+            ui.showToast(`\u062A\u0645\u062A \u0645\u0632\u0627\u0645\u0646\u0629 ${syncedCount} \u0639\u0645\u0644\u064A\u0629 \u0645\u0624\u062C\u0644\u0629 \u0628\u0646\u062C\u0627\u062D.`);
+        }
         if (A.currentSection === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
     });
 
@@ -357,3 +328,4 @@
     A.showAdmin = showAdmin;
     A.adminContent = adminContent;
 })();
+

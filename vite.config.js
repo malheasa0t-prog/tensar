@@ -12,6 +12,10 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { buildAdminRuntimeAssetSource, resolveAdminRuntimeAssetConfig } from './lib/adminRuntimeAsset.js';
+import {
+  createClientBundleLeakGuardPlugin,
+  resolveClientSecurityManualChunk,
+} from './lib/clientBundleSecurity.js';
 import { resolvePublicBuildEnv } from './lib/requiredPublicEnv.js';
 
 /**
@@ -53,6 +57,7 @@ export default defineConfig(({ command, mode }) => {
       react({
         include: /\.(js|jsx|ts|tsx)$/,
       }),
+      createClientBundleLeakGuardPlugin(),
       createLegacyAdminRuntimeAssetPlugin(adminRuntimeAssetSource),
     ],
     oxc: {
@@ -71,7 +76,6 @@ export default defineConfig(({ command, mode }) => {
         'next/script': path.resolve(__dirname, 'src/shims/next-script.jsx'),
         'next/font/google': path.resolve(__dirname, 'src/shims/next-font.js'),
         'next/og': path.resolve(__dirname, 'src/shims/next-font.js'),
-        'server-only': path.resolve(__dirname, 'src/shims/server-only.js'),
       },
     },
     define: {
@@ -82,6 +86,14 @@ export default defineConfig(({ command, mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            return resolveClientSecurityManualChunk(id);
+          },
+        },
+      },
     },
   };
 });

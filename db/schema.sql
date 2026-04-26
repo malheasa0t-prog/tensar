@@ -60,7 +60,6 @@ create table if not exists public.app_users (
     check (role in ('customer', 'user', 'admin', 'super_admin', 'technician', 'employee')),
   status text not null default 'active'
     check (status in ('active', 'inactive', 'banned')),
-  password_hash text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -482,6 +481,11 @@ create trigger trg_user_profiles_updated_at
 before update on public.user_profiles
 for each row execute function public.set_updated_at_now();
 
+drop trigger if exists trg_user_profiles_guard_sensitive_fields on public.user_profiles;
+create trigger trg_user_profiles_guard_sensitive_fields
+before insert or update on public.user_profiles
+for each row execute function public.guard_user_profile_sensitive_fields();
+
 drop trigger if exists trg_wallets_updated_at on public.wallets;
 create trigger trg_wallets_updated_at
 before update on public.wallets
@@ -614,6 +618,53 @@ stable
 set search_path = public, auth
 as $$
   select public.is_admin_user(auth.uid());
+$$;
+
+create or replace function public.guard_user_profile_sensitive_fields()
+returns trigger
+language plpgsql
+set search_path = public, auth
+as $$
+declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
+  v_actor_is_admin boolean := false;
+begin
+  if current_user not in ('anon', 'authenticated') then
+    return new;
+  end if;
+
+  if v_actor_role = 'service_role' then
+    return new;
+  end if;
+
+  if v_actor_user_id is not null then
+    v_actor_is_admin := public.is_admin_user(v_actor_user_id);
+  end if;
+
+  if v_actor_is_admin then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if public.is_admin_role(new.role)
+      or coalesce(new.status, 'active') <> 'active'
+      or nullif(trim(coalesce(new.ban_reason, '')), '') is not null then
+      raise exception 'Sensitive profile fields require admin approval';
+    end if;
+
+    return new;
+  end if;
+
+  if new.user_id is distinct from old.user_id
+    or new.role is distinct from old.role
+    or new.status is distinct from old.status
+    or coalesce(new.ban_reason, '') is distinct from coalesce(old.ban_reason, '') then
+    raise exception 'Sensitive profile fields require admin approval';
+  end if;
+
+  return new;
+end;
 $$;
 
 create or replace function public.can_view_order_item(p_order_id text)
@@ -961,15 +1012,31 @@ security definer
 set search_path = public, auth
 as $$
 declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
+  v_effective_admin_id uuid;
   v_wallet public.wallets%rowtype;
   v_tx_id uuid;
   v_new_balance numeric;
 begin
+  if p_target_user_id is null then
+    raise exception 'Target user is required';
+  end if;
+
   if p_amount is null or p_amount = 0 then
     raise exception 'Amount cannot be zero';
   end if;
 
-  if not public.is_admin_user(p_admin_user_id) then
+  if v_actor_user_id is not null and v_actor_user_id <> p_admin_user_id then
+    raise exception 'Actor mismatch';
+  end if;
+
+  if v_actor_user_id is null and v_actor_role <> 'service_role' then
+    raise exception 'Authentication required';
+  end if;
+
+  v_effective_admin_id := coalesce(v_actor_user_id, p_admin_user_id);
+  if v_effective_admin_id is null or not public.is_admin_user(v_effective_admin_id) then
     raise exception 'Not authorized';
   end if;
 
@@ -1020,7 +1087,7 @@ begin
     p_amount,
     v_new_balance,
     coalesce(nullif(trim(p_reason), ''), 'Admin adjustment'),
-    p_admin_user_id::text
+    v_effective_admin_id::text
   )
   returning id into v_tx_id;
 
@@ -1066,15 +1133,32 @@ security definer
 set search_path = public, auth
 as $$
 declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
+  v_effective_user_id uuid;
   v_service public.services%rowtype;
   v_wallet public.wallets%rowtype;
   v_total numeric;
   v_order_id text;
   v_new_balance numeric;
 begin
+  if p_user_id is null then
+    raise exception 'User is required';
+  end if;
+
   if p_quantity is null or p_quantity <= 0 then
     raise exception 'Quantity must be greater than 0';
   end if;
+
+  if v_actor_user_id is not null and v_actor_user_id <> p_user_id then
+    raise exception 'Actor mismatch';
+  end if;
+
+  if v_actor_user_id is null and v_actor_role <> 'service_role' then
+    raise exception 'Authentication required';
+  end if;
+
+  v_effective_user_id := coalesce(v_actor_user_id, p_user_id);
 
   select *
     into v_service
@@ -1099,7 +1183,7 @@ begin
   select *
     into v_wallet
   from public.wallets
-  where user_id = p_user_id
+  where user_id = v_effective_user_id
   for update;
 
   if not found then
@@ -1137,7 +1221,7 @@ begin
   )
   values (
     v_order_id,
-    p_user_id,
+    v_effective_user_id,
     v_service.id,
     v_service.name,
     nullif(trim(p_link), ''),
@@ -1162,7 +1246,7 @@ begin
   )
   values (
     v_wallet.id,
-    p_user_id,
+    v_effective_user_id,
     'purchase',
     -v_total,
     v_new_balance,
@@ -1179,7 +1263,7 @@ begin
     reference_id
   )
   values (
-    p_user_id,
+    v_effective_user_id,
     'تم إنشاء طلبك بنجاح',
     'طلب ' || v_service.name || ' بكمية ' || p_quantity || ' — المبلغ: ' || v_total::text || ' د.أ',
     'success',
@@ -1672,7 +1756,12 @@ grant all on all functions in schema public to service_role;
 
 grant all on all tables in schema public to authenticated;
 grant all on all sequences in schema public to authenticated;
-grant execute on all functions in schema public to authenticated;
+grant execute on function public.is_admin_user(uuid) to authenticated;
+grant execute on function public.is_current_admin() to authenticated;
+revoke execute on function public.create_service_order_tx(uuid, text, integer, text) from public, anon, authenticated;
+revoke execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) from public, anon, authenticated;
+grant execute on function public.create_service_order_tx(uuid, text, integer, text) to service_role;
+grant execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) to service_role;
 
 grant select on public.settings to anon;
 grant select on public.categories to anon;
@@ -2162,8 +2251,10 @@ where not exists (
 
 grant execute on function public.is_admin_user(uuid) to authenticated;
 grant execute on function public.is_current_admin() to authenticated;
-grant execute on function public.create_service_order_tx(uuid, text, integer, text) to authenticated;
-grant execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) to authenticated;
+revoke execute on function public.create_service_order_tx(uuid, text, integer, text) from public, anon, authenticated;
+revoke execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) from public, anon, authenticated;
+grant execute on function public.create_service_order_tx(uuid, text, integer, text) to service_role;
+grant execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) to service_role;
 
 create or replace function public.enable_realtime_for_table(p_table regclass)
 returns void
@@ -2212,7 +2303,7 @@ insert into storage.buckets (
 values (
   'deposits',
   'deposits',
-  true,
+  false,
   5242880,
   array['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 )
@@ -2223,9 +2314,17 @@ set
   allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Public can read deposit proofs" on storage.objects;
-create policy "Public can read deposit proofs"
+drop policy if exists "Authenticated users can read own deposit proofs" on storage.objects;
+create policy "Authenticated users can read own deposit proofs"
 on storage.objects for select
-using (bucket_id = 'deposits');
+to authenticated
+using (
+  bucket_id = 'deposits'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_current_admin()
+  )
+);
 
 drop policy if exists "Authenticated users can upload own deposit proofs" on storage.objects;
 create policy "Authenticated users can upload own deposit proofs"

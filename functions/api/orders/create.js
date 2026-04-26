@@ -29,14 +29,13 @@ function asPositiveNumber(value) {
 }
 
 /**
- * Returns the bearer token from the request or request body.
+ * Returns the bearer token from the request Authorization header.
  *
  * @param {Request} request - Incoming HTTP request.
- * @param {Record<string, unknown>} body - Parsed request body.
  * @returns {string} Auth token or an empty string.
  */
-function getAuthToken(request, body) {
-  return extractBearerToken(request) || body?.user_token || "";
+function getAuthToken(request) {
+  return extractBearerToken(request) || "";
 }
 
 /**
@@ -104,7 +103,7 @@ export async function onRequestPost(context) {
   try {
     const body = await request.json();
     const { service_id: serviceId, quantity, link } = body || {};
-    const userToken = getAuthToken(request, body);
+    const userToken = getAuthToken(request);
     const normalizedQuantity = asPositiveNumber(quantity);
 
     if (!serviceId || !normalizedQuantity || !userToken) {
@@ -176,16 +175,7 @@ export async function onRequestPost(context) {
       return errorResponse("فشل إنشاء الطلب", 500);
     }
 
-    await admin.from("notifications").insert([
-      {
-        user_id: user.id,
-        title: ORDER_MESSAGES.SUCCESS_TITLE,
-        body: buildOrderNotificationBody(service.name, normalizedQuantity, total),
-        type: "success",
-        reference_type: "order",
-        reference_id: orderId,
-      },
-    ]);
+    /* Notification is already created inside the create_service_order_tx RPC */
 
     if (service.provider_service_id) {
       const providerResult = await createProviderOrder(env, {

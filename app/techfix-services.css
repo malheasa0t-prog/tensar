@@ -179,6 +179,38 @@
   color: #f8fbff;
 }
 
+.service-card-pricing .service-card-media {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(0, 217, 255, 0.18), transparent 44%),
+    linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(8, 11, 28, 0.98));
+  display: grid;
+  place-items: center;
+}
+
+.service-card-pricing .service-card-media-fallback {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fbff;
+}
+
+.service-card-pricing .service-card-media-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .service-card-pricing h3 {
   margin: 0;
   color: #f8fbff;

@@ -2,13 +2,8 @@
 // Category and product mapping plus storefront catalog helpers.
 
 import {
-    ACCESSORY_PUBLIC_LABEL,
-    ACCESSORY_SECTION_NAME,
-    db,
-    isAccessoryCatalogCategoryId,
-    isAccessoryProduct,
-    isAccessoryProductCategoryId
-} from './core.js';
+    db
+} from './core.js?v=20260426-5';
 
 export function mapCategory(row) {
     return {
@@ -75,15 +70,11 @@ function sortProducts(products, sortKey) {
 }
 
 export function getVisibleCatalogCategories() {
-    return db.categories.filter((category) => !isAccessoryCatalogCategoryId(category.id));
+    return db.categories;
 }
 
 export function getCatalogProducts() {
-    return db.products.filter((product) => product.status === 'active' && !isAccessoryProduct(product));
-}
-
-export function getAccessoryProducts() {
-    return db.products.filter((product) => product.status === 'active' && isAccessoryProduct(product));
+    return db.products.filter((product) => product.status === 'active');
 }
 
 export function getProductById(productId) {
@@ -91,15 +82,13 @@ export function getProductById(productId) {
 }
 
 export function getCategoryName(categoryId) {
-    if (!categoryId) return ACCESSORY_PUBLIC_LABEL;
-    if (isAccessoryProductCategoryId(categoryId)) return ACCESSORY_PUBLIC_LABEL;
+    if (!categoryId) return '-';
     const category = db.categories.find((entry) => entry.id === categoryId);
-    if (isAccessoryCatalogCategoryId(categoryId)) return category ? category.name : ACCESSORY_SECTION_NAME;
     return category ? category.name : categoryId;
 }
 
 export function getCategoryIcon(categoryId) {
-    if (!categoryId || isAccessoryCatalogCategoryId(categoryId)) return 'fa-headphones';
+    if (!categoryId) return 'fa-box';
     return db.categories.find((category) => category.id === categoryId)?.icon || 'fa-box';
 }
 

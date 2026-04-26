@@ -44,7 +44,7 @@ const defaultBanners = [
       "https://images.unsplash.com/photo-1603302576837-37561b2e2302?q=80&w=2668&auto=format&fit=crop",
     title: "إكسسوارات لكل الأجهزة",
     subtitle: "تصفح أحدث السماعات والشواحن والكابلات الأصلية",
-    href: "/accessories",
+    href: "/products",
   },
 ];
 

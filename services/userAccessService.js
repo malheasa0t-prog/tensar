@@ -1,5 +1,6 @@
 export const BANNED_ACCOUNT_MESSAGE = "حسابك محظور. تواصل مع الإدارة.";
 const USER_ACCESS_LOOKUP_ERROR = "[UAS-301] تعذر التحقق من حالة المستخدم.";
+const USER_ACCESS_CLIENTS_ERROR = "[UAS-302] Explicit server and admin clients, or a secure server-side loader, are required.";
 const BANNED_PROFILE_STATUS = "banned";
 
 /**
@@ -40,19 +41,45 @@ async function loadUserProfileStatus({ userId, adminClient }) {
 }
 
 /**
- * Loads the default privileged/authenticated Supabase clients on demand.
+ * Resolves the Supabase clients needed for user-access checks.
  *
+ * @param {{
+ *   serverClient?: { auth: { getUser: (token: string) => Promise<{ data?: { user?: { id?: string } | null } }> } },
+ *   adminClient?: { from: (table: string) => { select: (fields: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { status?: string } | null, error: unknown }> } } } } },
+ *   loadClients?: () => Promise<{ serverClient?: { auth: { getUser: (token: string) => Promise<{ data?: { user?: { id?: string } | null } }> } }, adminClient?: { from: (table: string) => { select: (fields: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { status?: string } | null, error: unknown }> } } } } }>,
+ * }} input
  * @returns {Promise<{ serverClient: { auth: { getUser: (token: string) => Promise<{ data?: { user?: { id?: string } | null } }> } }, adminClient: { from: (table: string) => { select: (fields: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { status?: string } | null, error: unknown }> } } } } }>}
+ * @throws {Error}
  */
-async function loadDefaultUserAccessClients() {
-  const { supabaseAdmin, supabaseServer } = await import("../lib/supabaseServer.js");
-  return { serverClient: supabaseServer, adminClient: supabaseAdmin };
+async function resolveUserAccessClients({ serverClient, adminClient, loadClients }) {
+  if (serverClient && adminClient) {
+    return { serverClient, adminClient };
+  }
+
+  if (typeof loadClients !== "function") {
+    throw new Error(USER_ACCESS_CLIENTS_ERROR);
+  }
+
+  const resolvedClients = await loadClients();
+  if (!resolvedClients?.serverClient || !resolvedClients?.adminClient) {
+    throw new Error(USER_ACCESS_CLIENTS_ERROR);
+  }
+
+  return {
+    serverClient: resolvedClients.serverClient,
+    adminClient: resolvedClients.adminClient,
+  };
 }
 
 /**
  * Resolves the optional authenticated user and whether that account is banned.
  *
- * @param {{ token: string, serverClient?: { auth: { getUser: (token: string) => Promise<{ data?: { user?: { id?: string } | null } }> } }, adminClient?: { from: (table: string) => { select: (fields: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { status?: string } | null, error: unknown }> } } } } }} input
+ * @param {{
+ *   token: string,
+ *   serverClient?: { auth: { getUser: (token: string) => Promise<{ data?: { user?: { id?: string } | null } }> } },
+ *   adminClient?: { from: (table: string) => { select: (fields: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { status?: string } | null, error: unknown }> } } } } },
+ *   loadClients?: () => Promise<{ serverClient?: { auth: { getUser: (token: string) => Promise<{ data?: { user?: { id?: string } | null } }> } }, adminClient?: { from: (table: string) => { select: (fields: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: { status?: string } | null, error: unknown }> } } } } }>,
+ * }} input
  * @returns {Promise<{ userId: string | null, isBanned: boolean }>}
  * @throws {Error}
  */
@@ -60,16 +87,20 @@ export async function getOptionalUserAccessState({
   token,
   serverClient,
   adminClient,
+  loadClients,
 }) {
   const normalizedToken = typeof token === "string" ? token.trim() : "";
   if (!normalizedToken) {
     return { userId: null, isBanned: false };
   }
 
-  const defaultClients =
-    serverClient && adminClient ? null : await loadDefaultUserAccessClients();
-  const activeServerClient = serverClient || defaultClients.serverClient;
-  const activeAdminClient = adminClient || defaultClients.adminClient;
+  const resolvedClients = await resolveUserAccessClients({
+    serverClient,
+    adminClient,
+    loadClients,
+  });
+  const activeServerClient = resolvedClients.serverClient;
+  const activeAdminClient = resolvedClients.adminClient;
   const authResponse = await activeServerClient.auth.getUser(normalizedToken);
   const userId = authResponse?.data?.user?.id || null;
   if (!userId) {

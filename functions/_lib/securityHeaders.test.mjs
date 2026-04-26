@@ -55,7 +55,7 @@ test("onRequestGet should return the public runtime config when environment valu
     success: true,
     supabaseUrl: "https://example.supabase.co",
     supabasePublishableKey: "anon-key",
-    writeEnabled: true,
+    writeEnabled: false,
   });
 });
 

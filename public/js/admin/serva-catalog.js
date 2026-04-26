@@ -106,41 +106,92 @@
     }
 
     /**
-     * Adds a single digital service to the local database.
+     * Strips HTML/script tags from an untrusted string to prevent stored XSS.
+     *
+     * @param {unknown} value
+     * @returns {string}
+     */
+    function sanitizeText(value) {
+        return String(value || '').replace(/<[^>]*>/g, '').trim().slice(0, 500);
+    }
+
+    /**
+     * Clamps a numeric value into a safe positive integer range.
+     *
+     * @param {unknown} value
+     * @param {number} fallback
+     * @param {number} max
+     * @returns {number}
+     */
+    function safePositiveInt(value, fallback, max) {
+        const n = Math.floor(Number(value));
+        if (!Number.isFinite(n) || n < 1) return fallback;
+        return Math.min(n, max);
+    }
+
+    /**
+     * Adds a single digital service to the local database via Admin DB Proxy.
      *
      * @param {object} service - Serva-S service object
      * @param {string} categoryId - Target local category ID
      * @returns {Promise<void>}
      */
     async function addServiceToLocal(service, categoryId) {
-        const price = parseFloat(service.rate) || 0;
+        const price = Math.max(0, parseFloat(service.rate) || 0);
         const providerFields = Array.isArray(service.fields) ? service.fields : [];
         const linkRequired = Boolean(service.link_required);
+        const rawName = sanitizeText(service.name_ar || service.name);
+        const rawDescription = sanitizeText(service.name_en || service.name_ar || service.name);
+        const providerId = String(service.service || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+
+        if (!rawName || !providerId) {
+            throw new Error('بيانات الخدمة غير صالحة — الاسم أو المعرّف مفقود.');
+        }
 
         const row = {
             id: generateId('srv-'),
-            name: service.name_ar || service.name,
-            slug: slugify(service.name_ar || service.name || '') + '-' + service.service,
+            name: rawName,
+            slug: slugify(rawName) + '-' + providerId,
             category_id: categoryId,
-            provider_service_id: String(service.service),
+            provider_service_id: providerId,
             price: price,
             cost_price: price,
-            min_qty: service.min || 1,
-            max_qty: service.max || 1000,
-            description: service.name_en || (service.name_ar || service.name),
+            min_qty: safePositiveInt(service.min, 1, 1000000),
+            max_qty: safePositiveInt(service.max, 1000, 1000000),
+            description: rawDescription,
             status: 'active',
             sort_order: 0,
-            image: service.image || service.icon || null, // <-- السطر الجديد لجلب الصورة
+            image: sanitizeText(service.image || service.icon || '') || null,
             metadata: {
                 link_required: linkRequired,
                 provider_fields: providerFields,
-                pricing_type: service.pricing_type || 'default',
+                pricing_type: String(service.pricing_type || 'default').slice(0, 32),
                 has_quantity: Boolean(service.has_quantity),
             },
         };
 
-        const { error } = await TZ.supabase.from(LOCAL_SERVICES_TABLE).insert(row);
-        if (error) throw error;
+        const token = await getAuthToken();
+        if (!token) throw new Error('انتهت الجلسة. أعد تسجيل الدخول.');
+
+        const response = await fetch('/api/admin/db', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                type: 'mutation',
+                action: 'insert',
+                table: LOCAL_SERVICES_TABLE,
+                values: [row],
+            }),
+        });
+
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.error) {
+            throw new Error(result.error?.message || result.error || 'فشل إضافة الخدمة عبر الخادم الآمن.');
+        }
     }
 
     /**
@@ -439,11 +490,14 @@
                     <i class="fas fa-exclamation-triangle" style="color:var(--admin-danger); font-size:2rem;"></i>
                     <p>فشل تحميل كتالوج المزود</p>
                     <p style="font-size:0.85rem; opacity:0.7;">${error.message}</p>
-                    <button class="btn btn-primary btn-sm" onclick="AdminApp.sections['serva-catalog']()">
+                    <button class="btn btn-primary btn-sm" id="servaCatalogRetry">
                         <i class="fas fa-redo"></i> إعادة المحاولة
                     </button>
                 </div>
             `;
+            document.getElementById('servaCatalogRetry')?.addEventListener('click', function () {
+                A.sections['serva-catalog']();
+            });
         }
     };
 })();

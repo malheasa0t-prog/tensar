@@ -33,7 +33,7 @@ cp .env.example .env.local
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` أو `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_SITE_URL`
-- `ENABLE_LEGACY_ADMIN_WRITE` اختياري لتفعيل عمليات الكتابة
+- `ENABLE_LEGACY_ADMIN_WRITE=false` ويُترك معطّلًا دائمًا، لأن عمليات كتابة لوحة الإدارة انتقلت إلى Cloudflare Pages Functions المحمية
 
 ## التشغيل المحلي
 
@@ -92,6 +92,18 @@ npm run preview:cloudflare
 npm run deploy:cloudflare
 ```
 
+لفحص ما بعد النشر على البيئة الحية:
+
+```bash
+TARGET_BASE_URL=https://tensr.systems npm run security:postdeploy
+```
+
+التفاصيل الكاملة وخطوات الإنتاج موجودة في:
+
+```text
+docs/security-postdeploy-checklist.md
+```
+
 ### النشر عبر GitHub Actions
 
 الـ workflow المستخدم هو:
@@ -115,7 +127,7 @@ npm run deploy:cloudflare
 - `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GROQ_API_KEY`
-- `ENABLE_LEGACY_ADMIN_WRITE`
+- `ENABLE_LEGACY_ADMIN_WRITE=false`
 - `CRON_SECRET`
 
 ## ملاحظات أمنية

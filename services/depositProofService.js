@@ -48,5 +48,5 @@ export async function uploadDepositProof({ client, proofFile }) {
     throw new Error(payload?.error || PROOF_UPLOAD_ERROR_MESSAGE);
   }
 
-  return payload?.data?.publicUrl || null;
+  return payload?.data?.objectPath || null;
 }

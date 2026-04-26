@@ -26,23 +26,8 @@
         return String(order?.id || '').trim();
     }
 
-    function resolvePhysicalOrderSection(order, helpers) {
-        const metadataKind = normalizeText(order?.metadata?.catalog_kind || order?.metadata?.catalogKind);
-        if (metadataKind === 'accessories') return 'accessory-orders';
-        if (metadataKind === 'products') return 'product-orders';
-
-        const items = Array.isArray(order?.items) ? order.items : [];
-        const hasRegularProduct = items.some(function (item) {
-            const categoryId = item?.snapshot?.category_id || item?.snapshot?.categoryId || '';
-            if (categoryId && typeof helpers?.isAccessoryProductCategoryId === 'function') {
-                return !helpers.isAccessoryProductCategoryId(categoryId);
-            }
-
-            const product = typeof helpers?.getProductById === 'function' ? helpers.getProductById(item?.productId) : null;
-            return product ? !helpers.isAccessoryProduct(product) : true;
-        });
-
-        return hasRegularProduct ? 'product-orders' : 'accessory-orders';
+    function resolvePhysicalOrderSection() {
+        return 'product-orders';
     }
 
     function buildAdminSearchIndex(input) {

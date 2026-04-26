@@ -1,7 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import MobileBottomNav from "./MobileBottomNav";
@@ -15,10 +14,7 @@ import AppIcon from "./AppIcon";
 import HeaderNotificationBell from "./HeaderNotificationBell";
 import { getBrandMark, getSocialLinks, normalizeSiteSettings } from "@/lib/contactChannels";
 
-const GlobalSearchOverlay = dynamic(() => import("./GlobalSearchOverlay"), {
-  loading: () => null,
-  ssr: false,
-});
+const GlobalSearchOverlay = lazy(() => import("./GlobalSearchOverlay"));
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
 
@@ -217,7 +213,9 @@ export default function SiteHeader() {
         userLabel={userLabel}
         walletBalance={walletBalance}
       />
-      <GlobalSearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <Suspense fallback={null}>
+        <GlobalSearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      </Suspense>
     </>
   );
 }

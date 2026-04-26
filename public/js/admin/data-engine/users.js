@@ -1,15 +1,13 @@
 // ===== TechZone Admin Data Engine - Users =====
 // User mapping, role checks, and admin access helpers.
 
-import { ADMIN_SECTIONS, ROLES, db } from './core.js';
+import { ADMIN_SECTIONS, ROLES, db } from './core.js?v=20260426-5';
 
 const ALLOWED_ADMIN_SECTIONS = new Set([
     'dashboard',
     'orders',
     'product-orders',
-    'accessory-orders',
     'products',
-    'accessories',
     'categories',
     'main-categories',
     'subcategories',
@@ -61,7 +59,6 @@ export function mapUser(row) {
         lastLoginAt: row.last_login_at || null,
         role: normalizeRole(row.role),
         status: row.status || 'active',
-        passwordHash: row.password_hash,
         createdAt: row.created_at,
         updatedAt: row.updated_at || null
     };

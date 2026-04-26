@@ -3,11 +3,11 @@
 (function () {
     'use strict';
 
-    const ADMIN_ASSET_VERSION = '20260417-1';
+    const ADMIN_ASSET_VERSION = '20260426-5';
     const DATA_ENGINE_MODULE_PATH = `/js/admin/data-engine.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_SERVICE_WORKER_PATH = `/admin-sw.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_RUNTIME_ROUTE = '/api/admin/runtime';
-    const ADMIN_SERVICE_WORKER_SCOPE = '/admin.html';
+    const ADMIN_SERVICE_WORKER_SCOPE = '/__tz-panel.html';
     const SCRIPT_LOAD_TIMEOUT_MS = 10000;
     const GLOBAL_POLL_INTERVAL_MS = 25;
     const SUPABASE_GLOBAL_KEY = 'supabase';
@@ -38,7 +38,6 @@
         dashboard: ['js/admin/dashboard.js'],
         orders: ['js/admin/orders.js'],
         'product-orders': ['js/admin/orders.js'],
-        'accessory-orders': ['js/admin/orders.js'],
         products: ['js/admin/products.js'],
         categories: ['js/admin/categories.js'],
         'main-categories': ['js/admin/categories.js'],
@@ -55,8 +54,7 @@
         'contact-messages': ['js/admin/messages.js'],
         settings: ['js/admin/settings.js'],
         logs: ['js/admin/logs.js'],
-        'audit-logs': ['js/admin/logs.js'],
-        accessories: ['js/admin/accessories.js']
+        'audit-logs': ['js/admin/logs.js']
     });
     const loadedScripts = new Set();
     const loadedExternalScripts = new Set();

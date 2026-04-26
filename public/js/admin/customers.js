@@ -1,6 +1,6 @@
 /**
  * TechZone Admin - Customers Section
- * Lists every registered customer and opens a detailed profile modal.
+ * Renders customer summaries, profile details, and account status actions.
  */
 (function () {
     'use strict';
@@ -9,22 +9,51 @@
     var Helpers = window.AdminCustomerHelpers;
     if (!A || !Helpers) return;
 
+    var PAGE_SIZE = 15;
     var searchQuery = '';
     var filterStatus = '';
     var currentPage = 1;
-    var PAGE_SIZE = 15;
     var customerProfiles = [];
 
     function esc(value) {
         return TZ.escapeHtml(value == null ? '' : String(value));
     }
 
-    function getCustomers() {
-        return (TZ.db.users || []).filter(function (user) {
-            return typeof TZ.isCustomerUser === 'function' ? TZ.isCustomerUser(user) : true;
-        }).sort(function (first, second) {
-            return new Date(second.createdAt || 0) - new Date(first.createdAt || 0);
+    function createGrid(columns) {
+        var grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:' + columns + ';gap:12px;';
+        return grid;
+    }
+
+    function createInfoCard(label, value, useWordBreak) {
+        var card = document.createElement('div');
+        var labelElement = document.createElement('small');
+        var valueElement = document.createElement('strong');
+
+        card.style.cssText = 'padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;background:rgba(255,255,255,0.02);';
+        labelElement.style.cssText = 'display:block;color:var(--text-muted);margin-bottom:6px;';
+        labelElement.textContent = label;
+        valueElement.textContent = value || '-';
+        if (useWordBreak) valueElement.style.wordBreak = 'break-word';
+        card.appendChild(labelElement);
+        card.appendChild(valueElement);
+        return card;
+    }
+
+    function appendInfoCards(grid, items, useWordBreak) {
+        items.forEach(function (item) {
+            grid.appendChild(createInfoCard(item[0], item[1], useWordBreak));
         });
+    }
+
+    function getCustomers() {
+        return (TZ.db.users || [])
+            .filter(function (user) {
+                return typeof TZ.isCustomerUser === 'function' ? TZ.isCustomerUser(user) : true;
+            })
+            .sort(function (first, second) {
+                return new Date(second.createdAt || 0) - new Date(first.createdAt || 0);
+            });
     }
 
     function buildCustomerProfiles() {
@@ -42,8 +71,8 @@
         var start = (currentPage - 1) * PAGE_SIZE;
         return {
             items: list.slice(start, start + PAGE_SIZE),
-            total: list.length,
-            pages: Math.ceil(list.length / PAGE_SIZE) || 1
+            pages: Math.ceil(list.length / PAGE_SIZE) || 1,
+            total: list.length
         };
     }
 
@@ -54,29 +83,18 @@
             + '</span>';
     }
 
+    function resolveCustomerId(profile) {
+        var user = profile.user || {};
+        return profile.authUserId || user.authUserId || user.id || '';
+    }
+
     function buildNameButton(profile) {
         var user = profile.user || {};
-        var userId = profile.authUserId || user.authUserId || user.id;
-        var label = user.fullName || user.email || userId || 'عميل';
-
-        return '<button type="button" class="view-customer-btn" data-uid="' + esc(userId) + '"'
+        var label = user.fullName || user.email || resolveCustomerId(profile) || 'عميل';
+        return '<button type="button" class="view-customer-btn" data-uid="' + esc(resolveCustomerId(profile)) + '"'
             + ' style="background:none;border:0;padding:0;color:var(--primary-light);font:inherit;font-weight:700;cursor:pointer;text-align:right;">'
             + esc(label)
             + '</button>';
-    }
-
-    function buildStatCard(label, value) {
-        return '<div style="padding:14px;border:1px solid var(--border-color);border-radius:14px;background:var(--bg-lighter);">'
-            + '<small style="display:block;color:var(--text-muted);margin-bottom:6px;">' + esc(label) + '</small>'
-            + '<strong style="font-size:1.05rem;">' + esc(value) + '</strong>'
-            + '</div>';
-    }
-
-    function buildDetailRow(label, value) {
-        return '<div style="padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;background:rgba(255,255,255,0.02);">'
-            + '<small style="display:block;color:var(--text-muted);margin-bottom:4px;">' + esc(label) + '</small>'
-            + '<strong style="word-break:break-word;">' + esc(value || '-') + '</strong>'
-            + '</div>';
     }
 
     function getActivityTypeLabel(kind) {
@@ -90,57 +108,80 @@
         return Number(activity.amount || 0) > 0 ? TZ.formatPrice(activity.amount || 0) : '-';
     }
 
-    function buildActivityRows(profile) {
+    function appendActivityRows(tbody, profile) {
         var activity = Array.isArray(profile.activity) ? profile.activity.slice(0, 8) : [];
         if (activity.length === 0) {
-            return '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-clock"></i><p>لا توجد أنشطة مرتبطة بهذا العميل بعد</p></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-clock"></i><p>لا توجد أنشطة مرتبطة بهذا العميل بعد</p></div></td></tr>';
+            return;
         }
 
-        return activity.map(function (item) {
+        activity.forEach(function (item) {
+            var row = document.createElement('tr');
             var createdAt = item.createdAt ? A.formatDateTime(item.createdAt) : '-';
             var statusLabel = A.statusLabel ? A.statusLabel(item.status) : item.status;
+            var cells = [
+                '<strong>' + esc(item.label || item.id || '-') + '</strong>',
+                esc(getActivityTypeLabel(item.kind)),
+                esc(getActivityValue(item)),
+                '<span class="status-badge ' + esc(String(item.status || 'pending').trim().toLowerCase()) + '">' + esc(statusLabel || '-') + '</span>',
+                '<small>' + esc(createdAt) + '</small>'
+            ];
 
-            return '<tr>'
-                + '<td><strong>' + esc(item.label || item.id) + '</strong></td>'
-                + '<td>' + esc(getActivityTypeLabel(item.kind)) + '</td>'
-                + '<td>' + esc(getActivityValue(item)) + '</td>'
-                + '<td><span class="status-badge ' + esc(item.status || 'pending') + '">' + esc(statusLabel) + '</span></td>'
-                + '<td><small>' + esc(createdAt) + '</small></td>'
-                + '</tr>';
-        }).join('');
+            cells.forEach(function (cellMarkup) {
+                var cell = document.createElement('td');
+                cell.innerHTML = cellMarkup;
+                row.appendChild(cell);
+            });
+            tbody.appendChild(row);
+        });
     }
 
     function buildCustomerModalContent(profile) {
         var user = profile.user || {};
-        var registrationDate = user.createdAt ? A.formatDateTime(user.createdAt) : '-';
-        var lastLoginDate = user.lastLoginAt ? A.formatDateTime(user.lastLoginAt) : 'لا يوجد';
-        var lastOrderDate = profile.lastOrderAt ? A.formatDateTime(profile.lastOrderAt) : 'لا يوجد';
+        var root = document.createElement('div');
+        var statsGrid = createGrid('repeat(auto-fit,minmax(140px,1fr))');
+        var detailsGrid = createGrid('repeat(auto-fit,minmax(180px,1fr))');
+        var tableWrap = document.createElement('div');
+        var table = document.createElement('table');
+        var thead = document.createElement('thead');
+        var tbody = document.createElement('tbody');
+        var stats = [
+            ['طلبات المنتجات', String(profile.orderCount || 0)],
+            ['الصيانة', String(profile.repairCount || 0)],
+            ['طلبات الإيداع', String(profile.depositCount || 0)],
+            ['إجمالي الإنفاق', TZ.formatPrice(profile.totalSpend || 0)]
+        ];
+        var details = [
+            ['الاسم الكامل', user.fullName || '-'],
+            ['البريد الإلكتروني', user.email || '-'],
+            ['الهاتف', user.phone || '-'],
+            ['الدولة', user.country || '-'],
+            ['الحالة', Helpers.formatCustomerStatus(user.status)],
+            ['تاريخ التسجيل', user.createdAt ? A.formatDateTime(user.createdAt) : '-'],
+            ['آخر تسجيل دخول', user.lastLoginAt ? A.formatDateTime(user.lastLoginAt) : 'لا يوجد'],
+            ['آخر طلب', profile.lastOrderAt ? A.formatDateTime(profile.lastOrderAt) : 'لا يوجد'],
+            ['اللغة المفضلة', user.preferredLanguage || 'ar'],
+            ['العملة المفضلة', user.preferredCurrency || 'JOD'],
+            ['معرف الحساب', user.authUserId || user.id || '-'],
+            ['النبذة', user.bio || '-']
+        ];
 
-        return '<div style="display:grid;gap:18px;max-height:70vh;overflow:auto;padding-top:4px;">'
-            + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">'
-            + buildStatCard('طلبات المنتجات', profile.orderCount)
-            + buildStatCard('الصيانة', profile.repairCount)
-            + buildStatCard('طلبات الإيداع', profile.depositCount)
-            + buildStatCard('إجمالي الإنفاق', TZ.formatPrice(profile.totalSpend || 0))
-            + '</div>'
-            + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">'
-            + buildDetailRow('الاسم الكامل', user.fullName || '-')
-            + buildDetailRow('البريد الإلكتروني', user.email || '-')
-            + buildDetailRow('الهاتف', user.phone || '-')
-            + buildDetailRow('الدولة', user.country || '-')
-            + buildDetailRow('الحالة', Helpers.formatCustomerStatus(user.status))
-            + buildDetailRow('تاريخ التسجيل', registrationDate)
-            + buildDetailRow('آخر تسجيل دخول', lastLoginDate)
-            + buildDetailRow('آخر طلب', lastOrderDate)
-            + buildDetailRow('اللغة المفضلة', user.preferredLanguage || 'ar')
-            + buildDetailRow('العملة المفضلة', user.preferredCurrency || 'JOD')
-            + buildDetailRow('معرف الحساب', user.authUserId || user.id || '-')
-            + buildDetailRow('النبذة', user.bio || '-')
-            + '</div>'
-            + '<div class="table-wrap"><table class="data-table"><thead><tr>'
-            + '<th>المرجع</th><th>النوع</th><th>القيمة</th><th>الحالة</th><th>التاريخ</th>'
-            + '</tr></thead><tbody>' + buildActivityRows(profile) + '</tbody></table></div>'
-            + '</div>';
+        root.style.cssText = 'display:grid;gap:18px;max-height:70vh;overflow:auto;padding-top:4px;';
+        appendInfoCards(statsGrid, stats, false);
+        appendInfoCards(detailsGrid, details, true);
+
+        thead.innerHTML = '<tr><th>المرجع</th><th>النوع</th><th>القيمة</th><th>الحالة</th><th>التاريخ</th></tr>';
+        table.className = 'data-table';
+        table.appendChild(thead);
+        appendActivityRows(tbody, profile);
+        table.appendChild(tbody);
+
+        tableWrap.className = 'table-wrap';
+        tableWrap.appendChild(table);
+        root.appendChild(statsGrid);
+        root.appendChild(detailsGrid);
+        root.appendChild(tableWrap);
+        return root;
     }
 
     function findCustomerProfile(userId) {
@@ -157,23 +198,32 @@
         }
 
         void A.showModal({
-            title: 'تفاصيل العميل',
             cancelText: 'إغلاق',
-            contentHtml: buildCustomerModalContent(profile),
+            contentNode: buildCustomerModalContent(profile),
             hideConfirm: true,
+            title: 'تفاصيل العميل',
             type: 'info'
         });
     }
 
     async function toggleCustomerStatus(userId, currentStatus) {
         var newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-        var result = await TZ.supabase.from('user_profiles').update({
-            status: newStatus,
-            updated_at: new Date().toISOString()
-        }).eq('user_id', userId);
+        var confirmMessage = 'هل تريد تغيير حالة العميل إلى: ' + (newStatus === 'active' ? 'نشط' : 'غير نشط') + '؟';
+        if (!confirm(confirmMessage)) return;
+
+        var result = await TZ.supabase.rpc('admin_toggle_customer_status', {
+            p_target_user_id: userId
+        });
 
         if (result.error) {
-            A.showErrorToast('CUS-301', 'فشل تحديث حالة العميل');
+            var message = String(result.error.message || '');
+            if (message.includes('Not authorized')) {
+                A.showErrorToast('CUS-302', 'صلاحيات غير كافية لتغيير حالة العميل');
+            } else if (message.includes('Cannot change status of admin')) {
+                A.showErrorToast('CUS-303', 'لا يمكن تغيير حالة مستخدم إداري');
+            } else {
+                A.showErrorToast('CUS-301', 'فشل تحديث حالة العميل');
+            }
             return;
         }
 
@@ -206,18 +256,56 @@
         });
         document.querySelectorAll('.toggle-cust-btn').forEach(function (button) {
             button.addEventListener('click', function () {
-                toggleCustomerStatus(button.dataset.uid, button.dataset.status);
+                void toggleCustomerStatus(button.dataset.uid, button.dataset.status);
             });
         });
         document.querySelectorAll('.notify-cust-btn').forEach(function (button) {
             button.addEventListener('click', function () {
                 window.__TZ_ADMIN_NOTIFICATION_PREFILL = {
-                    userId: button.dataset.uid,
-                    title: 'رسالة إلى ' + button.dataset.name
+                    title: 'رسالة إلى ' + button.dataset.name,
+                    userId: button.dataset.uid
                 };
                 A.renderSection('notifications', { history: 'push' });
             });
         });
+    }
+
+    function buildPaginationMarkup(page) {
+        if (page.pages <= 1) return '';
+
+        var html = '<div class="admin-table-pagination"><div class="admin-table-pagination-info">عرض '
+            + page.items.length + ' من ' + page.total + '</div><div class="admin-table-pagination-controls">';
+        for (var pageNumber = 1; pageNumber <= page.pages; pageNumber += 1) {
+            html += '<button data-page="' + pageNumber + '" class="' + (pageNumber === currentPage ? 'active' : '') + '">' + pageNumber + '</button>';
+        }
+        return html + '</div></div>';
+    }
+
+    function buildCustomerRowsMarkup(items) {
+        if (items.length === 0) {
+            return '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-users"></i><p>لا يوجد عملاء مطابقون</p></div></td></tr>';
+        }
+
+        return items.map(function (profile) {
+            var user = profile.user || {};
+            var userId = resolveCustomerId(profile);
+            var createdAt = user.createdAt ? A.formatDate(user.createdAt) : 'غير محدد';
+            var toggleTitle = user.status === 'active' ? 'تعطيل' : 'تفعيل';
+
+            return '<tr data-customer-id="' + esc(userId) + '">'
+                + '<td>' + buildNameButton(profile) + '<br><small style="color:var(--text-muted);">سجّل في: ' + esc(createdAt) + '</small></td>'
+                + '<td><small>' + esc(user.email || '-') + '</small></td>'
+                + '<td><small>' + esc(user.phone || '-') + '</small></td>'
+                + '<td>' + profile.orderCount + '</td>'
+                + '<td>' + profile.repairCount + '</td>'
+                + '<td style="font-weight:600;color:#00b894;">' + TZ.formatPrice(profile.totalSpend) + '</td>'
+                + '<td>' + buildStatusBadge(user.status) + '</td>'
+                + '<td class="actions-cell">'
+                + '<button class="action-btn view-customer-detail-btn" data-uid="' + esc(userId) + '" title="عرض التفاصيل"><i class="fas fa-eye"></i></button>'
+                + '<button class="action-btn toggle-cust-btn" data-uid="' + esc(userId) + '" data-status="' + esc(user.status || 'active') + '" title="' + esc(toggleTitle) + '"><i class="fas fa-' + (user.status === 'active' ? 'ban' : 'check') + '"></i></button>'
+                + '<button class="action-btn notify-cust-btn" data-uid="' + esc(userId) + '" data-name="' + esc(user.fullName || 'عميل') + '" title="إرسال إشعار"><i class="fas fa-bell"></i></button>'
+                + '</td></tr>';
+        }).join('');
     }
 
     function renderCustomers() {
@@ -241,43 +329,11 @@
 
         html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
             + '<th>العميل</th><th>البريد</th><th>الهاتف</th><th>الطلبات</th><th>الصيانة</th><th>الإنفاق</th><th>الحالة</th><th>إجراءات</th>'
-            + '</tr></thead><tbody>';
-
-        if (page.items.length === 0) {
-            html += '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-users"></i><p>لا يوجد عملاء مطابقون</p></div></td></tr>';
-        } else {
-            page.items.forEach(function (profile) {
-                var user = profile.user || {};
-                var userId = profile.authUserId || user.authUserId || user.id;
-                var createdAt = user.createdAt ? A.formatDate(user.createdAt) : 'غير محدد';
-                var toggleTitle = user.status === 'active' ? 'تعطيل' : 'تفعيل';
-
-                html += '<tr data-customer-id="' + esc(userId) + '">'
-                    + '<td>' + buildNameButton(profile) + '<br><small style="color:var(--text-muted);">سجّل في: ' + esc(createdAt) + '</small></td>'
-                    + '<td><small>' + esc(user.email || '-') + '</small></td>'
-                    + '<td><small>' + esc(user.phone || '-') + '</small></td>'
-                    + '<td>' + profile.orderCount + '</td>'
-                    + '<td>' + profile.repairCount + '</td>'
-                    + '<td style="font-weight:600;color:#00b894;">' + TZ.formatPrice(profile.totalSpend) + '</td>'
-                    + '<td>' + buildStatusBadge(user.status) + '</td>'
-                    + '<td class="actions-cell">'
-                    + '<button class="action-btn view-customer-detail-btn" data-uid="' + esc(userId) + '" title="عرض التفاصيل"><i class="fas fa-eye"></i></button>'
-                    + '<button class="action-btn toggle-cust-btn" data-uid="' + esc(userId) + '" data-status="' + esc(user.status || 'active') + '" title="' + esc(toggleTitle) + '"><i class="fas fa-' + (user.status === 'active' ? 'ban' : 'check') + '"></i></button>'
-                    + '<button class="action-btn notify-cust-btn" data-uid="' + esc(userId) + '" data-name="' + esc(user.fullName || 'عميل') + '" title="إرسال إشعار"><i class="fas fa-bell"></i></button>'
-                    + '</td></tr>';
-            });
-        }
-        html += '</tbody></table></div></div>';
-
-        if (page.pages > 1) {
-            html += '<div class="admin-table-pagination"><div class="admin-table-pagination-info">عرض '
-                + page.items.length + ' من ' + page.total + '</div><div class="admin-table-pagination-controls">';
-            for (var pageNumber = 1; pageNumber <= page.pages; pageNumber += 1) {
-                html += '<button data-page="' + pageNumber + '" class="' + (pageNumber === currentPage ? 'active' : '') + '">' + pageNumber + '</button>';
-            }
-            html += '</div></div>';
-        }
-        html += '</div>';
+            + '</tr></thead><tbody>'
+            + buildCustomerRowsMarkup(page.items)
+            + '</tbody></table></div></div>'
+            + buildPaginationMarkup(page)
+            + '</div>';
 
         A.adminContent.innerHTML = html;
         bindEvents();

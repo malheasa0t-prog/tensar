@@ -27,3 +27,23 @@
 
 /fonts/*.woff2
   Cache-Control: public, max-age=31536000, immutable
+
+# Admin panel assets — prevent indexing and caching.
+/admin.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: private, no-store, max-age=0
+
+/__tz-panel.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: private, no-store, max-age=0
+
+/admin-config.js
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: private, no-store, max-age=0
+
+/js/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/css/admin/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+

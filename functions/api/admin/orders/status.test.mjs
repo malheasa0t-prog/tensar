@@ -38,23 +38,23 @@ test('onRequestPost should update admin order status through injected dependenci
       errorResponse: null,
     }),
     createSupabaseAdmin: () => ({ tag: 'admin-client' }),
-    updateAdminOrderStatus: async (input) => {
-      updates.push(input);
-      return {
-        orderId: 'ord-1',
-        targetType: 'physical_order',
-        status: 'completed',
-        auditError: null,
-        notificationError: null,
-      };
-    },
+        updateAdminOrderStatus: async (input) => {
+            updates.push(input);
+            return {
+                orderId: 'ord-1',
+                targetType: 'physical_order',
+                status: 'delivered',
+                auditError: null,
+                notificationError: null,
+            };
+        },
   });
 
   const response = await handlers.onRequestPost(createContext(new Request(
     'https://tensr.systems/api/admin/orders/status',
     {
       method: 'POST',
-      body: JSON.stringify({ orderId: 'ord-1', status: 'completed', targetType: 'physical_order' }),
+      body: JSON.stringify({ orderId: 'ord-1', status: 'delivered', targetType: 'physical_order' }),
       headers: { 'Content-Type': 'application/json' },
     }
   )));
@@ -105,7 +105,7 @@ test('onRequestPost should preserve coded business errors from the service layer
     'https://tensr.systems/api/admin/orders/status',
     {
       method: 'POST',
-      body: JSON.stringify({ orderId: 'ord-404', status: 'completed', targetType: 'physical_order' }),
+      body: JSON.stringify({ orderId: 'ord-404', status: 'delivered', targetType: 'physical_order' }),
       headers: { 'Content-Type': 'application/json' },
     }
   )));

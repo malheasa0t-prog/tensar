@@ -11,11 +11,6 @@ import AppIcon from '@/components/AppIcon';
 import InternalPageHero from '@/components/InternalPageHero';
 import ProductDetailsSkeleton from '@/components/ProductDetailsSkeleton';
 import ProductPurchaseActions from '@/components/ProductPurchaseActions';
-import {
-  ACCESSORY_PRODUCTS_SECTION_HREF,
-  ACCESSORY_SECTION_NAME,
-  isAccessoryProductCategoryId,
-} from '@/lib/accessoryCatalog';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
@@ -80,15 +75,13 @@ async function findItem(id) {
  * }} input
  * @returns {Array<{ href?: string, label: string }>}
  */
-function buildBreadcrumbItems({ category, categoryId, isAccessoryProduct, name }) {
+function buildBreadcrumbItems({ category, categoryId, name }) {
   return [
     { href: '/', label: 'الرئيسية' },
     { href: '/products', label: 'المنتجات' },
-    isAccessoryProduct
-      ? { href: ACCESSORY_PRODUCTS_SECTION_HREF, label: ACCESSORY_SECTION_NAME }
-      : category?.name
-        ? { href: `/category/${category.slug || categoryId}`, label: category.name }
-        : null,
+    category?.name
+      ? { href: `/category/${category.slug || categoryId}`, label: category.name }
+      : null,
     { label: name },
   ].filter(Boolean);
 }
@@ -125,10 +118,7 @@ export default function ProductDetailPage() {
   const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const isAccessoryProduct = product ? isAccessoryProductCategoryId(product.category_id) : false;
-  const categoryLabel = isAccessoryProduct
-    ? ACCESSORY_SECTION_NAME
-    : category?.name || 'منتج تقني';
+  const categoryLabel = category?.name || 'منتج تقني';
   const image = product && Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '';
 
   usePageSeo(product ? {
@@ -142,7 +132,6 @@ export default function ProductDetailPage() {
     breadcrumbItems: buildBreadcrumbItems({
       category,
       categoryId: product.category_id,
-      isAccessoryProduct,
       name: product.name,
     }),
     breadcrumbLabel: product.name,
@@ -169,8 +158,7 @@ export default function ProductDetailPage() {
 
         setProduct(item);
 
-        const isAccessory = isAccessoryProductCategoryId(item.category_id);
-        if (!isAccessory && item.category_id) {
+        if (item.category_id) {
           const { data: categoryData } = await supabase
             .from('categories')
             .select('name,slug')
@@ -213,7 +201,6 @@ export default function ProductDetailPage() {
   const breadcrumbItems = buildBreadcrumbItems({
     category,
     categoryId: product.category_id,
-    isAccessoryProduct,
     name: product.name,
   });
 

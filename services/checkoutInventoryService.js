@@ -26,6 +26,44 @@ function normalizeProductStatus(status) {
 }
 
 /**
+ * Returns true when the provided client supports inventory RPC calls.
+ *
+ * @param {unknown} client
+ * @returns {boolean}
+ */
+function supportsInventoryRpc(client) {
+  return typeof client?.rpc === "function";
+}
+
+/**
+ * Applies one optimistic inventory update using row-level filters.
+ *
+ * @param {{ adjustment: { productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }, client: any, restoring?: boolean }} input
+ * @returns {Promise<boolean>}
+ * @throws {Error}
+ */
+async function runOptimisticInventoryUpdate({ adjustment, client, restoring = false }) {
+  const payload = restoring
+    ? { quantity: adjustment.previousQuantity, sold: adjustment.previousSold, status: adjustment.previousStatus }
+    : { quantity: adjustment.nextQuantity, sold: adjustment.nextSold, status: adjustment.nextStatus };
+  const response = await client
+    .from("products")
+    .update(payload)
+    .eq("id", adjustment.productId)
+    .eq("quantity", restoring ? adjustment.nextQuantity : adjustment.previousQuantity)
+    .eq("sold", restoring ? adjustment.nextSold : adjustment.previousSold)
+    .eq("status", restoring ? adjustment.nextStatus : adjustment.previousStatus)
+    .select("id")
+    .maybeSingle();
+
+  if (response?.error) {
+    throw new Error(INVENTORY_UPDATE_ERROR_MESSAGE);
+  }
+
+  return Boolean(response?.data?.id);
+}
+
+/**
  * Builds optimistic inventory updates from the current product snapshots.
  *
  * @param {{ products: Array<Record<string, unknown>>, aggregatedItems: Array<{ id: string, qty: number }> }} input
@@ -67,44 +105,38 @@ export function buildInventoryAdjustments({ products, aggregatedItems }) {
 }
 
 /**
- * Applies one optimistic inventory update.
+ * Applies one atomic inventory update via Supabase RPC.
  *
- * @param {{ adjustment: { productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }, client: { from: (table: string) => { update: (payload: Record<string, unknown>) => any } }, restoring?: boolean }} input
+ * @param {{ adjustment: { productId: string, previousQuantity: number, nextQuantity: number, previousSold: number, nextSold: number, previousStatus: string, nextStatus: string }, client: any, restoring?: boolean }} input
  * @returns {Promise<boolean>}
  * @throws {Error}
  */
 async function runInventoryUpdate({ adjustment, client, restoring = false }) {
-  const payload = restoring
-    ? {
-        quantity: adjustment.previousQuantity,
-        sold: adjustment.previousSold,
-        status: adjustment.previousStatus,
-        updated_at: new Date().toISOString(),
-      }
-    : {
-        quantity: adjustment.nextQuantity,
-        sold: adjustment.nextSold,
-        status: adjustment.nextStatus,
-        updated_at: new Date().toISOString(),
-      };
-  const expectedQuantity = restoring ? adjustment.nextQuantity : adjustment.previousQuantity;
-  const expectedSold = restoring ? adjustment.nextSold : adjustment.previousSold;
-  const expectedStatus = restoring ? adjustment.nextStatus : adjustment.previousStatus;
-  const response = await client
-    .from("products")
-    .update(payload)
-    .eq("id", adjustment.productId)
-    .eq("quantity", expectedQuantity)
-    .eq("sold", expectedSold)
-    .eq("status", expectedStatus)
-    .select("id")
-    .maybeSingle();
+  if (!supportsInventoryRpc(client)) {
+    return runOptimisticInventoryUpdate({ adjustment, client, restoring });
+  }
+
+  const rpcName = restoring ? "restore_inventory" : "deduct_inventory";
+  const quantityToAdjust = adjustment.previousQuantity - adjustment.nextQuantity;
+
+  if (quantityToAdjust <= 0) {
+    return true;
+  }
+
+  const response = await client.rpc(rpcName, {
+    p_product_id: adjustment.productId,
+    p_quantity: quantityToAdjust,
+  });
 
   if (response?.error) {
     throw new Error(INVENTORY_UPDATE_ERROR_MESSAGE);
   }
 
-  return Boolean(response?.data?.id);
+  if (!restoring && response.data !== true) {
+    return false;
+  }
+
+  return true;
 }
 
 /**

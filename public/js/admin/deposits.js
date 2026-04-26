@@ -13,28 +13,88 @@
 
     function esc(v) { return TZ.escapeHtml(v == null ? '' : String(v)); }
 
+    function getRpcAdjustmentRow(result) {
+        return Array.isArray(result?.data) ? (result.data[0] || null) : (result?.data || null);
+    }
+
+    function buildApprovedDepositNotification(input) {
+        return {
+            user_id: input.userId,
+            title: 'تم شحن رصيدك بنجاح!',
+            body: 'تم إضافة ' + Number(input.amount || 0).toFixed(2) + ' د.أ إلى محفظتك.',
+            type: 'success',
+            reference_type: 'deposit',
+            reference_id: input.depositId
+        };
+    }
+
+    async function updateWalletNotificationReference(input) {
+        if (!input.transactionId) {
+            return false;
+        }
+
+        var result = await input.client.from('notifications')
+            .update(input.payload)
+            .eq('user_id', input.userId)
+            .eq('reference_type', 'wallet_transaction')
+            .eq('reference_id', input.transactionId)
+            .select('id');
+
+        if (result.error) {
+            throw new Error('تعذر تحديث إشعار المحفظة');
+        }
+
+        return Array.isArray(result.data) && result.data.length > 0;
+    }
+
+    async function insertApprovedDepositNotification(input) {
+        var result = await input.client.from('notifications').insert([input.payload]);
+        if (result.error) {
+            throw new Error('تعذر إنشاء إشعار الإيداع');
+        }
+    }
+
+    async function ensureApprovedDepositNotification(input) {
+        var payload = buildApprovedDepositNotification({
+            userId: input.userId,
+            amount: input.amount,
+            depositId: input.depositId
+        });
+        var updated = await updateWalletNotificationReference({
+            client: input.client,
+            payload: payload,
+            transactionId: input.transactionId,
+            userId: input.userId
+        });
+
+        if (!updated) {
+            await insertApprovedDepositNotification({
+                client: input.client,
+                payload: payload
+            });
+        }
+    }
+
     async function approveDeposit(deposit) {
         if (!confirm('هل تريد الموافقة على هذا الإيداع وإضافة الرصيد للمستخدم؟')) return;
 
         var authUser = await TZ.getSupabaseUser();
-        var adminId = authUser ? authUser.id : TZ.getSession()?.userId;
-        var userId = deposit.user_id || deposit.userId;
-        if (!adminId || !userId) { A.showErrorToast('DPM-201', 'تعذر تحديد المدير أو المستخدم'); return; }
+        if (!authUser) { A.showErrorToast('DPM-200', 'انتهت الجلسة. أعد تسجيل الدخول.'); return; }
 
-        var adjustRes = await TZ.supabase.rpc('admin_adjust_wallet_balance', {
-            p_admin_user_id: adminId,
-            p_target_user_id: userId,
-            p_amount: Number(deposit.amount),
-            p_reason: 'موافقة على طلب إيداع #' + deposit.id
+        var result = await TZ.supabase.rpc('admin_approve_deposit', {
+            p_admin_user_id: authUser.id,
+            p_deposit_id: deposit.id
         });
-        if (adjustRes.error) { A.showErrorToast('DPM-301', 'فشل إضافة الرصيد إلى المحفظة'); return; }
 
-        var updateRes = await TZ.supabase.from('deposits').update({
-            status: 'approved', reviewed_by: adminId, reviewed_at: new Date().toISOString()
-        }).eq('id', deposit.id);
-        if (updateRes.error) { A.showErrorToast('DPM-302', 'فشل تحديث حالة الإيداع'); return; }
-
-        /* Note: admin_adjust_wallet_balance RPC already sends a notification to the user */
+        if (result.error) {
+            var msg = String(result.error.message || '');
+            if (msg.includes('already processed')) {
+                A.showErrorToast('DPM-304', 'تم معالجة هذا الإيداع مسبقاً');
+            } else {
+                A.showErrorToast('DPM-301', 'فشل الموافقة: ' + msg);
+            }
+            return;
+        }
 
         A.showToast('تمت الموافقة وإضافة الرصيد بنجاح');
         await TZ.refreshData();
@@ -46,11 +106,12 @@
         if (!confirm('هل تريد رفض هذا الإيداع؟')) return;
 
         var authUser = await TZ.getSupabaseUser();
+        if (!authUser) { A.showErrorToast('DPM-200', 'انتهت الجلسة. أعد تسجيل الدخول.'); return; }
         var result = await TZ.supabase.from('deposits').update({
             status: 'rejected', admin_note: reason || null,
-            reviewed_by: authUser ? authUser.id : TZ.getSession()?.userId,
+            reviewed_by: authUser.id,
             reviewed_at: new Date().toISOString()
-        }).eq('id', deposit.id);
+        }).eq('id', deposit.id).eq('status', 'pending');
 
         if (result.error) { A.showErrorToast('DPM-303', 'تعذر رفض الإيداع'); return; }
 
@@ -132,4 +193,14 @@
     }
 
     A.sections.deposits = renderDeposits;
+
+    if (window.__ENABLE_DEPOSIT_ADMIN_TEST_HOOKS__) {
+        window.__depositAdminTestHooks = {
+            buildApprovedDepositNotification: buildApprovedDepositNotification,
+            ensureApprovedDepositNotification: ensureApprovedDepositNotification,
+            getRpcAdjustmentRow: getRpcAdjustmentRow,
+            insertApprovedDepositNotification: insertApprovedDepositNotification,
+            updateWalletNotificationReference: updateWalletNotificationReference
+        };
+    }
 })();

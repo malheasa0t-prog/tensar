@@ -9,7 +9,7 @@ import {
     nowIso,
     supabase,
     updateHealthStatus
-} from './core.js';
+} from './core.js?v=20260426-5';
 import {
     buildItemsByOrder,
     mapAuditLog,
@@ -18,13 +18,32 @@ import {
     mapDeposit,
     mapOrder,
     mapRepairBooking
-} from './orders.js';
-import { mapCategory, mapProduct, mapRepairService } from './products.js';
-import { mergeUsers } from './users.js';
+} from './orders.js?v=20260426-5';
+import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260426-5';
+import { mergeUsers } from './users.js?v=20260426-5';
+
+const LEGACY_USER_SAFE_FIELDS = 'id,auth_user_id,full_name,email,phone,role,status,created_at,updated_at';
+const PROFILE_SAFE_FIELDS = [
+    'id',
+    'user_id',
+    'full_name',
+    'email',
+    'phone',
+    'country',
+    'bio',
+    'avatar_url',
+    'preferred_language',
+    'preferred_currency',
+    'last_login_at',
+    'role',
+    'status',
+    'created_at',
+    'updated_at'
+].join(',');
 
 const QUERY_BUILDERS = {
-    profiles: () => supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
-    legacyUsers: () => supabase.from('app_users').select('*'),
+    profiles: () => supabase.from('user_profiles').select(PROFILE_SAFE_FIELDS).order('created_at', { ascending: false }),
+    legacyUsers: () => supabase.from('app_users').select(LEGACY_USER_SAFE_FIELDS),
     categories: () => supabase.from('categories').select('*').order('sort_order', { ascending: true }),
     products: () => supabase.from('products').select('*'),
     orders: () => supabase.from('orders').select('*').order('created_at', { ascending: false }),

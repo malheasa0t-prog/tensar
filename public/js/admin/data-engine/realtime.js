@@ -10,7 +10,7 @@ import {
     realtimeState,
     supabase,
     updateHealthStatus
-} from './core.js';
+} from './core.js?v=20260426-5';
 import {
     mapAuditLog,
     mapContactMessage,
@@ -18,8 +18,8 @@ import {
     mapDeposit,
     mapOrder,
     mapRepairBooking
-} from './orders.js';
-import { mapCategory, mapProduct, mapRepairService } from './products.js';
+} from './orders.js?v=20260426-5';
+import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260426-5';
 
 const CATEGORY_SORTER = (first, second) => (first.sortOrder || 0) - (second.sortOrder || 0);
 

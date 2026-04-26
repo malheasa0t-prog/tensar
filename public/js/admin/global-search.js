@@ -18,7 +18,7 @@
 
     if (!A || !helpers || !input || !dropdown || !container) return;
 
-    input.placeholder = 'ابحث في الطلبات...';
+    input.placeholder = 'Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ø·Ù„Ø¨Ø§Øª...';
 
     function getSearchData() {
         return {
@@ -35,9 +35,13 @@
         state.index = helpers.buildAdminSearchIndex(getSearchData());
     }
 
+    function clearDropdownContent() {
+        dropdown.replaceChildren();
+    }
+
     function closeDropdown() {
         dropdown.hidden = true;
-        dropdown.innerHTML = '';
+        clearDropdownContent();
         state.activeIndex = -1;
         state.results = [];
     }
@@ -47,14 +51,61 @@
     }
 
     function renderEmptyState(message) {
-        dropdown.innerHTML = `<div class="admin-search-empty">${message}</div>`;
+        const emptyState = document.createElement('div');
+
+        emptyState.className = 'admin-search-empty';
+        emptyState.textContent = message;
+        clearDropdownContent();
+        dropdown.appendChild(emptyState);
         openDropdown();
     }
 
     function formatResultType(kind) {
         return {
-            order: 'طلب'
-        }[kind] || 'نتيجة';
+            order: 'Ø·Ù„Ø¨'
+        }[kind] || 'Ù†ØªÙŠØ¬Ø©';
+    }
+
+    function createResultIcon(iconClassName) {
+        const wrapper = document.createElement('span');
+        const icon = document.createElement('i');
+
+        wrapper.className = 'admin-search-result-icon';
+        icon.className = 'fas ' + String(iconClassName || '').trim();
+        wrapper.appendChild(icon);
+        return wrapper;
+    }
+
+    function createResultBody(result) {
+        const body = document.createElement('span');
+        const title = document.createElement('strong');
+        const subtitle = document.createElement('small');
+
+        body.className = 'admin-search-result-body';
+        title.textContent = result.title || '';
+        subtitle.textContent = result.subtitle || '';
+        body.appendChild(title);
+        body.appendChild(subtitle);
+        return body;
+    }
+
+    function createResultMeta(kind) {
+        const meta = document.createElement('span');
+        meta.className = 'admin-search-result-meta';
+        meta.textContent = formatResultType(kind);
+        return meta;
+    }
+
+    function createResultButton(result, index) {
+        const button = document.createElement('button');
+
+        button.type = 'button';
+        button.className = 'admin-search-result' + (index === state.activeIndex ? ' is-active' : '');
+        button.dataset.searchIndex = String(index);
+        button.appendChild(createResultIcon(result.icon));
+        button.appendChild(createResultBody(result));
+        button.appendChild(createResultMeta(result.kind));
+        return button;
     }
 
     function renderResults(query) {
@@ -68,20 +119,14 @@
         state.activeIndex = state.results.length ? 0 : -1;
 
         if (state.results.length === 0) {
-            renderEmptyState('لا توجد نتائج مطابقة لهذا البحث.');
+            renderEmptyState('Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø¨Ø­Ø«.');
             return;
         }
 
-        dropdown.innerHTML = state.results.map(function (result, index) {
-            return `<button type="button" class="admin-search-result ${index === state.activeIndex ? 'is-active' : ''}" data-search-index="${index}">
-                <span class="admin-search-result-icon"><i class="fas ${result.icon}"></i></span>
-                <span class="admin-search-result-body">
-                    <strong>${TZ.escapeHtml(result.title)}</strong>
-                    <small>${TZ.escapeHtml(result.subtitle)}</small>
-                </span>
-                <span class="admin-search-result-meta">${TZ.escapeHtml(formatResultType(result.kind))}</span>
-            </button>`;
-        }).join('');
+        clearDropdownContent();
+        state.results.forEach(function (result, index) {
+            dropdown.appendChild(createResultButton(result, index));
+        });
         openDropdown();
     }
 

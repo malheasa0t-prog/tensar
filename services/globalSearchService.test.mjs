@@ -70,7 +70,7 @@ test("loadGlobalSearchSnapshot should build a normalized snapshot from all publi
   assert.equal(snapshot.items.length, 3);
   assert.ok(snapshot.quickFilters.some((filter) => filter.label === "لابتوبات"));
   assert.ok(snapshot.popularSuggestions.includes("لابتوب"));
-  assert.deepEqual(tracker.calls, { products: 1, repair_services: 1, categories: 1 });
+  assert.deepEqual(tracker.calls, { products: 1, repair_services: 1, categories: 1, services: 1 });
 });
 
 test("loadGlobalSearchSnapshot should return partial data when one source fails", async () => {
@@ -133,5 +133,5 @@ test("fetchGlobalSearchSnapshot should cache the most recent successful snapshot
   const secondSnapshot = await fetchGlobalSearchSnapshot(client);
 
   assert.equal(firstSnapshot, secondSnapshot);
-  assert.deepEqual(tracker.calls, { products: 1, repair_services: 1, categories: 1 });
+  assert.deepEqual(tracker.calls, { products: 1, repair_services: 1, categories: 1, services: 1 });
 });

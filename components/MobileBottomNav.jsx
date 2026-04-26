@@ -23,8 +23,7 @@ function isMobileItemActive({ pathname, href }) {
   if (href === "/products") {
     return (
       pathname.startsWith("/products") ||
-      pathname.startsWith("/category/") ||
-      pathname.startsWith("/accessories")
+      pathname.startsWith("/category/")
     );
   }
 

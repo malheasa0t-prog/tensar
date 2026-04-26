@@ -9,13 +9,81 @@ import { buildErrorPayload } from '../_lib/errorCodes.js';
  *
  * @param {EventContext} context
  */
-
-const ALLOWED_HOSTS = [];
+const DEFAULT_ALLOWED_IMAGE_HOSTS = Object.freeze([
+  'bayubxlmrgkquwoutwmn.supabase.co',
+  'placehold.co',
+  'serva-s.com',
+]);
+const ALLOWED_IMAGE_HOSTS_ENV_KEYS = Object.freeze([
+  'IMAGE_PROXY_ALLOWED_HOSTS',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'SUPABASE_URL',
+]);
 const CACHE_MAX_AGE = 7 * 24 * 60 * 60;
 const DEFAULT_IMAGE_WIDTH = 1200;
 const DEFAULT_IMAGE_QUALITY = 80;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const VALID_FORMATS = new Set(['avif', 'jpeg', 'png', 'webp']);
+
+/**
+ * Normalizes a hostname for reliable allow-list comparisons.
+ *
+ * @param {string | null | undefined} value
+ * @returns {string}
+ */
+function normalizeHostname(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+/**
+ * Extracts a hostname from a raw hostname or full URL string.
+ *
+ * @param {string | null | undefined} value
+ * @returns {string}
+ */
+function extractHostname(value) {
+  const normalizedValue = String(value ?? '').trim();
+  if (!normalizedValue) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    try {
+      return normalizeHostname(new URL(normalizedValue).hostname);
+    } catch (error) {
+      console.warn('[IMG-001] Ignoring invalid allowed host value:', error);
+      return '';
+    }
+  }
+
+  return normalizeHostname(normalizedValue.split('/')[0]);
+}
+
+/**
+ * Reads the approved external image hosts from defaults and environment.
+ *
+ * @param {Record<string, string | undefined> | undefined} env
+ * @returns {Set<string>}
+ */
+export function readAllowedImageHosts(env) {
+  const hosts = new Set(DEFAULT_ALLOWED_IMAGE_HOSTS.map(normalizeHostname));
+
+  ALLOWED_IMAGE_HOSTS_ENV_KEYS.forEach((envKey) => {
+    const rawValue = String(env?.[envKey] ?? '').trim();
+    if (!rawValue) {
+      return;
+    }
+
+    rawValue.split(',').forEach((entry) => {
+      const hostname = extractHostname(entry);
+      if (hostname) {
+        hosts.add(hostname);
+      }
+    });
+  });
+
+  return hosts;
+}
 
 /**
  * Parses a bounded integer search parameter.
@@ -69,10 +137,11 @@ function buildImageTransformOptions(url) {
  *
  * @param {string} imageUrl
  * @param {URL} requestUrl
+ * @param {typeof fetch} fetchImpl
  * @returns {Promise<Response>}
  */
-async function fetchUpstreamImage(imageUrl, requestUrl) {
-  return fetch(imageUrl, {
+async function fetchUpstreamImage(imageUrl, requestUrl, fetchImpl) {
+  return fetchImpl(imageUrl, {
     headers: {
       Accept: 'image/*,*/*;q=0.8',
       'User-Agent': 'Mozilla/5.0 (compatible; TechZone/1.0)',
@@ -96,51 +165,64 @@ function imageErrorResponse(errorMessage, status) {
   return Response.json(buildErrorPayload(errorMessage), { status });
 }
 
-export async function onRequestGet(context) {
-  const requestUrl = new URL(context.request.url);
-  const rawUrl = requestUrl.searchParams.get('url');
+/**
+ * Creates the image proxy handler with injectable dependencies for tests.
+ *
+ * @param {{ fetchImpl?: typeof fetch }} [options={}]
+ * @returns {(context: EventContext) => Promise<Response>}
+ */
+export function createImageProxyHandler(options = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
 
-  if (!rawUrl) {
-    return imageErrorResponse('[IMG-101] Missing url parameter', 400);
-  }
+  return async function onRequestGet(context) {
+    const requestUrl = new URL(context.request.url);
+    const rawUrl = requestUrl.searchParams.get('url');
+    const allowedHosts = readAllowedImageHosts(context.env);
 
-  let parsed;
-  try {
-    parsed = new URL(rawUrl);
-  } catch (error) {
-    console.error('[IMG-102] Invalid image proxy URL:', error);
-    return imageErrorResponse('[IMG-102] Invalid URL', 400);
-  }
-
-  if (parsed.protocol !== 'https:') {
-    return imageErrorResponse('[IMG-103] Only HTTPS allowed', 400);
-  }
-
-  if (!ALLOWED_HOSTS.includes(parsed.hostname)) {
-    return imageErrorResponse('[IMG-201] Domain not allowed', 403);
-  }
-
-  try {
-    const response = await fetchUpstreamImage(parsed.toString(), requestUrl);
-    if (!response.ok) {
-      return imageErrorResponse(`[IMG-401] Upstream ${response.status}`, 502);
+    if (!rawUrl) {
+      return imageErrorResponse('[IMG-101] Missing url parameter', 400);
     }
 
-    const contentType = response.headers.get('content-type') || 'image/webp';
-    const imageBuffer = await response.arrayBuffer();
-    if (imageBuffer.byteLength > MAX_IMAGE_SIZE) {
-      return imageErrorResponse('[IMG-402] Image too large', 413);
+    let parsed;
+    try {
+      parsed = new URL(rawUrl);
+    } catch (error) {
+      console.error('[IMG-102] Invalid image proxy URL:', error);
+      return imageErrorResponse('[IMG-102] Invalid URL', 400);
     }
 
-    return new Response(imageBuffer, {
-      headers: {
-        'Cache-Control': `public, max-age=${CACHE_MAX_AGE}, immutable`,
-        'Content-Type': contentType,
-        ...buildCorsHeaders(context.request, 'GET, OPTIONS'),
-      },
-    });
-  } catch (error) {
-    console.error('[IMG-500] Failed to fetch image:', error);
-    return imageErrorResponse('[IMG-500] Failed to fetch image', 500);
-  }
+    if (parsed.protocol !== 'https:') {
+      return imageErrorResponse('[IMG-103] Only HTTPS allowed', 400);
+    }
+
+    if (!allowedHosts.has(normalizeHostname(parsed.hostname))) {
+      return imageErrorResponse('[IMG-201] Domain not allowed', 403);
+    }
+
+    try {
+      const response = await fetchUpstreamImage(parsed.toString(), requestUrl, fetchImpl);
+      if (!response.ok) {
+        return imageErrorResponse(`[IMG-401] Upstream ${response.status}`, 502);
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/webp';
+      const imageBuffer = await response.arrayBuffer();
+      if (imageBuffer.byteLength > MAX_IMAGE_SIZE) {
+        return imageErrorResponse('[IMG-402] Image too large', 413);
+      }
+
+      return new Response(imageBuffer, {
+        headers: {
+          'Cache-Control': `public, max-age=${CACHE_MAX_AGE}, immutable`,
+          'Content-Type': contentType,
+          ...buildCorsHeaders(context.request, 'GET, OPTIONS'),
+        },
+      });
+    } catch (error) {
+      console.error('[IMG-500] Failed to fetch image:', error);
+      return imageErrorResponse('[IMG-500] Failed to fetch image', 500);
+    }
+  };
 }
+
+export const onRequestGet = createImageProxyHandler();

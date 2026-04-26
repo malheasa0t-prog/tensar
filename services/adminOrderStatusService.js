@@ -4,18 +4,14 @@ const ORDER_TARGET_TYPES = Object.freeze({
   physical: 'physical_order',
 });
 
-const PHYSICAL_ORDER_TARGET_STATUSES = new Set([
+export const PHYSICAL_ORDER_TARGET_STATUSES = Object.freeze([
   'pending',
-  'awaiting_delivery',
-  'confirmed',
   'processing',
-  'shipped',
   'delivered',
-  'completed',
   'cancelled',
-  'failed',
-  'refunded',
 ]);
+
+const PHYSICAL_ORDER_STATUS_SET = new Set(PHYSICAL_ORDER_TARGET_STATUSES);
 
 /**
  * Error type used for expected admin order-status failures.
@@ -143,7 +139,7 @@ async function insertAuditLog({ client, actor, targetId, details }) {
  * @throws {AdminOrderStatusError}
  */
 async function updatePhysicalOrderStatus({ client, actor, orderId, status }) {
-  if (!PHYSICAL_ORDER_TARGET_STATUSES.has(status)) {
+  if (!PHYSICAL_ORDER_STATUS_SET.has(status)) {
     throw createAdminOrderStatusError('ORM-104', 'حالة الطلب الفيزيائي غير صالحة.', 400);
   }
 

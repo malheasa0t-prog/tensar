@@ -38,35 +38,72 @@ async function getUserFromRequest(request, env) {
  */
 function validateProfileInput(body) {
   const errors = [];
-  const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : '';
-  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
-  const avatarUrl = typeof body.avatar_url === 'string' ? body.avatar_url.trim() : '';
-  const country = typeof body.country === 'string' ? body.country.trim() : '';
-  const bio = typeof body.bio === 'string' ? body.bio.trim() : '';
-  const preferredLanguage = typeof body.preferred_language === 'string' ? body.preferred_language.trim() : '';
-  const preferredCurrency = typeof body.preferred_currency === 'string' ? body.preferred_currency.trim() : '';
+  const payload = {};
+  const raw = body || {};
 
-  if (fullName && (fullName.length < 2 || fullName.length > 120)) errors.push('[PRF-101] الاسم يجب أن يكون بين حرفين و120 حرفاً');
-  if (phone && !/^[+0-9\s()-]{7,20}$/.test(phone)) errors.push('[PRF-102] رقم الهاتف غير صالح');
-  if (avatarUrl && avatarUrl.length > 2048) errors.push('[PRF-103] رابط الصورة طويل جداً');
-  if (country && country.length > 80) errors.push('[PRF-104] اسم الدولة طويل جداً');
-  if (bio && bio.length > 500) errors.push('[PRF-105] النبذة يجب ألا تتجاوز 500 حرف');
-  if (preferredLanguage && preferredLanguage.length > 12) errors.push('[PRF-106] قيمة اللغة غير صالحة');
-  if (preferredCurrency && preferredCurrency.length > 8) errors.push('[PRF-107] قيمة العملة غير صالحة');
+  // Only include fields that were explicitly sent in the request
+  if ('full_name' in raw) {
+    const fullName = typeof raw.full_name === 'string' ? raw.full_name.trim() : '';
+    if (fullName && (fullName.length < 2 || fullName.length > 120)) {
+      errors.push('[PRF-101] الاسم يجب أن يكون بين حرفين و120 حرفاً');
+    }
+    if (fullName) payload.full_name = fullName;
+  }
 
-  return {
-    errors,
-    payload: {
-      full_name: fullName || null,
-      phone: phone || null,
-      avatar_url: avatarUrl || null,
-      country: country || null,
-      bio: bio || null,
-      preferred_language: preferredLanguage || 'ar',
-      preferred_currency: preferredCurrency || 'JOD',
-      updated_at: new Date().toISOString(),
-    },
-  };
+  if ('phone' in raw) {
+    const phone = typeof raw.phone === 'string' ? raw.phone.trim() : '';
+    if (phone && !/^[+0-9\s()-]{7,20}$/.test(phone)) {
+      errors.push('[PRF-102] رقم الهاتف غير صالح');
+    }
+    if (phone) payload.phone = phone;
+  }
+
+  if ('avatar_url' in raw) {
+    const avatarUrl = typeof raw.avatar_url === 'string' ? raw.avatar_url.trim() : '';
+    if (avatarUrl && avatarUrl.length > 2048) {
+      errors.push('[PRF-103] رابط الصورة طويل جداً');
+    }
+    payload.avatar_url = avatarUrl || null;
+  }
+
+  if ('country' in raw) {
+    const country = typeof raw.country === 'string' ? raw.country.trim() : '';
+    if (country && country.length > 80) {
+      errors.push('[PRF-104] اسم الدولة طويل جداً');
+    }
+    if (country) payload.country = country;
+  }
+
+  if ('bio' in raw) {
+    const bio = typeof raw.bio === 'string' ? raw.bio.trim() : '';
+    if (bio && bio.length > 500) {
+      errors.push('[PRF-105] النبذة يجب ألا تتجاوز 500 حرف');
+    }
+    payload.bio = bio || null;
+  }
+
+  if ('preferred_language' in raw) {
+    const lang = typeof raw.preferred_language === 'string' ? raw.preferred_language.trim() : '';
+    if (lang && lang.length > 12) {
+      errors.push('[PRF-106] قيمة اللغة غير صالحة');
+    }
+    payload.preferred_language = lang || 'ar';
+  }
+
+  if ('preferred_currency' in raw) {
+    const currency = typeof raw.preferred_currency === 'string' ? raw.preferred_currency.trim() : '';
+    if (currency && currency.length > 8) {
+      errors.push('[PRF-107] قيمة العملة غير صالحة');
+    }
+    payload.preferred_currency = currency || 'JOD';
+  }
+
+  // Always set updated_at if there's anything to update
+  if (Object.keys(payload).length > 0) {
+    payload.updated_at = new Date().toISOString();
+  }
+
+  return { errors, payload };
 }
 
 /**
@@ -127,6 +164,10 @@ async function handlePatch(request, env) {
   const { errors, payload } = validateProfileInput(body || {});
   if (errors.length > 0) {
     return errorResponse(errors[0], 400);
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return errorResponse('[PRF-109] لم يتم إرسال أي بيانات للتحديث', 400);
   }
 
   const admin = createSupabaseAdmin(env);

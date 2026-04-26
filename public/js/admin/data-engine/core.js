@@ -1,6 +1,12 @@
 // ===== TechZone Admin Data Engine - Core =====
 // Shared state, Supabase bootstrap, utilities, auth/session helpers, and catalog constants.
 
+import {
+    installSanitizedInnerHtmlGuard,
+    sanitizeAdminHtmlMarkup
+} from './htmlSanitizer.js';
+import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260426-5';
+
 const SUPABASE_URL = window.__TZ_SUPABASE_URL || '';
 const SUPABASE_PUBLISHABLE_KEY = window.__TZ_SUPABASE_PUBLISHABLE_KEY || '';
 const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY || window.__TZ_SUPABASE_ANON_KEY || '';
@@ -8,10 +14,13 @@ const SESSION_STORAGE_KEY = 'tz_session';
 const CART_STORAGE_KEY = 'tz_cart';
 const ADMIN_ACCESS_ERROR = '[DEN-201] يلزم وجود جلسة إدارة موثقة للوصول إلى البيانات.';
 
-export const isLegacyAdminPage = /(^|\/)admin(?:\.html)?$/i.test(window.location.pathname || '');
-export const legacyAdminWriteEnabled =
-    window.__TZ_LEGACY_ADMIN_WRITE_ENABLED === true && isLegacyAdminPage;
+export const isLegacyAdminPage = /(^|\/)(?:admin(?:\.html)?|__tz-panel\.html)$/i.test(window.location.pathname || '');
+export const legacyAdminWriteEnabled = false;
 let adminRuntimeAccessGranted = false;
+
+if (isLegacyAdminPage && typeof window.Element === 'function') {
+    installSanitizedInnerHtmlGuard({ elementCtor: window.Element, sanitizeHtml: sanitizeAdminHtmlMarkup });
+}
 
 export const engineStatus = {
     ready: Boolean(window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY),
@@ -31,9 +40,14 @@ export const health = {
     activeSessions: 0
 };
 
-export const supabase = engineStatus.ready
+const rawSupabaseClient = engineStatus.ready
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
+
+export const supabase = createAdminSupabaseClient({
+    adminPage: isLegacyAdminPage,
+    baseClient: rawSupabaseClient
+});
 
 export const realtimeState = {
     activeScopedChannel: null
@@ -52,9 +66,7 @@ export const ADMIN_SECTIONS = [
     { id: 'dashboard', minLevel: 3, icon: 'fa-chart-pie', label: 'لوحة المعلومات' },
     { id: 'orders', minLevel: 3, icon: 'fa-shopping-bag', label: 'الطلبات' },
     { id: 'product-orders', minLevel: 3, icon: 'fa-box', label: 'طلبات المنتجات' },
-    { id: 'accessory-orders', minLevel: 3, icon: 'fa-headphones', label: 'طلبات الإكسسوارات' },
     { id: 'products', minLevel: 8, icon: 'fa-box-open', label: 'المنتجات' },
-    { id: 'accessories', minLevel: 8, icon: 'fa-headphones', label: 'الإكسسوارات' },
     { id: 'categories', minLevel: 8, icon: 'fa-tags', label: 'الفئات' },
     { id: 'services', minLevel: 8, icon: 'fa-bolt', label: 'الخدمات' },
     { id: 'deposits', minLevel: 8, icon: 'fa-money-check-alt', label: 'طلبات الإيداع' },
@@ -77,39 +89,6 @@ const DEFAULT_SETTINGS = {
     ]
 };
 
-export const ACCESSORY_SECTION_NAME = 'منتجات اكسسوارات';
-export const ACCESSORY_PUBLIC_LABEL = 'إكسسوارات';
-export const ACCESSORY_MAIN_CATEGORY_ID = 'cat-accessories-direct-root';
-export const ACCESSORY_SUBCATEGORY_ID = 'cat-accessories-direct-items';
-export const ACCESSORY_MAIN_CATEGORY_SLUG = 'accessories-direct-root';
-export const ACCESSORY_SUBCATEGORY_SLUG = 'accessories-direct-items';
-const ACCESSORY_LEGACY_CATEGORY_SLUG = 'accessories';
-
-export const ACCESSORY_MAIN_CATEGORY = {
-    id: ACCESSORY_MAIN_CATEGORY_ID,
-    name: ACCESSORY_SECTION_NAME,
-    parentId: null,
-    status: 'active',
-    sortOrder: 9991,
-    icon: 'fa-headphones',
-    image: '',
-    description: 'فئة داخلية مخصصة لمنتجات الإكسسوارات المباشرة.',
-    slug: ACCESSORY_MAIN_CATEGORY_SLUG,
-    showInNavbar: false
-};
-
-export const ACCESSORY_SUBCATEGORY = {
-    id: ACCESSORY_SUBCATEGORY_ID,
-    name: 'قسم مباشر',
-    parentId: ACCESSORY_MAIN_CATEGORY_ID,
-    status: 'active',
-    sortOrder: 9992,
-    icon: 'fa-box-open',
-    image: '',
-    description: 'فئة فرعية داخلية تحفظ منتجات الإكسسوارات التي تظهر مباشرة في صفحة المنتجات.',
-    slug: ACCESSORY_SUBCATEGORY_SLUG,
-    showInNavbar: false
-};
 
 function readJsonStorage(key, fallbackValue) {
     try {
@@ -230,39 +209,6 @@ export function updateHealthStatus(patch = {}) {
     window.dispatchEvent(new CustomEvent(HEALTH_UPDATE_EVENT, { detail: { ...health } }));
 }
 
-export function normalizeAccessoryCategorySlug(value) {
-    return String(value || '').trim().toLowerCase();
-}
-
-function getAccessoryCategoryById(categoryId) {
-    const normalizedId = String(categoryId || '').trim();
-    if (!normalizedId) return null;
-    return db.categories.find((category) => category.id === normalizedId) || null;
-}
-
-export function isAccessoryCategorySlug(slug) {
-    const normalizedSlug = normalizeAccessoryCategorySlug(slug);
-    return normalizedSlug === ACCESSORY_LEGACY_CATEGORY_SLUG
-        || normalizedSlug === ACCESSORY_MAIN_CATEGORY_SLUG
-        || normalizedSlug === ACCESSORY_SUBCATEGORY_SLUG;
-}
-
-export function isAccessoryCatalogCategoryId(categoryId) {
-    return isAccessoryCategorySlug(getAccessoryCategoryById(categoryId)?.slug);
-}
-
-export function isAccessoryProductCategoryId(categoryId) {
-    return isAccessoryCatalogCategoryId(categoryId);
-}
-
-export function isAccessoryProduct(product) {
-    return Boolean(product) && (
-        product.productType === 'accessory'
-        || !product.categoryId
-        || isAccessoryCategorySlug(product.categorySlug)
-        || isAccessoryProductCategoryId(product.categoryId)
-    );
-}
 
 export function detectDataScope() {
     const overrideScope = typeof window.__TZ_DATA_SCOPE === 'string'
@@ -271,7 +217,7 @@ export function detectDataScope() {
     if (overrideScope) return overrideScope;
 
     const path = (window.location.pathname || '').toLowerCase();
-    if (document.getElementById('adminLayout') || path.endsWith('/admin') || path.endsWith('/admin.html')) {
+    if (document.getElementById('adminLayout') || path.endsWith('/admin') || path.endsWith('/admin.html') || path.endsWith('/__tz-panel.html')) {
         return 'admin';
     }
     if (path.endsWith('/products')) return 'products';

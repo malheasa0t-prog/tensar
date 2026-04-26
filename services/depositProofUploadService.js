@@ -1,3 +1,7 @@
+/**
+ * Client-side helpers for validating and uploading private deposit proof files.
+ */
+
 import {
   DEPOSIT_PROOF_BUCKET_NAME,
   buildDepositProofObjectPath,
@@ -40,7 +44,7 @@ export function validateDepositProofFile(proofFile) {
 }
 
 /**
- * Ensures the dedicated deposit-proof bucket exists before uploading files.
+ * Ensures the deposit-proof bucket exists and remains private.
  *
  * @param {{ getBucket?: (name: string) => Promise<{ data?: unknown, error?: { message?: string } | null }>, createBucket?: (name: string, options: { public: boolean, fileSizeLimit: number, allowedMimeTypes: string[] }) => Promise<{ error?: { message?: string } | null }> }} storageApi
  * @returns {Promise<void>}
@@ -62,7 +66,7 @@ export async function ensureDepositProofBucket(storageApi) {
   }
 
   const createResponse = await storageApi.createBucket(DEPOSIT_PROOF_BUCKET_NAME, {
-    public: true,
+    public: false,
     fileSizeLimit: DEPOSIT_PROOF_SIZE_LIMIT_BYTES,
     allowedMimeTypes: [...DEPOSIT_PROOF_ALLOWED_MIME_TYPES],
   });
@@ -73,9 +77,9 @@ export async function ensureDepositProofBucket(storageApi) {
 }
 
 /**
- * Uploads a deposit proof image and returns its public URL.
+ * Uploads a deposit proof image and returns its private object path.
  *
- * @param {{ storageApi: { getBucket: (name: string) => Promise<{ data?: unknown, error?: { message?: string } | null }>, createBucket: (name: string, options: { public: boolean, fileSizeLimit: number, allowedMimeTypes: string[] }) => Promise<{ error?: { message?: string } | null }>, from: (bucketName: string) => { upload: (path: string, file: File | { name?: string, type?: string }, options?: { contentType?: string, upsert?: boolean }) => Promise<{ error?: { message?: string } | null }>, getPublicUrl: (path: string) => { data?: { publicUrl?: string } } } }, proofFile: File | { name?: string, type?: string, size?: number }, userId: string, now?: () => number }} input
+ * @param {{ storageApi: { getBucket: (name: string) => Promise<{ data?: unknown, error?: { message?: string } | null }>, createBucket: (name: string, options: { public: boolean, fileSizeLimit: number, allowedMimeTypes: string[] }) => Promise<{ error?: { message?: string } | null }>, from: (bucketName: string) => { upload: (path: string, file: File | { name?: string, type?: string }, options?: { contentType?: string, upsert?: boolean }) => Promise<{ error?: { message?: string } | null }> } }, proofFile: File | { name?: string, type?: string, size?: number }, userId: string, now?: () => number }} input
  * @returns {Promise<string | null>}
  * @throws {Error}
  */
@@ -102,9 +106,5 @@ export async function uploadDepositProofFile({ storageApi, proofFile, userId, no
     throw new Error(`[DPU-302] فشل رفع صورة الإثبات: ${error.message || "خطأ غير معروف."}`);
   }
 
-  const {
-    data: { publicUrl } = {},
-  } = bucketApi.getPublicUrl(objectPath);
-
-  return publicUrl || null;
+  return objectPath;
 }

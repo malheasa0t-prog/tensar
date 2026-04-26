@@ -27,6 +27,10 @@
 
     if (!A || !H || !elements.layout) return;
 
+    function esc(value) {
+        return TZ.escapeHtml(value == null ? '' : String(value));
+    }
+
     function syncSidebarTooltips() {
         document.querySelectorAll('.sidebar-link, .sidebar-group-toggle').forEach(function (node) {
             const labelNode = node.classList.contains('sidebar-link')
@@ -56,8 +60,8 @@
         const breadcrumbs = H.buildAdminBreadcrumbs(A.currentSection);
         elements.breadcrumbs.innerHTML = breadcrumbs.map(function (item, index) {
             const separator = index === breadcrumbs.length - 1 ? '' : '<span>/</span>';
-            const icon = item.icon ? `<i class="fas ${item.icon}"></i>` : '';
-            return `<button type="button" class="admin-breadcrumb ${item.current ? 'is-current' : ''}" data-breadcrumb-section="${item.section}">${icon}${item.label}</button>${separator}`;
+            const icon = item.icon ? `<i class="fas ${esc(item.icon)}"></i>` : '';
+            return `<button type="button" class="admin-breadcrumb ${item.current ? 'is-current' : ''}" data-breadcrumb-section="${esc(item.section)}">${icon}${esc(item.label)}</button>${separator}`;
         }).join('');
     }
 
@@ -74,9 +78,9 @@
         elements.alertsBadge.hidden = actionableAlerts.length === 0;
         elements.alertsBadge.textContent = actionableAlerts.length;
         elements.alertsMenu.innerHTML = state.alerts.map(function (item) {
-            return `<button type="button" class="admin-header-menu-item" data-alert-section="${item.section}">
-                <span class="admin-header-menu-icon admin-header-menu-icon--${item.tone}"><i class="fas ${item.icon}"></i></span>
-                <span>${item.title}</span>
+            return `<button type="button" class="admin-header-menu-item" data-alert-section="${esc(item.section)}">
+                <span class="admin-header-menu-icon admin-header-menu-icon--${esc(item.tone)}"><i class="fas ${esc(item.icon)}"></i></span>
+                <span>${esc(item.title)}</span>
             </button>`;
         }).join('');
     }
@@ -118,9 +122,9 @@
         const results = H.searchAdminCommands(state.commandItems, query, 8);
         state.activeCommandIndex = results.length ? 0 : -1;
         elements.commandList.innerHTML = results.map(function (command, index) {
-            return `<button type="button" class="admin-command-item ${index === 0 ? 'is-active' : ''}" data-command-id="${command.id}">
-                <span class="admin-command-item-icon"><i class="fas ${command.icon}"></i></span>
-                <span><strong>${command.title}</strong><small>${command.description}</small></span>
+            return `<button type="button" class="admin-command-item ${index === 0 ? 'is-active' : ''}" data-command-id="${esc(command.id)}">
+                <span class="admin-command-item-icon"><i class="fas ${esc(command.icon)}"></i></span>
+                <span><strong>${esc(command.title)}</strong><small>${esc(command.description)}</small></span>
             </button>`;
         }).join('') || '<div class="admin-command-empty">لا توجد أوامر مطابقة.</div>';
     }

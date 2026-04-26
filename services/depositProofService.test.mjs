@@ -38,7 +38,7 @@ test("uploadDepositProof should upload proof files through the deposit API", asy
     return {
       ok: true,
       async json() {
-        return { success: true, data: { publicUrl: "https://cdn.example.com/proof.png" } };
+        return { success: true, data: { objectPath: "user-1/proof.png" } };
       },
     };
   };
@@ -49,7 +49,7 @@ test("uploadDepositProof should upload proof files through the deposit API", asy
       proofFile: { name: "receipt.png", type: "image/png", size: 10 },
     });
 
-    assert.equal(result, "https://cdn.example.com/proof.png");
+    assert.equal(result, "user-1/proof.png");
     assert.equal(calls.length, 1);
     assert.equal(calls[0].url, "/api/deposits/proof");
     assert.equal(calls[0].options.method, "POST");

@@ -1,16 +1,23 @@
--- ============================================
--- FIX GRANTS: Explicit table permissions for anon role
--- Run this in Supabase SQL Editor
--- ============================================
+-- Safe grant baseline for public and authenticated roles.
+-- Avoid broad anon access and keep privileged RPCs off user-facing roles.
 
--- Grant schema access
-GRANT USAGE ON SCHEMA public TO anon;
-GRANT USAGE ON SCHEMA public TO authenticated;
+grant usage on schema public to anon;
+grant usage on schema public to authenticated;
 
--- Grant full access on all tables to anon and authenticated
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+grant all on all tables in schema public to authenticated;
+grant all on all sequences in schema public to authenticated;
+grant execute on function public.is_admin_user(uuid) to authenticated;
+grant execute on function public.is_current_admin() to authenticated;
 
--- Grant sequence access (for auto-generated IDs)
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+revoke execute on function public.create_service_order_tx(uuid, text, integer, text) from public, anon, authenticated;
+revoke execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) from public, anon, authenticated;
+
+grant select on public.settings to anon;
+grant select on public.categories to anon;
+grant select on public.products to anon;
+grant select on public.services to anon;
+grant select on public.repair_services to anon;
+grant select on public.reviews to anon;
+grant select on public.coupons to anon;
+grant insert on public.contact_messages to anon;
+grant insert on public.repair_bookings to anon;

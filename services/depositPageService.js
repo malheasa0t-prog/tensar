@@ -75,20 +75,20 @@ export async function createDepositRequest({
   }
   const numericAmount = Number(amount);
 
-  const proofUrl = await uploadProof({
+  const proofReference = await uploadProof({
     client,
     proofFile,
     userId: user.id,
   });
   const { error } = await client.from("deposits").insert([
     {
-      user_id: user.id,
-      amount: numericAmount,
-      method: "manual",
-      proof_url: proofUrl,
-      status: "pending",
-    },
-  ]);
+        user_id: user.id,
+        amount: numericAmount,
+        method: "manual",
+        proof_url: proofReference,
+        status: "pending",
+      },
+    ]);
 
   if (error) {
     throw new Error(`[DPG-302] فشل إنشاء طلب الإيداع: ${error.message || "خطأ غير معروف."}`);

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { trackAddToCart } from "@/lib/analyticsModel";
 import { validateCartChange } from "@/lib/cartAvailabilityModel";
 import { mergeCartItemsWithServerProducts } from "@/lib/cartSyncModel";
@@ -65,6 +65,7 @@ export default function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasHydratedCart, setHasHydratedCart] = useState(false);
+  const itemsRef = useRef([]);
 
   const refreshCartItems = useCallback(async (cartItems) => {
     const productIds = getCartProductIds(cartItems);
@@ -77,10 +78,14 @@ export default function CartProvider({ children }) {
       setItems((prev) => mergeCartItemsWithServerProducts({ cartItems: prev, serverProducts }));
     } catch (error) {
       if (error instanceof Error) {
-        return;
+        console.error("[CRT-301] Failed to refresh cart items:", error);
       }
     }
   }, []);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
     try {
@@ -94,8 +99,8 @@ export default function CartProvider({ children }) {
         setItems(parsed);
         void refreshCartItems(parsed);
       }
-    } catch {
-      // Ignore corrupted cart payload and start with an empty cart.
+    } catch (error) {
+      console.error("[CRT-302] Failed to hydrate cart storage:", error);
     } finally {
       setHasHydratedCart(true);
     }
@@ -110,12 +115,12 @@ export default function CartProvider({ children }) {
   }, [hasHydratedCart, items]);
 
   useEffect(() => {
-    if (!sidebarOpen || items.length === 0) {
+    if (!sidebarOpen || itemsRef.current.length === 0) {
       return;
     }
 
-    void refreshCartItems(items);
-  }, [items.length, refreshCartItems, sidebarOpen]);
+    void refreshCartItems(itemsRef.current);
+  }, [refreshCartItems, sidebarOpen]);
 
   const addToCart = useCallback((product) => {
     let result = { ok: false, message: DEFAULT_ADD_ERROR_MESSAGE, availableStock: null };

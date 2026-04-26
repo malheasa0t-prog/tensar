@@ -5,8 +5,7 @@
  * wraps the app in providers, and renders routes via Outlet.
  */
 
-import dynamic from 'next/dynamic';
-import { useState, useEffect, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import ClientProviders from '@/components/ClientProviders';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -17,10 +16,7 @@ import SiteFooter from '@/components/SiteFooter';
 import { normalizeSiteSettings } from '@/lib/contactChannels';
 import { fetchHeaderSnapshot } from '@/services/headerService';
 
-const AiChatbot = dynamic(() => import('@/components/AiChatbot'), {
-  loading: () => null,
-  ssr: false,
-});
+const AiChatbot = lazy(() => import('@/components/AiChatbot'));
 
 /**
  * Root application component that manages global state and layout.
@@ -97,7 +93,9 @@ export default function App() {
             </PageTransitionShell>
           </main>
           <SiteFooter siteSettings={siteSettings} />
-          <AiChatbot />
+          <Suspense fallback={null}>
+            <AiChatbot />
+          </Suspense>
         </ClientProviders>
       </div>
     </ErrorBoundary>

@@ -1,6 +1,11 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /__tz-panel.html
+Disallow: /admin-config.js
+Disallow: /admin-sw.js
+Disallow: /js/admin/
+Disallow: /css/admin/
 Disallow: /auth/
 Disallow: /checkout
 Disallow: /compare

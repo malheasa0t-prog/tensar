@@ -7,7 +7,6 @@ const STATIC_PATHS = [
   { pathname: "/", changeFrequency: "daily", priority: 1 },
   { pathname: "/products", changeFrequency: "daily", priority: 0.9 },
   { pathname: "/services", changeFrequency: "weekly", priority: 0.9 },
-  { pathname: "/accessories", changeFrequency: "weekly", priority: 0.8 },
   { pathname: "/contact", changeFrequency: "monthly", priority: 0.6 },
 ];
 

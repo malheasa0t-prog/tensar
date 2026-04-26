@@ -136,14 +136,30 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
+    v_actor_user_id UUID := auth.uid();
+    v_actor_role TEXT := COALESCE(current_setting('request.jwt.claim.role', true), '');
+    v_effective_admin_id UUID;
     v_wallet public.wallets%ROWTYPE;
     v_tx_id UUID;
 BEGIN
+    IF p_target_user_id IS NULL THEN
+        RAISE EXCEPTION 'Target user is required';
+    END IF;
+
     IF p_amount = 0 THEN
         RAISE EXCEPTION 'Amount cannot be zero';
     END IF;
 
-    IF NOT public.is_admin_user(p_admin_user_id) THEN
+    IF v_actor_user_id IS NOT NULL AND v_actor_user_id <> p_admin_user_id THEN
+        RAISE EXCEPTION 'Actor mismatch';
+    END IF;
+
+    IF v_actor_user_id IS NULL AND v_actor_role <> 'service_role' THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
+
+    v_effective_admin_id := COALESCE(v_actor_user_id, p_admin_user_id);
+    IF v_effective_admin_id IS NULL OR NOT public.is_admin_user(v_effective_admin_id) THEN
         RAISE EXCEPTION 'Not authorized';
     END IF;
 
@@ -187,7 +203,7 @@ BEGIN
         p_amount,
         v_wallet.balance + p_amount,
         COALESCE(p_reason, 'Admin adjustment'),
-        p_admin_user_id::TEXT
+        v_effective_admin_id::TEXT
     )
     RETURNING id INTO v_tx_id;
 
@@ -223,14 +239,31 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
+    v_actor_user_id UUID := auth.uid();
+    v_actor_role TEXT := COALESCE(current_setting('request.jwt.claim.role', true), '');
+    v_effective_user_id UUID;
     v_service public.services%ROWTYPE;
     v_wallet public.wallets%ROWTYPE;
     v_total NUMERIC;
     v_order_id UUID;
 BEGIN
+    IF p_user_id IS NULL THEN
+        RAISE EXCEPTION 'User is required';
+    END IF;
+
     IF p_quantity IS NULL OR p_quantity <= 0 THEN
         RAISE EXCEPTION 'Quantity must be greater than 0';
     END IF;
+
+    IF v_actor_user_id IS NOT NULL AND v_actor_user_id <> p_user_id THEN
+        RAISE EXCEPTION 'Actor mismatch';
+    END IF;
+
+    IF v_actor_user_id IS NULL AND v_actor_role <> 'service_role' THEN
+        RAISE EXCEPTION 'Authentication required';
+    END IF;
+
+    v_effective_user_id := COALESCE(v_actor_user_id, p_user_id);
 
     SELECT * INTO v_service
     FROM public.services
@@ -252,7 +285,7 @@ BEGIN
 
     SELECT * INTO v_wallet
     FROM public.wallets
-    WHERE user_id = p_user_id
+    WHERE user_id = v_effective_user_id
     FOR UPDATE;
 
     IF NOT FOUND THEN
@@ -282,7 +315,7 @@ BEGIN
         provider_name
     )
     VALUES (
-        p_user_id,
+        v_effective_user_id,
         v_service.id,
         v_service.name,
         NULLIF(p_link, ''),
@@ -306,7 +339,7 @@ BEGIN
     )
     VALUES (
         v_wallet.id,
-        p_user_id,
+        v_effective_user_id,
         'purchase',
         -v_total,
         v_wallet.balance - v_total,
@@ -316,7 +349,7 @@ BEGIN
 
     INSERT INTO public.notifications(user_id, title, body, type, reference_type, reference_id)
     VALUES (
-        p_user_id,
+        v_effective_user_id,
         'تم إنشاء طلبك بنجاح',
         'طلب ' || v_service.name || ' بكمية ' || p_quantity || ' — المبلغ: ' || v_total || ' د.أ',
         'success',
@@ -330,8 +363,10 @@ END;
 $$;
 
 -- ===== 7) grant execute for authenticated users =====
-GRANT EXECUTE ON FUNCTION public.create_service_order_tx(UUID, TEXT, INTEGER, TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_adjust_wallet_balance(UUID, UUID, NUMERIC, TEXT) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_service_order_tx(UUID, TEXT, INTEGER, TEXT) FROM public, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_adjust_wallet_balance(UUID, UUID, NUMERIC, TEXT) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_service_order_tx(UUID, TEXT, INTEGER, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_adjust_wallet_balance(UUID, UUID, NUMERIC, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.is_admin_user(UUID) TO authenticated;
 
 -- =====================================================

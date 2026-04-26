@@ -15,6 +15,10 @@
     var currentPage = 1;
     var pageSize = 15;
     var editingProduct = null;
+    var pendingImageFile = null;
+    var PRODUCT_IMAGE_BUCKET = 'product-images';
+    var ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    var MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
 
     function esc(value) {
         return TZ.escapeHtml(value == null ? '' : String(value));
@@ -79,8 +83,55 @@
         };
     }
 
+    async function ensureProductImageBucket() {
+        var bucketRes = await TZ.supabase.storage.getBucket(PRODUCT_IMAGE_BUCKET);
+        if (bucketRes.data) return;
+        var msg = String(bucketRes.error?.message || '').toLowerCase();
+        if (bucketRes.error && !msg.includes('not found')) return;
+        await TZ.supabase.storage.createBucket(PRODUCT_IMAGE_BUCKET, {
+            public: true,
+            fileSizeLimit: MAX_IMAGE_SIZE_BYTES,
+            allowedMimeTypes: ALLOWED_IMAGE_TYPES
+        });
+    }
+
+    async function uploadProductImage(file) {
+        if (!file) return null;
+        var normalizedType = String(file.type || '').trim().toLowerCase();
+        if (!ALLOWED_IMAGE_TYPES.includes(normalizedType)) {
+            A.showErrorToast('PRM-110', 'نوع الملف غير مدعوم. استخدم JPEG أو PNG أو WebP.');
+            return null;
+        }
+        if (Number(file.size || 0) > MAX_IMAGE_SIZE_BYTES) {
+            A.showErrorToast('PRM-111', 'حجم الصورة يتجاوز 4MB.');
+            return null;
+        }
+        try {
+            await ensureProductImageBucket();
+            var ext = file.name.split('.').pop() || 'jpg';
+            var objectPath = 'products/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+            var uploadRes = await TZ.supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(objectPath, file, {
+                contentType: file.type || 'application/octet-stream',
+                upsert: false
+            });
+            if (uploadRes.error) {
+                A.showErrorToast('PRM-312', 'فشل رفع الصورة: ' + (uploadRes.error.message || ''));
+                return null;
+            }
+            var urlRes = TZ.supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(objectPath);
+            return urlRes.data?.publicUrl || null;
+        } catch (err) {
+            A.showErrorToast('PRM-313', 'خطأ أثناء رفع الصورة.');
+            return null;
+        }
+    }
+
     async function saveProduct(input) {
         var isEdit = Boolean(input.id && editingProduct);
+        var imageUrl = await uploadProductImage(pendingImageFile);
+        var existingImages = isEdit ? (editingProduct.images || []) : [];
+        var images = imageUrl ? [imageUrl, ...existingImages] : existingImages;
+
         var payload = {
             name: input.name,
             category_id: input.categoryId,
@@ -92,6 +143,7 @@
             status: input.status || 'active',
             description: input.description || '',
             low_stock_alert: Number(input.lowStockAlert) || 5,
+            images: images,
             updated_at: new Date().toISOString(),
         };
 
@@ -104,6 +156,7 @@
             return false;
         }
 
+        pendingImageFile = null;
         A.showToast(isEdit ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
         return true;
     }
@@ -157,9 +210,44 @@
         editingProduct = null;
     }
 
+    function clearElementChildren(element) {
+        while (element && element.firstChild) {
+            element.removeChild(element.firstChild);
+        }
+    }
+
+    function createProductPreviewIcon() {
+        var icon = document.createElement('i');
+        icon.className = 'fas fa-image';
+        icon.style.fontSize = '1.5rem';
+        icon.style.opacity = '0.3';
+        return icon;
+    }
+
+    function renderProductImagePreview(container, imageUrl, altText) {
+        if (!container) return;
+
+        clearElementChildren(container);
+        if (!String(imageUrl || '').trim()) {
+            container.appendChild(createProductPreviewIcon());
+            return;
+        }
+
+        var image = document.createElement('img');
+        image.src = String(imageUrl);
+        image.alt = altText || 'Product image';
+        image.style.width = '100%';
+        image.style.height = '100%';
+        image.style.objectFit = 'cover';
+        image.style.borderRadius = '8px';
+        container.appendChild(image);
+    }
+
     function openProductForm(product) {
         editingProduct = product || null;
+        pendingImageFile = null;
         var currentProduct = product || {};
+        var existingImageUrl = (currentProduct.images && currentProduct.images.length > 0) ? currentProduct.images[0] : '';
         var isEdit = Boolean(currentProduct.id);
         var backdrop = document.createElement('div');
         var panel = document.createElement('div');
@@ -213,6 +301,18 @@
                             <label>الوصف</label>
                             <textarea id="prdDesc" rows="4">${esc(currentProduct.description || '')}</textarea>
                         </div>
+                        <div class="admin-form-group full">
+                            <label>صورة المنتج (JPEG, PNG, WebP — حد أقصى 4MB)</label>
+                            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                                <div id="prdImagePreview" style="width:80px;height:80px;border-radius:10px;border:2px dashed rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(0,0,0,0.15);flex-shrink:0;">
+                                    ${existingImageUrl ? '<img src="' + esc(existingImageUrl) + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="صورة المنتج">' : '<i class="fas fa-image" style="font-size:1.5rem;opacity:0.3;"></i>'}
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <input type="file" id="prdImageFile" accept="image/jpeg,image/png,image/webp" style="width:100%;">
+                                    <small style="color:var(--text-muted);display:block;margin-top:4px;">اختر صورة جديدة لاستبدال الحالية أو اتركه فارغاً للإبقاء على الصورة الحالية.</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -224,6 +324,7 @@
 
         document.body.appendChild(backdrop);
         document.body.appendChild(panel);
+        renderProductImagePreview(panel.querySelector('#prdImagePreview'), existingImageUrl, 'Product image');
 
         function handleClose() {
             closeProductForm(backdrop, panel);
@@ -232,6 +333,36 @@
         backdrop.addEventListener('click', handleClose);
         panel.querySelector('#closeProductForm').addEventListener('click', handleClose);
         panel.querySelector('#cancelProductBtn').addEventListener('click', handleClose);
+
+        panel.querySelector('#prdImageFile')?.addEventListener('change', function () {
+            var file = this.files && this.files[0];
+            var preview = panel.querySelector('#prdImagePreview');
+            if (!file) {
+                pendingImageFile = null;
+                renderProductImagePreview(preview, existingImageUrl, 'Product image');
+                preview = null;
+            }
+            if (!ALLOWED_IMAGE_TYPES.includes(file.type.toLowerCase())) {
+                A.showErrorToast('PRM-110', 'نوع الملف غير مدعوم.');
+                this.value = '';
+                renderProductImagePreview(preview, existingImageUrl, 'Product image');
+                return;
+            }
+            if (file.size > MAX_IMAGE_SIZE_BYTES) {
+                A.showErrorToast('PRM-111', 'حجم الصورة يتجاوز 4MB.');
+                this.value = '';
+                renderProductImagePreview(preview, existingImageUrl, 'Product image');
+                return;
+            }
+            pendingImageFile = file;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                renderProductImagePreview(preview, e.target?.result, 'Product preview');
+                return;
+                if (preview) preview.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="معاينة">';
+            };
+            reader.readAsDataURL(file);
+        });
         panel.querySelector('#saveProductBtn').addEventListener('click', async function () {
             var button = this;
             var name = panel.querySelector('#prdName').value.trim();
@@ -282,9 +413,15 @@
             var stockColor = product.quantity <= 0 ? '#e74c3c' : product.quantity <= lowStockLimit ? '#fdcb6e' : '#00b894';
             var statusLabel = product.status === 'active' ? 'نشط' : product.status === 'draft' ? 'مسودة' : product.status;
 
+            var thumbUrl = (product.images && product.images.length > 0) ? product.images[0] : '';
             return `
                 <tr>
-                    <td><strong>${esc(product.name)}</strong>${product.brand ? '<br><small style="color:var(--text-muted);">' + esc(product.brand) + '</small>' : ''}</td>
+                    <td style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:rgba(0,0,0,0.1);flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                            ${thumbUrl ? '<img src="' + esc(thumbUrl) + '" style="width:100%;height:100%;object-fit:cover;" alt="" loading="lazy">' : '<i class="fas fa-image" style="opacity:0.25;"></i>'}
+                        </div>
+                        <div><strong>${esc(product.name)}</strong>${product.brand ? '<br><small style="color:var(--text-muted);">' + esc(product.brand) + '</small>' : ''}</div>
+                    </td>
                     <td><small>${esc(categoryName)}</small></td>
                     <td style="font-weight:600;">${TZ.formatPrice(product.price)}${product.discount_price || product.discountPrice ? '<br><small style="color:#00b894;">' + TZ.formatPrice(product.discount_price || product.discountPrice) + '</small>' : ''}</td>
                     <td style="color:${stockColor};font-weight:600;">${product.quantity}</td>

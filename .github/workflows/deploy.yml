@@ -36,3 +36,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=tensar --commit-dirty=true
+
+      - name: Post-deploy security smoke check
+        env:
+          TARGET_BASE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npm run security:postdeploy

@@ -15,7 +15,6 @@ import ProductsExplorerClient from '@/components/ProductsExplorerClient';
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import Link from 'next/link';
-import { isAccessoryCatalogCategoryId, isAccessoryProduct } from '@/lib/accessoryCatalog';
 import { mapProductsExplorerProduct } from '@/lib/productsExplorerModel';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -49,16 +48,13 @@ export default function ProductsPage() {
           return;
         }
 
-        const filteredCategories = (categoriesResult.data || []).filter(
-          (cat) => !isAccessoryCatalogCategoryId(cat.id)
-        );
+        const filteredCategories = categoriesResult.data || [];
         const categoryById = Object.fromEntries(
           filteredCategories.map((cat) => [cat.id, cat.name])
         );
         const filteredProducts = (productsResult.data || [])
           .filter(
             (product) =>
-              !isAccessoryProduct(product) &&
               ['physical', ''].includes(String(product.product_type || '').trim().toLowerCase())
           )
           .map((product) =>

@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS public.app_users (
     CHECK (role IN ('customer','user','admin','super_admin','technician','employee')),
   status text NOT NULL DEFAULT 'active'
     CHECK (status IN ('active','inactive','banned')),
-  password_hash text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -620,7 +619,8 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin_user(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_current_admin() TO authenticated;
 GRANT SELECT ON public.settings TO anon;
 GRANT SELECT ON public.categories TO anon;
 GRANT SELECT ON public.products TO anon;
@@ -739,11 +739,21 @@ WHERE NOT EXISTS (SELECT 1 FROM public.reviews);
 -- ============================================================
 -- 12. Storage Bucket for Deposit Proofs
 -- ============================================================
-INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types) VALUES ('deposits','deposits',true,5242880,ARRAY['image/jpeg','image/jpg','image/png','image/webp'])
+INSERT INTO storage.buckets (id,name,public,file_size_limit,allowed_mime_types) VALUES ('deposits','deposits',false,5242880,ARRAY['image/jpeg','image/jpg','image/png','image/webp'])
 ON CONFLICT (id) DO UPDATE SET public=excluded.public,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 
 DROP POLICY IF EXISTS "Public can read deposit proofs" ON storage.objects;
-CREATE POLICY "Public can read deposit proofs" ON storage.objects FOR SELECT USING (bucket_id='deposits');
+DROP POLICY IF EXISTS "Authenticated users can read own deposit proofs" ON storage.objects;
+CREATE POLICY "Authenticated users can read own deposit proofs"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (
+  bucket_id='deposits'
+  AND (
+    (storage.foldername(name))[1] = auth.uid()::text
+    OR public.is_current_admin()
+  )
+);
 
 DROP POLICY IF EXISTS "Authenticated users can upload own deposit proofs" ON storage.objects;
 CREATE POLICY "Authenticated users can upload own deposit proofs" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id='deposits' AND (storage.foldername(name))[1]=auth.uid()::text);

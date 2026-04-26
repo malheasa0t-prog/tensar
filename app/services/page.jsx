@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import '@/app/techfix-pages.css';
 import '@/app/techfix-services.css';
+import Image from 'next/image';
 import Link from 'next/link';
 import AppIcon from '@/components/AppIcon';
 import PageSectionBreadcrumbs from '@/components/PageSectionBreadcrumbs';
@@ -19,6 +20,7 @@ import RepairOrderLookupCard from '@/components/repair-booking/RepairOrderLookup
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { isOptimizableImageSrc } from '@/lib/imageUtils';
 import { getSiteSettings } from '@/lib/siteSettings';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -190,9 +192,30 @@ export default function ServicesPage() {
                   <span className="featured-badge">
                     {service.category || 'خدمات الصيانة'}
                   </span>
-                  <div className="service-icon">
-                    <AppIcon name={service.icon || 'wrench'} size={24} />
-                  </div>
+                  {service.image ? (
+                    <div className="service-card-media">
+                      <div className="service-card-media-fallback" aria-hidden="true">
+                        <AppIcon name={service.icon || 'wrench'} size={24} />
+                      </div>
+                      <Image
+                        src={service.image}
+                        alt={service.name}
+                        width={960}
+                        height={640}
+                        className="service-card-media-image"
+                        sizes="(max-width: 900px) 100vw, 480px"
+                        loading="lazy"
+                        unoptimized={!isOptimizableImageSrc(service.image)}
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="service-icon">
+                      <AppIcon name={service.icon || 'wrench'} size={24} />
+                    </div>
+                  )}
                   <h3>{service.name}</h3>
                   <p>
                     {service.description ||

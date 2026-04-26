@@ -1,6 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { lazy, Suspense } from "react";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToastProvider from "@/components/ToastProvider";
 import CartProvider from "@/components/CartProvider";
@@ -16,18 +16,9 @@ import ScrollProgress from "@/components/ScrollProgress";
 import WelcomeOnboardingEntry from "@/components/WelcomeOnboardingEntry";
 import WhatsappFloatingButton from "@/components/WhatsappFloatingButton";
 
-const ComparisonDock = dynamic(() => import("@/components/ComparisonDock"), {
-  loading: () => null,
-  ssr: false,
-});
-const LiveChatWidget = dynamic(() => import("@/components/LiveChatWidget"), {
-  loading: () => null,
-  ssr: false,
-});
-const BackToTop = dynamic(() => import("@/components/BackToTop"), {
-  loading: () => null,
-  ssr: false,
-});
+const ComparisonDock = lazy(() => import("@/components/ComparisonDock"));
+const LiveChatWidget = lazy(() => import("@/components/LiveChatWidget"));
+const BackToTop = lazy(() => import("@/components/BackToTop"));
 
 export default function ClientProviders({
   children,
@@ -52,10 +43,16 @@ export default function ClientProviders({
                   {children}
                   <WelcomeOnboardingEntry />
                   <CartSidebar />
-                  <ComparisonDock />
-                  <LiveChatWidget />
+                  <Suspense fallback={null}>
+                    <ComparisonDock />
+                  </Suspense>
+                  <Suspense fallback={null}>
+                    <LiveChatWidget />
+                  </Suspense>
                   <WhatsappFloatingButton />
-                  <BackToTop />
+                  <Suspense fallback={null}>
+                    <BackToTop />
+                  </Suspense>
                 </ToastProvider>
               </CartProvider>
             </ComparisonProvider>

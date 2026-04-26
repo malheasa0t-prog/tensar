@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import { normalizeSiteSettings } from '@/lib/contactChannels';
+import { buildCheckoutRequestPayload } from '@/lib/checkoutRequestPayload';
 import { loadSiteSettingsClient } from '@/lib/siteSettingsClient';
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
@@ -31,7 +32,8 @@ export async function fetchCheckoutOptions() {
       deliveryMethods: siteSettings.deliveryMethods,
       walletTransferNumber: siteSettings.walletTransferNumber || '',
     };
-  } catch {
+  } catch (error) {
+    console.error("[CKS-301] Failed to load checkout options:", error);
     return getDefaultCheckoutOptions();
   }
 }
@@ -46,16 +48,17 @@ export async function submitCheckoutOrder({ items, form }) {
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
 
+  if (!token) {
+    throw new Error('[CKP-201] يجب تسجيل الدخول أولاً لإتمام الطلب.');
+  }
+
   const response = await fetch('/api/checkout', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      items: items.map((item) => ({ id: item.id, qty: Number(item.qty) || 1 })),
-      ...form,
-    }),
+    body: JSON.stringify(buildCheckoutRequestPayload({ items, form })),
   });
 
   const json = await response.json();

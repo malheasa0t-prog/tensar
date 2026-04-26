@@ -6,7 +6,10 @@ grant all on all functions in schema public to service_role;
 
 grant all on all tables in schema public to authenticated;
 grant all on all sequences in schema public to authenticated;
-grant execute on all functions in schema public to authenticated;
+grant execute on function public.is_admin_user(uuid) to authenticated;
+grant execute on function public.is_current_admin() to authenticated;
+revoke execute on function public.create_service_order_tx(uuid, text, integer, text) from public, anon, authenticated;
+revoke execute on function public.admin_adjust_wallet_balance(uuid, uuid, numeric, text) from public, anon, authenticated;
 
 grant select on public.settings to anon;
 grant select on public.categories to anon;

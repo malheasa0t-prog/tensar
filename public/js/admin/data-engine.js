@@ -2,12 +2,6 @@
 // ES module entry point that wires shared state into the legacy window.TZ API.
 
 import {
-    ACCESSORY_MAIN_CATEGORY,
-    ACCESSORY_MAIN_CATEGORY_ID,
-    ACCESSORY_PUBLIC_LABEL,
-    ACCESSORY_SECTION_NAME,
-    ACCESSORY_SUBCATEGORY,
-    ACCESSORY_SUBCATEGORY_ID,
     ADMIN_SECTIONS,
     DATA_SCOPE,
     ROLES,
@@ -25,9 +19,6 @@ import {
     HEALTH_UPDATE_EVENT,
     hasAdminRuntimeAccess,
     health,
-    isAccessoryCatalogCategoryId,
-    isAccessoryProduct,
-    isAccessoryProductCategoryId,
     legacyAdminWriteEnabled,
     nowIso,
     revokeAdminRuntimeAccess,
@@ -37,16 +28,16 @@ import {
     supabaseSignIn,
     supabaseSignOut,
     clearSession
-} from './data-engine/core.js';
-import { loadDataFromSupabaseByScope } from './data-engine/loaders.js';
+} from './data-engine/core.js?v=20260426-5';
+import { loadDataFromSupabaseByScope } from './data-engine/loaders.js?v=20260426-5';
 import {
     OFFLINE_QUEUE_EVENT,
     getQueuedCommits,
     registerOfflineSyncListeners
-} from './data-engine/offline.js';
+} from './data-engine/offline.js?v=20260426-5';
+import { getAdminSessionUser } from './data-engine/adminSession.js?v=20260426-5';
 import {
     getActiveRepairServices,
-    getAccessoryProducts,
     getBrands,
     getCatalogProducts,
     getCategoryIcon,
@@ -56,16 +47,16 @@ import {
     getLatestProducts,
     getProductById,
     getVisibleCatalogCategories
-} from './data-engine/products.js';
-import { fireDataUpdate, setupScopedRealtime } from './data-engine/realtime.js';
-import { commitDb, refreshData, syncOfflineQueue } from './data-engine/sync.js';
+} from './data-engine/products.js?v=20260426-5';
+import { fireDataUpdate, setupScopedRealtime } from './data-engine/realtime.js?v=20260426-5';
+import { commitDb, refreshData, syncOfflineQueue } from './data-engine/sync.js?v=20260426-5';
 import {
     canAccessAdmin,
     canAccessSection,
     findUserByAuthUser,
     getUserById,
     isCustomerUser
-} from './data-engine/users.js';
+} from './data-engine/users.js?v=20260426-5';
 
 function notifyCartChange() {
     if (typeof window.TZ.onCartChange === 'function') {
@@ -112,6 +103,47 @@ function getCartCount() {
     return db.cart.reduce((total, item) => total + item.qty, 0);
 }
 
+function applyAdminTextOverrides() {
+    const roleLabels = {
+        super_admin: '\u0645\u062F\u064A\u0631 \u0639\u0627\u0645',
+        admin: '\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645',
+        technician: '\u0641\u0646\u064A \u0635\u064A\u0627\u0646\u0629',
+        employee: '\u0645\u0648\u0638\u0641 \u0645\u0628\u064A\u0639\u0627\u062A',
+        customer: '\u0639\u0645\u064A\u0644',
+        user: '\u0645\u0633\u062A\u062E\u062F\u0645'
+    };
+    const sectionLabels = {
+        dashboard: '\u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A',
+        orders: '\u0627\u0644\u0637\u0644\u0628\u0627\u062A',
+        'product-orders': '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A',
+        products: '\u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A',
+        categories: '\u0627\u0644\u0641\u0626\u0627\u062A',
+        services: '\u0627\u0644\u062E\u062F\u0645\u0627\u062A',
+        deposits: '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0625\u064A\u062F\u0627\u0639',
+        customers: '\u0627\u0644\u0639\u0645\u0644\u0627\u0621',
+        coupons: '\u0627\u0644\u0643\u0648\u0628\u0648\u0646\u0627\u062A',
+        notifications: '\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646',
+        chats: '\u0627\u0644\u062F\u0631\u062F\u0634\u0627\u062A \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629',
+        messages: '\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u062A\u0648\u0627\u0635\u0644',
+        settings: '\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A',
+        logs: '\u0633\u062C\u0644 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A'
+    };
+
+    Object.entries(roleLabels).forEach(([role, label]) => {
+        if (window.TZ.ROLES?.[role]) {
+            window.TZ.ROLES[role].label = label;
+        }
+    });
+
+    if (Array.isArray(window.TZ.ADMIN_SECTIONS)) {
+        window.TZ.ADMIN_SECTIONS.forEach((section) => {
+            if (sectionLabels[section.id]) {
+                section.label = sectionLabels[section.id];
+            }
+        });
+    }
+}
+
 window.TZ = {
     db: protectedDb,
     supabase,
@@ -129,6 +161,7 @@ window.TZ = {
     supabaseSignIn,
     supabaseSignOut,
     getSupabaseUser,
+    getAdminSessionUser,
     getSession,
     setSession,
     clearSession,
@@ -144,26 +177,11 @@ window.TZ = {
     getBrands,
     getVisibleCatalogCategories,
     getCatalogProducts,
-    getAccessoryProducts,
-    isAccessoryCatalogCategoryId,
-    isAccessoryProductCategoryId,
-    isAccessoryProduct,
     getActiveRepairServices,
     ROLES,
     ADMIN_SECTIONS,
     canAccessAdmin,
     canAccessSection,
-    accessoryCatalog: {
-        sectionName: ACCESSORY_SECTION_NAME,
-        publicLabel: ACCESSORY_PUBLIC_LABEL,
-        mainCategoryId: ACCESSORY_MAIN_CATEGORY_ID,
-        subcategoryId: ACCESSORY_SUBCATEGORY_ID,
-        mainCategorySeed: clone(ACCESSORY_MAIN_CATEGORY),
-        subcategorySeed: clone(ACCESSORY_SUBCATEGORY),
-        isAccessoryCatalogCategoryId,
-        isAccessoryProductCategoryId,
-        isAccessoryProduct
-    },
     addToCart,
     removeFromCart,
     getCartTotal,
@@ -174,6 +192,8 @@ window.TZ = {
     onCartChange: null,
     legacyWriteEnabled: legacyAdminWriteEnabled
 };
+
+applyAdminTextOverrides();
 
 export {
     grantAdminRuntimeAccess,

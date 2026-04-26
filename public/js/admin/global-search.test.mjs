@@ -20,21 +20,21 @@ function loadHooks() {
   return window.__adminGlobalSearchTestHooks;
 }
 
-test("resolvePhysicalOrderSection should honor explicit accessories metadata", () => {
+test("resolvePhysicalOrderSection should always return product-orders", () => {
   const hooks = loadHooks();
   const section = hooks.resolvePhysicalOrderSection(
-    { metadata: { catalog_kind: "accessories" }, items: [] },
+    { metadata: { catalog_kind: "products" }, items: [] },
     {}
   );
 
-  assert.equal(section, "accessory-orders");
+  assert.equal(section, "product-orders");
 });
 
-test("buildAdminSearchIndex should include physical orders only", () => {
+test("buildAdminSearchIndex should index physical orders", () => {
   const hooks = loadHooks();
   const index = hooks.buildAdminSearchIndex({
     orders: [{ id: "1234", customerName: "أحمد محمد", total: 45, status: "processing", items: [] }],
-    helpers: { getProductById: () => null, isAccessoryProduct: () => false, isAccessoryProductCategoryId: () => false },
+    helpers: {},
   });
 
   assert.equal(index.length, 1);

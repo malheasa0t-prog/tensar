@@ -15,8 +15,8 @@
     function buildModalConfig(input, message) {
         if (typeof input === 'object' && input !== null) {
             return {
-                cancelText: 'إلغاء',
-                confirmText: 'تأكيد',
+                cancelText: '\u0625\u0644\u063A\u0627\u0621',
+                confirmText: '\u062A\u0623\u0643\u064A\u062F',
                 type: 'warning',
                 ...input
             };
@@ -25,10 +25,29 @@
         return {
             title: String(input || ''),
             message: String(message || ''),
-            confirmText: 'تأكيد',
-            cancelText: 'إلغاء',
+            confirmText: '\u062A\u0623\u0643\u064A\u062F',
+            cancelText: '\u0625\u0644\u063A\u0627\u0621',
             type: 'warning'
         };
+    }
+
+    function isDomNode(value) {
+        return typeof Node === 'function' && value instanceof Node;
+    }
+
+    function appendModalBodyContent(container, config) {
+        if (!container) return;
+        if (isDomNode(config.contentNode)) {
+            container.appendChild(config.contentNode);
+            return;
+        }
+        if (!config.contentHtml) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = String(config.contentHtml || '');
+        while (wrapper.firstChild) {
+            container.appendChild(wrapper.firstChild);
+        }
     }
 
     function showToast(message) {
@@ -63,9 +82,8 @@
         const title = TZ.escapeHtml(config.title || '');
         const body = TZ.escapeHtml(config.message || '');
         const icon = config.icon || typeMeta.icon;
-        const contentHtml = config.contentHtml || '';
-        const cancelText = TZ.escapeHtml(config.cancelText || 'إغلاق');
-        const confirmText = TZ.escapeHtml(config.confirmText || 'تأكيد');
+        const cancelText = TZ.escapeHtml(config.cancelText || '\u0625\u063A\u0644\u0627\u0642');
+        const confirmText = TZ.escapeHtml(config.confirmText || '\u062A\u0623\u0643\u064A\u062F');
         const shouldShowConfirm = config.hideConfirm !== true;
 
         overlay.className = 'modal-overlay';
@@ -75,7 +93,6 @@
                 <div class="admin-confirm-modal__body">
                     <h3>${title}</h3>
                     ${body ? `<p>${body}</p>` : ''}
-                    ${contentHtml}
                 </div>
                 <div class="admin-confirm-modal__actions">
                     <button type="button" class="btn btn-outline" data-modal-cancel>${cancelText}</button>
@@ -98,6 +115,7 @@
             };
 
             document.body.appendChild(overlay);
+            appendModalBodyContent(overlay.querySelector('.admin-confirm-modal__body'), config);
             document.addEventListener('keydown', handleEscape);
             overlay.addEventListener('click', (event) => {
                 if (event.target === overlay || event.target.closest('[data-modal-cancel]')) close(false);
@@ -118,7 +136,7 @@
         adminContent.innerHTML = `
             <div class="admin-section-loading">
                 <div class="admin-section-loading__header">
-                    <span class="admin-section-loading__eyebrow">جاري تحميل القسم</span>
+                    <span class="admin-section-loading__eyebrow">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0633\u0645</span>
                     <strong>${TZ.escapeHtml(sectionTitle)}</strong>
                 </div>
                 <div class="admin-section-loading__grid">
@@ -141,8 +159,8 @@
             <div class="status-box warning admin-access-state">
                 <i class="fas fa-shield-halved"></i>
                 <div>
-                    <strong>لا تملك صلاحية الوصول</strong>
-                    <p>لا يمكنك فتح قسم ${TZ.escapeHtml(sectionTitle)} بحسب صلاحيات حسابك.</p>
+                    <strong>\u0644\u0627 \u062A\u0645\u0644\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644</strong>
+                    <p>\u0644\u0627 \u064A\u0645\u0643\u0646\u0643 \u0641\u062A\u062D \u0642\u0633\u0645 ${TZ.escapeHtml(sectionTitle)} \u0628\u062D\u0633\u0628 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u062D\u0633\u0627\u0628\u0643.</p>
                 </div>
             </div>
         `;
@@ -153,28 +171,15 @@
             <div class="status-box danger admin-access-state">
                 <i class="fas fa-circle-exclamation"></i>
                 <div>
-                    <strong>تعذر تحميل القسم</strong>
-                    <p>${TZ.escapeHtml(error?.message || 'حدث خطأ غير متوقع أثناء تحميل القسم المطلوب.')}</p>
+                    <strong>\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0633\u0645</strong>
+                    <p>${TZ.escapeHtml(error?.message || '\u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0645\u0637\u0644\u0648\u0628.')}</p>
                 </div>
             </div>
         `;
     }
 
     function showLegacyModeNotice(TZ) {
-        if (TZ.legacyWriteEnabled) return;
-
-        const existing = document.getElementById('legacyReadOnlyNotice');
-        if (existing) existing.remove();
-
-        const notice = document.createElement('div');
-        notice.id = 'legacyReadOnlyNotice';
-        notice.style.cssText = 'margin:12px 16px 0;padding:12px 14px;border:1px solid rgba(241,196,15,.45);background:rgba(241,196,15,.12);border-radius:10px;color:#f5c542;font-size:.92rem;line-height:1.7';
-        notice.innerHTML = 'وضع آمن: لوحة الإدارة القديمة تعمل حالياً بصلاحية قراءة فقط لمنع الكتابة المباشرة من المتصفح. لإجراء تعديلات فعلية استخدم الواجهة الإدارية الحديثة.';
-
-        const content = document.getElementById('adminContent');
-        if (content && content.parentNode) {
-            content.parentNode.insertBefore(notice, content);
-        }
+        void TZ;
     }
 
     function getAdminImageUploadLimitText() {
@@ -186,7 +191,7 @@
     }
 
     function showAdminImageUploadLimitToast() {
-        showErrorToast('COR-101', `حجم الصورة يتجاوز ${getAdminImageUploadLimitText()}.`);
+        showErrorToast('COR-101', `\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u064A\u062A\u062C\u0627\u0648\u0632 ${getAdminImageUploadLimitText()}.`);
     }
 
     window.AdminCoreUi = {

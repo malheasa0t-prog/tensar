@@ -26,14 +26,14 @@ test("readProviderConfig should normalize environment values", () => {
 });
 
 test("translateProviderError should localize known provider errors", () => {
-  assert.equal(translateProviderError("invalid_api_key"), "Ù…ÙØªØ§Ø­ API ØºÙŠØ± ØµØ§Ù„Ø­.");
+  assert.equal(translateProviderError("invalid_api_key"), "مفتاح API غير صالح.");
   assert.equal(translateProviderError("custom message"), "custom message");
 });
 
 test("parseProviderJson should fail clearly on invalid upstream bodies", async () => {
   await assert.rejects(
     () => parseProviderJson(new Response("<html>bad gateway</html>")),
-    /Ø§Ø³ØªØ¬Ø§Ø¨Ø© ØºÙŠØ± ØµØ§Ù„Ø­Ø© Ù…Ù† Ø§Ù„Ù…Ø²ÙˆØ¯: <html>bad gateway<\/html>/
+    /استجابة غير صالحة من المزود: <html>bad gateway<\/html>/
   );
 });
 

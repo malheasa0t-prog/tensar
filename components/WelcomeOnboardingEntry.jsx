@@ -1,15 +1,11 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 const WELCOME_MODAL_STORAGE_KEY = "tz_onboarding_seen";
 const HIDDEN_PATH_PREFIXES = ["/admin", "/auth", "/checkout", "/compare", "/dashboard"];
-const WelcomeOnboardingModal = dynamic(() => import("@/components/WelcomeOnboardingModal"), {
-  loading: () => null,
-  ssr: false,
-});
+const WelcomeOnboardingModal = lazy(() => import("@/components/WelcomeOnboardingModal"));
 
 /**
  * Determines whether the onboarding modal chunk should be loaded for the current route.
@@ -43,5 +39,9 @@ export default function WelcomeOnboardingEntry() {
     return null;
   }
 
-  return <WelcomeOnboardingModal />;
+  return (
+    <Suspense fallback={null}>
+      <WelcomeOnboardingModal />
+    </Suspense>
+  );
 }
