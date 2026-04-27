@@ -18,7 +18,7 @@
 
     if (!A || !helpers || !input || !dropdown || !container) return;
 
-    input.placeholder = 'Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ø·Ù„Ø¨Ø§Øª...';
+    input.placeholder = 'ابحث في الطلبات...';
 
     function getSearchData() {
         return {
@@ -62,8 +62,8 @@
 
     function formatResultType(kind) {
         return {
-            order: 'Ø·Ù„Ø¨'
-        }[kind] || 'Ù†ØªÙŠØ¬Ø©';
+            order: 'طلب'
+        }[kind] || 'نتيجة';
     }
 
     function createResultIcon(iconClassName) {
@@ -119,7 +119,7 @@
         state.activeIndex = state.results.length ? 0 : -1;
 
         if (state.results.length === 0) {
-            renderEmptyState('Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø¨Ø­Ø«.');
+            renderEmptyState('لا توجد نتائج مطابقة لهذا البحث.');
             return;
         }
 

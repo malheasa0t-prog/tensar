@@ -42,22 +42,22 @@ export default function DashboardLayout() {
       <div className="container">
         <div className="dashboard-hero">
           <div>
-            <h1 className="dashboard-hero-title">Ù…Ø±Ø­Ø¨Ø§Ù‹ØŒ {displayName} ðŸ‘‹</h1>
+            <h1 className="dashboard-hero-title">مرحباً، {displayName} 👋</h1>
             <p className="dashboard-hero-subtitle">
-              Ø¥Ø¯Ø§Ø±Ø© Ø­Ø³Ø§Ø¨Ùƒ ÙˆØ·Ù„Ø¨Ø§ØªÙƒ ÙˆÙ‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù…ÙØ¶Ù„Ø© Ø¨ÙƒÙ„ Ø³Ù„Ø§Ø³Ø©.
+              إدارة حسابك وطلباتك وقائمة المفضلة بكل سلاسة.
             </p>
           </div>
 
           <div className="dashboard-hero-actions">
             <div className="dashboard-wallet-chip">
-              <div className="dashboard-wallet-label">Ø±ØµÙŠØ¯Ùƒ</div>
+              <div className="dashboard-wallet-label">رصيدك</div>
               <div className="dashboard-wallet-value">
-                {wallet ? Number(wallet.balance).toFixed(2) : '0.00'} <span>Ø¯.Ø£</span>
+                {wallet ? Number(wallet.balance).toFixed(2) : '0.00'} <span>د.أ</span>
               </div>
             </div>
 
             <button onClick={handleLogout} className="btn btn-danger">
-              ðŸšª Ø®Ø±ÙˆØ¬
+              🚪 خروج
             </button>
           </div>
         </div>

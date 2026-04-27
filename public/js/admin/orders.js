@@ -560,7 +560,7 @@
                 var orderId = button.dataset.orderId;
 
                 if (button.disabled || !newStatus || !orderId) return;
-                if (!window.confirm('Ù‡Ù„ ØªØ±ÙŠØ¯ ØªØºÙŠÙŠØ± Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨ Ø¥Ù„Ù‰ "' + getStatusLabel(newStatus, activeTab) + '"ØŸ')) return;
+                if (!window.confirm('هل تريد تغيير حالة الطلب إلى "' + getStatusLabel(newStatus, activeTab) + '"؟')) return;
 
                 void changeOrderStatus(orderId, newStatus);
             });

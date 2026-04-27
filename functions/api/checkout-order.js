@@ -3,8 +3,8 @@
  */
 
 const DEFAULT_DELIVERY_METHODS = Object.freeze([
-  { value: "delivery", label: "ØªÙˆØµÙŠÙ„", fee: 2 },
-  { value: "pickup", label: "Ø§Ø³ØªÙ„Ø§Ù…", fee: 0 },
+  { value: "delivery", label: "توصيل", fee: 2 },
+  { value: "pickup", label: "استلام", fee: 0 },
 ]);
 
 /**
@@ -54,7 +54,7 @@ async function updateProviderOrderSnapshot({ admin, orderId, productId, snapshot
     .maybeSingle();
 
   if (currentItemError || !currentItem?.id) {
-    throw new Error("[CHK-113] ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø¹Ù†ØµØ± Ø§Ù„Ø·Ù„Ø¨ Ù„ØªØ­Ø¯ÙŠØ« Ø­Ø§Ù„Ø© Ø§Ù„Ù…Ø²ÙˆØ¯");
+    throw new Error("[CHK-113] تعذر تحميل عنصر الطلب لتحديث حالة المزود");
   }
 
   const { error: snapshotUpdateError } = await admin
@@ -65,7 +65,7 @@ async function updateProviderOrderSnapshot({ admin, orderId, productId, snapshot
     .eq("id", currentItem.id);
 
   if (snapshotUpdateError) {
-    throw new Error("[CHK-114] ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø­Ø§Ù„Ø© Ø·Ù„Ø¨ Ø§Ù„Ù…Ø²ÙˆØ¯");
+    throw new Error("[CHK-114] تعذر حفظ حالة طلب المزود");
   }
 }
 
@@ -165,7 +165,7 @@ export async function createCheckoutOrderRecord({
 }) {
   const deliveryMethods = await loadDeliveryMethods(admin);
   if (!deliveryMethods.some((entry) => entry.value === deliveryMethod)) {
-    throw new Error("[CHK-108] Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªØ³Ù„ÙŠÙ… ØºÙŠØ± ØµØ§Ù„Ø­Ø©");
+    throw new Error("[CHK-108] طريقة التسليم غير صالحة");
   }
 
   const shippingFee = getShippingFee(deliveryMethod, deliveryMethods);
@@ -192,7 +192,7 @@ export async function createCheckoutOrderRecord({
 
   if (orderError || !orderRow) {
     throw new Error(
-      `[CHK-109] ØªØ¹Ø°Ø± Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø·Ù„Ø¨: ${orderError?.message || "Ø®Ø·Ø£ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ"}`
+      `[CHK-109] تعذر إنشاء الطلب: ${orderError?.message || "خطأ غير معروف"}`
     );
   }
 
@@ -204,7 +204,7 @@ export async function createCheckoutOrderRecord({
   if (itemsError) {
     await admin.from("orders").delete().eq("id", orderId);
     throw new Error(
-      `[CHK-110] ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø¹Ù†Ø§ØµØ± Ø§Ù„Ø·Ù„Ø¨: ${itemsError?.message || "Ø®Ø·Ø£ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ"}`
+      `[CHK-110] تعذر حفظ عناصر الطلب: ${itemsError?.message || "خطأ غير معروف"}`
     );
   }
 
@@ -301,8 +301,8 @@ export async function sendCheckoutNotification({
   await admin.from("notifications").insert([
     {
       user_id: userId,
-      title: "ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø·Ù„Ø¨Ùƒ Ø¨Ù†Ø¬Ø§Ø­",
-      body: `Ø·Ù„Ø¨ #${orderId} â€” ${orderItemsCount} Ù…Ù†ØªØ¬ â€” Ø§Ù„Ù…Ø¨Ù„Øº: ${total.toFixed(2)} Ø¯.Ø£`,
+      title: "تم إنشاء طلبك بنجاح",
+      body: `طلب #${orderId} — ${orderItemsCount} منتج — المبلغ: ${total.toFixed(2)} د.أ`,
       type: "success",
       reference_type: "order",
       reference_id: orderId,

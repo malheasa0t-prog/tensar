@@ -42,36 +42,7 @@
 </head>
 
 <body data-theme="dark">
-    <div class="admin-login-overlay" id="adminLoginOverlay" style="display:none;" aria-hidden="true">
-        <div class="admin-login-card">
-            <div class="login-logo">
-                <i class="fas fa-microchip"></i>
-                <span>Tech<span class="accent">Zone</span></span>
-            </div>
-            <h2>لوحة الإدارة</h2>
-            <p>سجّل الدخول للوصول إلى لوحة التحكم الداخلية.</p>
-            <form id="adminLoginForm">
-                <div class="admin-form-group">
-                    <label>البريد الإلكتروني</label>
-                    <div class="admin-input-wrap">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="adminEmail" placeholder="admin@example.com" required>
-                    </div>
-                </div>
-                <div class="admin-form-group">
-                    <label>كلمة المرور</label>
-                    <div class="admin-input-wrap">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="adminPassword" placeholder="••••••••" required>
-                    </div>
-                </div>
-                <div id="loginError" class="login-error" style="display:none;"></div>
-                <button type="submit" class="btn btn-primary btn-full">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-            </form>
-        </div>
-    </div>
+    <!-- Admin auth is enforced at the gate level -->
 
     <div class="admin-layout" id="adminLayout" style="display:none;">
         <aside class="admin-sidebar" id="adminSidebar">

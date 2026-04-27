@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -60,25 +60,25 @@ export default function WelcomeOnboardingModal() {
         aria-modal="true"
         aria-labelledby="welcome-onboarding-title"
       >
-        <button type="button" className={styles.closeButton} onClick={dismiss} aria-label="Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„ØªØ±Ø­ÙŠØ¨">
+        <button type="button" className={styles.closeButton} onClick={dismiss} aria-label="إغلاق الترحيب">
           <AppIcon name="x" size={16} />
         </button>
 
         <span className={styles.eyebrow}>
           <AppIcon name="sparkles" size={14} />
-          Ø¨Ø¯Ø§ÙŠØ© Ø³Ø±ÙŠØ¹Ø©
+          بداية سريعة
         </span>
-        <h2 id="welcome-onboarding-title">Ù…Ø±Ø­Ø¨Ø§Ù‹ Ø¨Ùƒ ÙÙŠ TechZone</h2>
+        <h2 id="welcome-onboarding-title">مرحباً بك في TechZone</h2>
         <p className={styles.description}>
-          Ø§Ø³ØªÙƒØ´Ù Ø§Ù„Ù…Ù†ØªØ¬Ø§ØªØŒ Ø§Ø­Ø¬Ø² Ø§Ù„ØµÙŠØ§Ù†Ø©ØŒ Ø£Ùˆ Ø±Ø§Ø¬Ø¹ Ø§Ù„Ø§Ø´ØªØ±Ø§ÙƒØ§Øª ÙˆØ§Ù„Ø®Ø¯Ù…Ø§Øª Ù…Ù† ÙˆØ§Ø¬Ù‡Ø© ÙˆØ§Ø­Ø¯Ø© Ù…ØµÙ…Ù…Ø© Ù„ØªÙˆØµÙ„Ùƒ
-          Ù…Ø¨Ø§Ø´Ø±Ø© Ù„Ù…Ø§ ØªØ­ØªØ§Ø¬Ù‡.
+          استكشف المنتجات، احجز الصيانة، أو راجع الاشتراكات والخدمات من واجهة واحدة مصممة لتوصلك
+          مباشرة لما تحتاجه.
         </p>
 
         <div className={styles.features}>
           {[
-            { icon: "shopping-bag", title: "Ù…Ù†ØªØ¬Ø§Øª ÙˆØªÙ‚Ù†ÙŠØ§Øª", description: "Ø§Ø¨Ø­Ø« ÙˆÙ‚Ø§Ø±Ù† ÙˆØ£Ø¶Ù Ù„Ù„Ø³Ù„Ø© Ø¨Ø³Ø±Ø¹Ø©." },
-            { icon: "wrench", title: "ØµÙŠØ§Ù†Ø© Ù…Ø±Ù†Ø©", description: "Ø§Ø­Ø¬Ø² Ø®Ø¯Ù…Ø© Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…Ø­Ù„ Ø£Ùˆ Ø¹Ù† Ø¨Ø¹Ø¯." },
-            { icon: "wallet", title: "Ø±ØµÙŠØ¯ ÙˆØ§Ø´ØªØ±Ø§ÙƒØ§Øª", description: "Ø¥Ø¯Ø§Ø±Ø© Ø£Ø³Ù‡Ù„ Ù„Ù„Ø¯ÙØ¹ ÙˆØ§Ù„Ø·Ù„Ø¨Ø§Øª." },
+            { icon: "shopping-bag", title: "منتجات وتقنيات", description: "ابحث وقارن وأضف للسلة بسرعة." },
+            { icon: "wrench", title: "صيانة مرنة", description: "احجز خدمة داخل المحل أو عن بعد." },
+            { icon: "wallet", title: "رصيد واشتراكات", description: "إدارة أسهل للدفع والطلبات." },
           ].map((item) => (
             <div key={item.title} className={styles.featureCard}>
               <span className={styles.featureIcon}>
@@ -94,10 +94,10 @@ export default function WelcomeOnboardingModal() {
 
         <div className={styles.actions}>
           <Link href="/products" className={styles.primaryButton} onClick={dismiss}>
-            Ø§Ø¨Ø¯Ø£ Ø§Ù„ØªØ³ÙˆÙ‚
+            ابدأ التسوق
           </Link>
           <Link href="/services" className={styles.secondaryButton} onClick={dismiss}>
-            Ø§Ø³ØªÙƒØ´Ù Ø§Ù„Ø®Ø¯Ù…Ø§Øª
+            استكشف الخدمات
           </Link>
         </div>
       </section>

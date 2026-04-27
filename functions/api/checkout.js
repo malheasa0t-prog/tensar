@@ -1,7 +1,7 @@
 /**
- * Cloudflare Pages Function â€” Checkout API.
+ * Cloudflare Pages Function — Checkout API.
  *
- * Handles POST /api/checkout â€” creates physical product orders.
+ * Handles POST /api/checkout — creates physical product orders.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -59,7 +59,7 @@ export function createCheckoutRequestClient({ createClientImpl = createClient, e
 }
 
 /**
- * POST /api/checkout â€” creates a product order.
+ * POST /api/checkout — creates a product order.
  *
  * @param {EventContext} context
  * @returns {Promise<Response>}
@@ -287,7 +287,7 @@ export function createCheckoutHandler(dependencies = {}) {
       return finalizeCheckoutResponse({
         request,
         response: errorResponse(
-          `[CHK-500] Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹: ${errorMessage}`,
+          `[CHK-500] حدث خطأ غير متوقع: ${errorMessage}`,
           500
         ),
       });

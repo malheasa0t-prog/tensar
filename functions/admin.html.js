@@ -150,7 +150,7 @@ function loadShell(){
     });
 }
 function validateAdminSession(token){
-  if(!token){loadShell();return;}
+  if(!token){showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");return;}
   fetch(S,{
     method:"GET",
     credentials:"same-origin",
@@ -196,12 +196,12 @@ client.auth.getSession()
   .then(function(result){
     var session=result&&result.data&&result.data.session;
     if(!session||!session.access_token){
-      loadShell();
+      showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
       return;
     }
     validateAdminSession(session.access_token);
   })
-  .catch(function(){loadShell();});
+  .catch(function(){showDenied("\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062C\u0644\u0633\u0629.");});
 })();
 </script>
 </body>

@@ -1,4 +1,4 @@
-﻿// ===== TechZone Admin - Core =====
+// ===== TechZone Admin - Core =====
 (function () {
     'use strict';
 
@@ -20,12 +20,9 @@
     const helpers = window.AdminCoreHelpers;
     const ui = window.AdminCoreUi;
     const SIDEBAR_GROUP_STORAGE_KEY = 'tz_admin_sidebar_groups';
-    const loginOverlay = document.getElementById('adminLoginOverlay');
     const adminLayout = document.getElementById('adminLayout');
     const adminContent = document.getElementById('adminContent');
     const pageTitle = document.getElementById('pageTitle');
-    const loginForm = document.getElementById('adminLoginForm');
-    const loginError = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarClose = document.getElementById('sidebarClose');
@@ -56,15 +53,13 @@
         A.currentUser = null;
         helpers.requestAdminRuntimeAccess(false);
         TZ.clearSession();
-        if (loginOverlay) loginOverlay.style.display = 'flex';
-        if (adminLayout) adminLayout.style.display = 'none';
+        window.location.href = '/';
     }
 
     function showAdmin(user) {
         helpers.requestAdminRuntimeAccess(true);
         A.currentUser = user;
         TZ.setSession(user.id, user.role, user.fullName);
-        if (loginOverlay) loginOverlay.style.display = 'none';
         if (adminLayout) adminLayout.style.display = 'flex';
         document.getElementById('adminName').textContent = user.fullName;
         document.getElementById('adminRole').textContent = TZ.ROLES[user.role]?.label || user.role;
@@ -153,52 +148,6 @@
     async function initializeAdminShell() {
         if (initialized) return;
         initialized = true;
-
-        if (loginForm) {
-            loginForm.addEventListener('submit', async function (event) {
-                event.preventDefault();
-                const email = document.getElementById('adminEmail').value.trim();
-                const password = document.getElementById('adminPassword').value;
-                const submitButton = loginForm.querySelector('button[type="submit"]');
-                const originalHtml = submitButton.innerHTML;
-
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644...';
-                submitButton.disabled = true;
-
-                const result = await TZ.supabaseSignIn(email, password);
-                if (result.error) {
-                    loginError.textContent = result.error === 'Invalid login credentials'
-                        ? '\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629'
-                        : result.error;
-                    loginError.style.display = 'block';
-                    submitButton.innerHTML = originalHtml;
-                    submitButton.disabled = false;
-                    return;
-                }
-
-                const adminSession = await TZ.getAdminSessionUser({ baseClient: TZ.supabase });
-                const appUser = adminSession.user;
-                helpers.requestAdminRuntimeAccess(true);
-                if (!appUser || !TZ.canAccessAdmin(appUser)) {
-                    loginError.textContent = adminSession.error
-                        || '\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629';
-                    loginError.style.display = 'block';
-                    helpers.requestAdminRuntimeAccess(false);
-                    await TZ.supabaseSignOut();
-                    submitButton.innerHTML = originalHtml;
-                    submitButton.disabled = false;
-                    return;
-                }
-
-                TZ.commitDb('admin_login', appUser.id, `\u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644: ${appUser.fullName}`);
-                await TZ.refreshData();
-                TZ.startRealtime?.();
-                loginError.style.display = 'none';
-                submitButton.innerHTML = originalHtml;
-                submitButton.disabled = false;
-                showAdmin(appUser);
-            });
-        }
 
         logoutBtn.addEventListener('click', async function () {
             helpers.requestAdminRuntimeAccess(false);
