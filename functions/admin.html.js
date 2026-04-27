@@ -82,20 +82,36 @@ export function buildAdminGateHtml({ supabaseUrl, supabaseAnonKey }) {
 <title>TechZone</title>
 <style>
 body{margin:0;padding:0;font-family:system-ui,sans-serif;background:#0f172a;color:#94a3b8;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.g-l{text-align:center}
+.g-l{text-align:center;max-width:400px;padding:20px}
 .g-s{width:36px;height:36px;border:3px solid #1e293b;border-top-color:#6366f1;border-radius:50%;animation:r .8s linear infinite;margin:0 auto 16px}
 @keyframes r{to{transform:rotate(360deg)}}
 .g-t{font-size:14px;opacity:.8}
+.g-d{display:none}
+.g-i{font-size:48px;margin-bottom:16px}
+.g-b{display:inline-block;margin-top:16px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;text-decoration:none;transition:background .2s}
+.g-b:hover{background:#4f46e5}
+.g-e{color:#f87171}
 </style>
 </head>
 <body>
-<div class="g-l"><div class="g-s"></div><div class="g-t" id="gateStatus">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642...</div></div>
+<div class="g-l">
+<div id="gateLoading"><div class="g-s"></div><div class="g-t" id="gateStatus">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642...</div></div>
+<div id="gateDenied" class="g-d"><div class="g-i">\u26D4</div><div class="g-t g-e" id="gateDeniedMsg"></div><a href="/" class="g-b">\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0631\u0626\u064A\u0633\u064A\u0629</a></div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
 var U="${safeUrl}",K="${safeKey}",P="${safePanelPath}",S="${safeSessionRoute}";
 var statusNode=document.getElementById("gateStatus");
-function setMessage(message){if(statusNode){statusNode.textContent=message;}}
+var loadingNode=document.getElementById("gateLoading");
+var deniedNode=document.getElementById("gateDenied");
+var deniedMsg=document.getElementById("gateDeniedMsg");
+function setMessage(msg){if(statusNode){statusNode.textContent=msg;}}
+function showDenied(msg){
+  if(loadingNode){loadingNode.style.display="none";}
+  if(deniedNode){deniedNode.style.display="block";}
+  if(deniedMsg){deniedMsg.textContent=msg;}
+}
 function clearAdminShellCaches(){
   if(!("caches" in window)){return Promise.resolve();}
   return window.caches.keys()
@@ -144,16 +160,28 @@ function validateAdminSession(token){
     }
   })
   .then(function(response){
-    if(response.status===401||response.status===403){loadShell();return null;}
+    if(response.status===401){
+      showDenied("\u062C\u0644\u0633\u062A\u0643 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u0633\u062C\u0644 \u062F\u062E\u0648\u0644\u0643 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");
+      return null;
+    }
+    if(response.status===403){
+      showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
+      return null;
+    }
     if(!response.ok)throw new Error("session");
     return response.json();
   })
   .then(function(payload){
     if(payload===null){return;}
-    if(!payload||payload.success!==true||!payload.user){loadShell();return;}
+    if(!payload||payload.success!==true||!payload.user){
+      showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
+      return;
+    }
     loadShell();
   })
-  .catch(function(){loadShell();});
+  .catch(function(){
+    setMessage("\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062C\u0644\u0633\u0629. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.");
+  });
 }
 if(!U||!K){
   setMessage("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
@@ -167,7 +195,11 @@ var client=window.supabase.createClient(U,K);
 client.auth.getSession()
   .then(function(result){
     var session=result&&result.data&&result.data.session;
-    validateAdminSession(session&&session.access_token?session.access_token:"");
+    if(!session||!session.access_token){
+      loadShell();
+      return;
+    }
+    validateAdminSession(session.access_token);
   })
   .catch(function(){loadShell();});
 })();
