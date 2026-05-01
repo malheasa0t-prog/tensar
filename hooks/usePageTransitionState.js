@@ -9,6 +9,7 @@ import {
   buildRouteKey,
   resolveRouteTransition,
 } from "@/lib/pageTransitionModel";
+import { prefetchRouteModule } from "@/src/routePrefetch";
 
 /**
  * Clears an active timeout reference if one exists.
@@ -155,6 +156,10 @@ function handleNavigationIntent(input) {
 
   input.event.preventDefault();
   clearTimer(input.pendingTimerRef);
+
+  /* Start loading the destination chunk immediately, in parallel with exit animation */
+  void prefetchRouteModule(result.destination);
+
   input.setPendingDestination(result.destination);
   input.setPhase("exit");
   input.pendingTimerRef.current = window.setTimeout(
