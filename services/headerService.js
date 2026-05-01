@@ -39,7 +39,17 @@ function hasAuthDisplayName(user) {
  * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ siteSettings: ReturnType<typeof normalizeSiteSettings>, dynamicLinks: Array<{ href: string, label: string, id: string, image: string }> }>}
  */
+const HEADER_CACHE_TTL_MS = 300_000;
+let headerSnapshotCache = null;
+let headerSnapshotCacheTime = 0;
+
 export async function fetchHeaderSnapshot(client) {
+  const now = Date.now();
+
+  if (headerSnapshotCache && now - headerSnapshotCacheTime < HEADER_CACHE_TTL_MS) {
+    return headerSnapshotCache;
+  }
+
   const resolvedClient = await resolveHeaderClient(client);
   const siteSettings = await loadSiteSettingsClient(resolvedClient).catch(() =>
     normalizeSiteSettings()
@@ -52,10 +62,15 @@ export async function fetchHeaderSnapshot(client) {
     .order("sort_order", { ascending: true });
 
   const categories = response.error || !Array.isArray(response.data) ? [] : response.data;
-  return {
+  const snapshot = {
     siteSettings,
     dynamicLinks: buildHeaderCategoryLinks({ categories, siteSettings }),
   };
+
+  headerSnapshotCache = snapshot;
+  headerSnapshotCacheTime = now;
+
+  return snapshot;
 }
 
 /**
