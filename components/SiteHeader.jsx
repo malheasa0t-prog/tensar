@@ -3,7 +3,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import MobileBottomNav from "./MobileBottomNav";
 import MobileMenu from "./MobileMenu";
 import { useCart } from "./CartProvider";
 import { useComparison } from "./ComparisonProvider";
@@ -13,6 +12,7 @@ import { useTheme } from "./ThemeProvider";
 import AppIcon from "./AppIcon";
 import HeaderNotificationBell from "./HeaderNotificationBell";
 import { getBrandMark, getSocialLinks, normalizeSiteSettings } from "@/lib/contactChannels";
+import { resolveMobileMenuIcon } from "@/lib/mobileMenuModel";
 
 const GlobalSearchOverlay = lazy(() => import("./GlobalSearchOverlay"));
 
@@ -36,7 +36,7 @@ export default function SiteHeader() {
     userLabel,
     walletBalance,
   } = useSiteRuntime();
-  const { cartCount, openSidebar, sidebarOpen } = useCart();
+  const { cartCount, openSidebar } = useCart();
   const { comparisonCount } = useComparison();
   const { favoriteCount } = useFavorites();
   const { themeLabel, toggleTheme } = useTheme();
@@ -90,18 +90,14 @@ export default function SiteHeader() {
       (link) => !mobileBaseLinks.some((existingLink) => existingLink.href === link.href)
     ),
   ];
+  const desktopLinksWithIcons = desktopLinks.map((link) => ({
+    ...link,
+    icon: resolveMobileMenuIcon(link.href),
+  }));
   const brandName = siteSettings.company.name || "TechZone";
   const brandMark = getBrandMark(brandName);
   const socialLinks = getSocialLinks(siteSettings);
   const favoritesHref = authLoading ? "/auth/login" : user ? "/dashboard/favorites" : "/auth/login";
-  const shouldShowBottomNav = Boolean(
-    pathname &&
-      !pathname.startsWith("/admin") &&
-      !pathname.startsWith("/dashboard") &&
-      !pathname.startsWith("/auth") &&
-      pathname !== "/checkout"
-  );
-
   function isPublicActive(href) {
     if (!href || href.includes("#")) return false;
     if (href === "/") return pathname === "/";
@@ -116,23 +112,11 @@ export default function SiteHeader() {
   return (
     <>
       <header className={`site-header${scrolled ? " is-scrolled" : ""}`}>
-        <div className="container nav-shell">
+        <div className="nav-shell">
           <Link href="/" className="brand">
             <span className="brand-mark">{brandMark}</span>
             <span className="brand-text">{brandName}</span>
           </Link>
-
-          <nav className="main-nav" aria-label="روابط الموقع">
-            {desktopLinks.map((link) => (
-              <Link
-                key={`${link.href}-${link.label}`}
-                href={link.href}
-                className={isPublicActive(link.href) ? "is-active" : ""}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
 
           <div className="nav-actions">
             <button
@@ -147,14 +131,7 @@ export default function SiteHeader() {
               <small>Ctrl + K</small>
             </button>
 
-            <button
-              className="nav-icon-btn nav-cart-btn"
-              onClick={openSidebar}
-              aria-label="سلة التسوق"
-            >
-              <AppIcon name="cart" size={18} />
-              {cartCount > 0 ? <span className="cart-badge is-bouncing">{cartCount}</span> : null}
-            </button>
+            <HeaderNotificationBell user={user} authLoading={authLoading} />
 
             <Link
               href={favoritesHref}
@@ -166,7 +143,14 @@ export default function SiteHeader() {
               {favoriteCount > 0 ? <span className="cart-badge">{favoriteCount}</span> : null}
             </Link>
 
-            <HeaderNotificationBell user={user} authLoading={authLoading} />
+            <button
+              className="nav-icon-btn nav-cart-btn"
+              onClick={openSidebar}
+              aria-label="سلة التسوق"
+            >
+              <AppIcon name="cart" size={18} />
+              {cartCount > 0 ? <span className="cart-badge is-bouncing">{cartCount}</span> : null}
+            </button>
 
             {!authLoading
               ? user
@@ -195,6 +179,21 @@ export default function SiteHeader() {
               <span />
             </button>
           </div>
+
+          <nav className="main-nav" aria-label="روابط الموقع">
+            {desktopLinksWithIcons.map((link) => (
+              <Link
+                key={`${link.href}-${link.label}`}
+                href={link.href}
+                className={isPublicActive(link.href) ? "is-active" : ""}
+              >
+                <span className="main-nav-link-icon" aria-hidden="true">
+                  <AppIcon name={link.icon} size={16} />
+                </span>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </header>
 

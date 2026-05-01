@@ -135,12 +135,17 @@ Every new module must follow this structure:
 ---
 
 ## 🌍 Language & Stack Preferences
-- Default language: Python 3.11+
-- Use type hints everywhere
-- Prefer f-strings over .format()
-- Use pathlib over os.path
-- Use dataclasses or Pydantic for data models
-- Virtual environments: always recommend venv or poetry
+- Default language: JavaScript (ES2022+)
+- Frontend: React 18 + Vite 8 (SPA)
+- Routing: React Router DOM v7
+- Styling: Vanilla CSS + CSS Modules
+- Backend: Cloudflare Pages Functions
+- Database: Supabase (PostgreSQL)
+- Icons: Lucide React
+- Testing: Node.js built-in test runner (node:test)
+- Use JSDoc comments for type documentation
+- Use `@/` import alias for project root
+- All UI text MUST be in Arabic (RTL layout)
 
 ---
 

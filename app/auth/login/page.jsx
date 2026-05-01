@@ -9,7 +9,6 @@ import { useToast } from '@/components/ToastProvider';
 import AuthProviderButton from '@/components/auth/AuthProviderButton';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
-import { supabase } from '@/lib/supabaseClient';
 import { getPostAuthDestination, syncProfileFromAuthUser } from '@/lib/authProfileSync';
 import {
   AUTH_SOCIAL_PROVIDERS,
@@ -18,7 +17,13 @@ import {
   mapOAuthProviderError,
   validateLoginForm,
 } from '@/lib/loginPageModel';
+import { supabase } from '@/lib/supabaseClient';
 
+/**
+ * Renders the account login page and starts email or OAuth authentication.
+ *
+ * @returns {import('react').JSX.Element}
+ */
 export default function LoginPage() {
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -27,9 +32,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [activeProvider, setActiveProvider] = useState('');
   const [error, setError] = useState('');
-  const withAuthCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
+  const hasSocialProviders = AUTH_SOCIAL_PROVIDERS.length > 0;
+  const withAuthCode = (code, message) =>
+    String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
   const loginSuccessMessage = useMemo(
-    () => (searchParams.get('reset') === 'success' ? 'تم تحديث كلمة المرور. يمكنك تسجيل الدخول الآن.' : ''),
+    () =>
+      searchParams.get('reset') === 'success'
+        ? 'تم تحديث كلمة المرور. يمكنك تسجيل الدخول الآن.'
+        : '',
     [searchParams]
   );
 
@@ -45,18 +55,28 @@ export default function LoginPage() {
 
     if (validationError) {
       setError(validationError);
-      showToast(withAuthCode('AUS-101', validationError), { type: 'warning', title: 'تحقق من البيانات' });
+      showToast(withAuthCode('AUS-101', validationError), {
+        type: 'warning',
+        title: 'تحقق من البيانات',
+      });
       return;
     }
 
     setLoading(true);
     setError('');
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
     if (authError) {
       const nextError = mapLoginAuthError(authError);
       setError(nextError);
-      showToast(withAuthCode('AUS-301', nextError), { type: 'error', title: 'تعذر تسجيل الدخول' });
+      showToast(withAuthCode('AUS-301', nextError), {
+        type: 'error',
+        title: 'تعذر تسجيل الدخول',
+      });
       setLoading(false);
       return;
     }
@@ -82,10 +102,14 @@ export default function LoginPage() {
 
     if (providerError) {
       const providerLabel =
-        AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() || provider;
+        AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() ||
+        provider;
       const nextError = mapOAuthProviderError({ provider: providerLabel, error: providerError });
       setError(nextError);
-      showToast(withAuthCode('AUS-302', nextError), { type: 'error', title: 'تعذر المتابعة' });
+      showToast(withAuthCode('AUS-302', nextError), {
+        type: 'error',
+        title: 'تعذر المتابعة',
+      });
       setActiveProvider('');
     }
   }
@@ -94,7 +118,7 @@ export default function LoginPage() {
     <AuthSplitLayout
       badgeIcon="lock"
       title="تسجيل الدخول"
-      description="ادخل إلى حسابك للوصول إلى الطلبات والمفضلة والإشعارات ومتابعة الصيانة من مكان واحد."
+      description="أدخل بريدك الإلكتروني وكلمة المرور للمتابعة."
       panel={LOGIN_EXPERIENCE_PANEL}
       footer={
         <p className="auth-footer-copy">
@@ -162,22 +186,24 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="auth-divider">أو</div>
+          {hasSocialProviders ? <div className="auth-divider">أو</div> : null}
 
-          <div className={shellStyles.socialSection}>
-            <div className={shellStyles.socialGrid}>
-              {AUTH_SOCIAL_PROVIDERS.map((provider) => (
-                <AuthProviderButton
-                  key={provider.provider}
-                  provider={provider.provider}
-                  label={provider.label}
-                  isLoading={activeProvider === provider.provider}
-                  disabled={loading}
-                  onClick={() => void handleProviderLogin(provider.provider)}
-                />
-              ))}
+          {hasSocialProviders ? (
+            <div className={shellStyles.socialSection}>
+              <div className={shellStyles.socialGrid}>
+                {AUTH_SOCIAL_PROVIDERS.map((provider) => (
+                  <AuthProviderButton
+                    key={provider.provider}
+                    provider={provider.provider}
+                    label={provider.label}
+                    isLoading={activeProvider === provider.provider}
+                    disabled={loading}
+                    onClick={() => void handleProviderLogin(provider.provider)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
         </>
       }
     />

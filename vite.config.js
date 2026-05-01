@@ -81,6 +81,9 @@ export default defineConfig(({ command, mode }) => {
     define: {
       'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
+      'process.env.NEXT_PUBLIC_AUTH_SOCIAL_PROVIDERS': JSON.stringify(
+        env.NEXT_PUBLIC_AUTH_SOCIAL_PROVIDERS || ''
+      ),
       'process.env.npm_package_version': JSON.stringify(env.npm_package_version || '1.0.0'),
     },
     build: {

@@ -1,0 +1,269 @@
+/* Desktop public sidebar layout.
+ *
+ * Keeps the vertical navigation on the right while reserving a gutter for it,
+ * so the sidebar never overlaps the main content.
+ */
+
+:root {
+  --desktop-sidebar-gap: 0.65rem;
+  --desktop-sidebar-width: clamp(12.5rem, 13.5vw, 14rem);
+}
+
+@media (min-width: 1024px) {
+  body:has(.site-header) {
+    padding-right: calc(var(--desktop-sidebar-width) + (var(--desktop-sidebar-gap) * 2));
+    padding-inline-end: unset;
+  }
+
+  .site-header,
+  .site-header.is-scrolled {
+    position: fixed;
+    top: var(--desktop-sidebar-gap);
+    right: var(--desktop-sidebar-gap);
+    bottom: var(--desktop-sidebar-gap);
+    left: auto;
+    width: var(--desktop-sidebar-width);
+    min-height: calc(100vh - (var(--desktop-sidebar-gap) * 2));
+    border: 1px solid rgba(160, 170, 220, 0.12);
+    border-radius: 1.5rem;
+    background:
+      linear-gradient(180deg, rgba(14, 18, 44, 0.97), rgba(7, 10, 27, 0.98)),
+      radial-gradient(circle at top, rgba(131, 56, 236, 0.12), transparent 58%);
+    box-shadow: 0 16px 48px rgba(4, 6, 20, 0.35);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    overflow: hidden;
+    z-index: 100;
+  }
+
+  .site-header::after {
+    display: none;
+  }
+
+  /* ── Nav Shell — compact grid ── */
+  .site-header .nav-shell,
+  .site-header.is-scrolled .nav-shell {
+    width: 100%;
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 0.55rem;
+    align-items: stretch;
+    align-content: start;
+    padding: 0.65rem;
+    margin: 0;
+  }
+
+  /* ── Brand — compact ── */
+  .site-header .brand {
+    width: 100%;
+    min-height: 52px;
+    justify-content: space-between;
+    padding: 0.55rem 0.7rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .site-header .brand-mark,
+  .site-header.is-scrolled .brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    transform: none;
+  }
+
+  .site-header .brand-text,
+  .site-header.is-scrolled .brand-text {
+    width: auto;
+    opacity: 1;
+    overflow: visible;
+    white-space: nowrap;
+    font-size: 0.92rem;
+  }
+
+  /* ── Main Nav — compact links ── */
+  .site-header .main-nav {
+    display: grid;
+    gap: 0.25rem;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+    padding-inline-end: 0.1rem;
+  }
+
+  .site-header .main-nav::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .site-header .main-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+  }
+
+  .site-header .main-nav a,
+  .site-header.is-scrolled .main-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 2.55rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.75rem;
+    background: transparent;
+    border: 1px solid transparent;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: rgba(230, 236, 255, 0.82);
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .site-header .main-nav a::after,
+  .site-header.is-scrolled .main-nav a::after {
+    display: none;
+  }
+
+  .site-header .main-nav a:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #f8f4ff;
+  }
+
+  .site-header .main-nav a.is-active {
+    background: linear-gradient(135deg, rgba(131, 56, 236, 0.14), rgba(255, 0, 110, 0.08));
+    border-color: rgba(177, 92, 255, 0.2);
+    color: #f8f4ff;
+  }
+
+  /* ── Nav Link Icons — smaller ── */
+  .site-header .main-nav-link-icon {
+    width: 1.65rem;
+    height: 1.65rem;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(230, 236, 255, 0.75);
+    font-size: 0.82rem;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .site-header .main-nav a:hover .main-nav-link-icon {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8f4ff;
+  }
+
+  .site-header .main-nav a.is-active .main-nav-link-icon {
+    background: var(--gradient-neon);
+    box-shadow: 0 2px 8px rgba(131, 56, 236, 0.3);
+    color: #fff;
+  }
+
+  /* ── Nav Actions — compact (now below brand) ── */
+  .site-header .nav-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .site-header .nav-search-trigger,
+  .site-header .cta-link,
+  .site-header.is-scrolled .nav-search-trigger,
+  .site-header.is-scrolled .cta-link {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.75rem;
+    justify-content: flex-start;
+    font-size: 0.82rem;
+  }
+
+  .site-header .nav-search-trigger {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .site-header .nav-search-trigger span,
+  .site-header .nav-search-trigger small,
+  .site-header .cta-link-label,
+  .site-header.is-scrolled .nav-search-trigger span,
+  .site-header.is-scrolled .nav-search-trigger small,
+  .site-header.is-scrolled .cta-link-label {
+    width: auto;
+    opacity: 1;
+    overflow: visible;
+  }
+
+  .site-header .nav-search-trigger small {
+    margin-inline-start: auto;
+  }
+
+  .site-header .nav-icon-btn {
+    width: 100%;
+    height: 40px;
+    border-radius: 0.75rem;
+  }
+
+  .site-header .cta-link {
+    justify-content: center;
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+
+  .site-header .mobile-toggle {
+    display: none;
+  }
+
+  .header-notifications-overlay {
+    padding-inline-end: calc(var(--desktop-sidebar-width) + (var(--desktop-sidebar-gap) * 2) + 1rem);
+  }
+
+  /* ── Light Theme ── */
+  [data-theme='light'] .site-header,
+  [data-theme='light'] .site-header.is-scrolled {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 242, 247, 0.96)),
+      radial-gradient(circle at top, rgba(14, 165, 233, 0.12), transparent 58%);
+    border-color: rgba(148, 163, 184, 0.2);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+  }
+
+  [data-theme='light'] .site-header .brand,
+  [data-theme='light'] .site-header .nav-search-trigger,
+  [data-theme='light'] .site-header .nav-icon-btn {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: rgba(148, 163, 184, 0.16);
+  }
+
+  [data-theme='light'] .site-header .main-nav a {
+    background: transparent;
+    color: #334155;
+  }
+
+  [data-theme='light'] .site-header .main-nav a:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  [data-theme='light'] .site-header .main-nav a.is-active {
+    background: rgba(14, 165, 233, 0.1);
+    border-color: rgba(14, 165, 233, 0.2);
+    color: #0f172a;
+  }
+
+  [data-theme='light'] .site-header .main-nav-link-icon {
+    background: rgba(15, 23, 42, 0.06);
+    color: #0f172a;
+  }
+}
+
+@media (min-width: 1440px) {
+  body:has(.site-header) {
+    padding-right: calc(var(--desktop-sidebar-width) + (var(--desktop-sidebar-gap) * 2.5));
+  }
+}

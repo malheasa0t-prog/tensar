@@ -28,9 +28,18 @@ export default function AuthSplitLayout({
   panel,
   title,
 }) {
+  const hasPanelIntro = Boolean(panel?.eyebrow || panel?.title || panel?.description);
+  const hasPanelFeatures = Array.isArray(panel?.features) && panel.features.length > 0;
+  const hasPanelStats = Array.isArray(panel?.stats) && panel.stats.length > 0;
+  const hasShowcaseContent = hasPanelIntro || hasPanelFeatures || hasPanelStats;
+  const layoutClassName = hasShowcaseContent
+    ? styles.layout
+    : `${styles.layout} ${styles.layoutSingleColumn}`;
+  const dashboardFeatures = hasPanelFeatures ? panel.features.slice(0, 2) : [];
+
   return (
     <section className={styles.shell}>
-      <div className={styles.layout}>
+      <div className={layoutClassName}>
         <div className={`surface-panel auth-card ${styles.formCard}`}>
           <div className="auth-head">
             <div className="auth-icon">
@@ -44,66 +53,69 @@ export default function AuthSplitLayout({
           {footer ? <div className={styles.footerSlot}>{footer}</div> : null}
         </div>
 
-        <aside className={`surface-panel ${styles.showcaseCard}`}>
-          <span className={styles.showcaseBadge}>
-            <AppIcon name="sparkles" size={14} />
-            {panel.eyebrow}
-          </span>
-          <h2>{panel.title}</h2>
-          <p>{panel.description}</p>
+        {hasShowcaseContent ? (
+          <aside className={`surface-panel ${styles.showcaseCard}`}>
+            {panel.eyebrow ? (
+              <span className={styles.showcaseBadge}>
+                <AppIcon name="sparkles" size={14} />
+                {panel.eyebrow}
+              </span>
+            ) : null}
+            {panel.title ? <h2>{panel.title}</h2> : null}
+            {panel.description ? <p>{panel.description}</p> : null}
 
-          <div className={styles.visualStage} aria-hidden="true">
-            <div className={styles.glowOrb} />
-            <div className={styles.dashboardCard}>
-              <div className={styles.dashboardBar}>
-                <span />
-                <span />
-                <span />
+            {dashboardFeatures.length > 0 ? (
+              <div className={styles.visualStage} aria-hidden="true">
+                <div className={styles.glowOrb} />
+                <div className={styles.dashboardCard}>
+                  <div className={styles.dashboardBar}>
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className={styles.dashboardGrid}>
+                    {dashboardFeatures.map((feature) => (
+                      <div key={feature.title} className={styles.dashboardMetric}>
+                        <span className={styles.metricIcon}>
+                          <AppIcon name={feature.icon} size={18} />
+                        </span>
+                        <strong>{feature.title}</strong>
+                        <small>{feature.description}</small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className={styles.dashboardGrid}>
-                {panel.features.slice(0, 2).map((feature) => (
-                  <div key={feature.title} className={styles.dashboardMetric}>
-                    <span className={styles.metricIcon}>
-                      <AppIcon name={feature.icon} size={18} />
-                    </span>
-                    <strong>{feature.title}</strong>
-                    <small>{feature.description}</small>
+            ) : null}
+
+            {hasPanelStats ? (
+              <div className={styles.statsRow}>
+                {panel.stats.map((item) => (
+                  <div key={item.label} className={styles.statCard}>
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
                   </div>
                 ))}
               </div>
-            </div>
-            <div className={styles.floatingCard}>
-              <span className={styles.metricIcon}>
-                <AppIcon name="shield-check" size={18} />
-              </span>
-              <strong>جلسة آمنة</strong>
-              <small>بياناتك تنتقل عبر مسار مصادقة مشفّر.</small>
-            </div>
-          </div>
+            ) : null}
 
-          <div className={styles.statsRow}>
-            {panel.stats.map((item) => (
-              <div key={item.label} className={styles.statCard}>
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
+            {hasPanelFeatures ? (
+              <div className={styles.featureList}>
+                {panel.features.map((feature) => (
+                  <article key={feature.title} className={styles.featureItem}>
+                    <span className={styles.featureIcon}>
+                      <AppIcon name={feature.icon} size={18} />
+                    </span>
+                    <div>
+                      <strong>{feature.title}</strong>
+                      <p>{feature.description}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
-            ))}
-          </div>
-
-          <div className={styles.featureList}>
-            {panel.features.map((feature) => (
-              <article key={feature.title} className={styles.featureItem}>
-                <span className={styles.featureIcon}>
-                  <AppIcon name={feature.icon} size={18} />
-                </span>
-                <div>
-                  <strong>{feature.title}</strong>
-                  <p>{feature.description}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </aside>
+            ) : null}
+          </aside>
+        ) : null}
       </div>
     </section>
   );

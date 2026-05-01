@@ -12,10 +12,10 @@
 /* ── Promo Banner Shell — COMPACT ── */
 .home-purple .home-hero-banner-shell {
   width: calc(100% - clamp(1rem, 3vw, 2.75rem));
-  max-width: 1720px;
+  max-width: var(--max-w, 1200px);
   margin-inline: auto;
-  margin-top: clamp(0.3rem, 0.8vw, 0.5rem);
-  margin-bottom: clamp(0.4rem, 1vw, 0.65rem);
+  margin-top: clamp(0.4rem, 1vw, 0.65rem);
+  margin-bottom: clamp(0.6rem, 1.2vw, 0.85rem);
 }
 
 .home-purple .home-hero-banner-shell .promo-banner {
@@ -32,8 +32,8 @@
 /* ── Hero Grid: 2-column layout (text+buttons LEFT, categories RIGHT) ── */
 /* ── Hero Inline Row ── */
 .home-purple .home-hero-inline-row {
-  padding: 0.6rem 0;
-  border-bottom: 1px solid rgba(177, 92, 255, 0.1);
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(177, 92, 255, 0.12);
 }
 
 .home-purple .hero-copy {
@@ -62,7 +62,8 @@
 /* ── Stats Shell ── */
 .home-purple .hero-stats-shell {
   display: grid;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .home-purple .stats-row-compact {
@@ -512,5 +513,195 @@
 
   .home-purple .hero-category-card-media-frame {
     min-height: 95px;
+  }
+}
+
+/* ──────────────────────────────────────────
+   Features Section — "لماذا TechZone؟"
+   ────────────────────────────────────────── */
+.home-purple .home-features-section {
+  padding-block: clamp(2rem, 4vw, 3.5rem);
+}
+
+.home-purple .home-features-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.home-purple .home-features-header h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  font-weight: 900;
+  line-height: 1.25;
+  color: #f8f4ff;
+}
+
+.home-purple .home-features-header p {
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+  color: rgba(230, 236, 255, 0.78);
+  line-height: 1.65;
+}
+
+.home-purple .home-features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.home-purple .home-feature-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1.5rem 1.15rem;
+  text-align: center;
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(31, 20, 63, 0.92), rgba(10, 14, 39, 0.96)),
+    radial-gradient(circle at top, rgba(131, 56, 236, 0.14), transparent 50%);
+  border: 1px solid rgba(177, 92, 255, 0.16);
+  box-shadow: 0 12px 28px rgba(4, 6, 18, 0.28);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s ease,
+    box-shadow 0.4s ease;
+}
+
+.home-purple .home-feature-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(177, 92, 255, 0.35);
+  box-shadow:
+    0 0 22px rgba(131, 56, 236, 0.18),
+    0 20px 40px rgba(4, 6, 18, 0.4);
+}
+
+.home-purple .home-feature-icon {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(131, 56, 236, 0.35), rgba(0, 217, 255, 0.22));
+  color: #ffffff;
+  border: 1px solid rgba(177, 92, 255, 0.25);
+  box-shadow: 0 6px 16px rgba(131, 56, 236, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.home-purple .home-feature-card:hover .home-feature-icon {
+  transform: scale(1.08);
+  box-shadow: 0 8px 22px rgba(131, 56, 236, 0.35);
+}
+
+.home-purple .home-feature-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #f8f5ff;
+}
+
+.home-purple .home-feature-card p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.7;
+  color: rgba(223, 228, 255, 0.82);
+}
+
+/* ── Contact Section Improvements ── */
+.home-purple .home-contact-section {
+  padding-block: clamp(2rem, 4vw, 3rem);
+}
+
+.home-purple .home-contact-wrapper {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.home-purple .home-contact-header {
+  text-align: center;
+}
+
+.home-purple .home-contact-header h2 {
+  margin: 0;
+  font-size: clamp(1.3rem, 2.2vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.25;
+  color: #f8f4ff;
+}
+
+.home-purple .home-contact-header p {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: rgba(230, 236, 255, 0.78);
+}
+
+.home-purple .home-contact-panel {
+  max-width: 640px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.home-purple .home-contact-panel-copy h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #f8f5ff;
+}
+
+.home-purple .home-contact-panel-copy p {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: rgba(223, 228, 255, 0.82);
+}
+
+.home-purple .home-contact-actions {
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.home-purple .home-contact-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* ── Features Responsive — Tablet ── */
+@media (max-width: 1024px) {
+  .home-purple .home-features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Features Responsive — Mobile ── */
+@media (max-width: 768px) {
+  .home-purple .home-features-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .home-purple .home-feature-card {
+    flex-direction: row;
+    text-align: start;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 0.85rem;
+  }
+
+  .home-purple .home-feature-icon {
+    flex-shrink: 0;
+  }
+}
+
+/* ── Reduced Motion for Features ── */
+@media (prefers-reduced-motion: reduce) {
+  .home-purple .home-feature-card,
+  .home-purple .home-feature-icon {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
   }
 }

@@ -1,5 +1,6 @@
 .heroRoot {
   position: relative;
+  overflow: hidden;
 }
 
 /* ── Inline Horizontal Row (Title | Description | Buttons) ── */
@@ -20,13 +21,14 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.15rem;
+  gap: 0.2rem;
   margin: 0;
-  font-size: clamp(1.5rem, 2.5vw, 2.25rem);
-  line-height: 1.15;
+  font-size: clamp(1.65rem, 2.8vw, 2.5rem);
+  line-height: 1.2;
   letter-spacing: var(--letter-spacing-tight);
   color: #f8f4ff;
   white-space: nowrap;
+  text-shadow: 0 2px 16px rgba(131, 56, 236, 0.18);
 }
 
 .heroInlineDesc {

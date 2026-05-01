@@ -4,7 +4,51 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { getStaggeredRevealDelay } from "@/lib/scrollRevealModel";
 
 /**
- * Renders the homepage contact showcase section below the hero.
+ * Feature highlight card for the homepage showcase.
+ *
+ * @param {{ icon: string, title: string, description: string, delayMs: number }} props
+ * @returns {JSX.Element}
+ */
+function FeatureCard({ icon, title, description, delayMs }) {
+  return (
+    <ScrollReveal variant="fade-up" delayMs={delayMs}>
+      <div className="home-feature-card">
+        <div className="home-feature-icon">
+          <AppIcon name={icon} size={22} />
+        </div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+    </ScrollReveal>
+  );
+}
+
+/** @type {Array<{icon: string, title: string, description: string}>} */
+const FEATURES = [
+  {
+    icon: "shield-check",
+    title: "ضمان الجودة",
+    description: "جميع المنتجات والخدمات مضمونة ومعتمدة بأعلى معايير الجودة.",
+  },
+  {
+    icon: "zap",
+    title: "تسليم فوري",
+    description: "خدمات رقمية تُسلّم فورياً وشحن سريع للمنتجات الفعلية.",
+  },
+  {
+    icon: "headphones",
+    title: "دعم فني متواصل",
+    description: "فريق دعم جاهز لمساعدتك على مدار الساعة عبر جميع القنوات.",
+  },
+  {
+    icon: "credit-card",
+    title: "دفع آمن",
+    description: "طرق دفع متعددة وآمنة تشمل البطاقات والمحافظ الإلكترونية.",
+  },
+];
+
+/**
+ * Renders the homepage showcase sections below the hero.
  *
  * @param {{
  *   socialLinks: Array<{ key: string, href: string, icon: string, label: string, description: string }>,
@@ -21,10 +65,37 @@ export default function HomeShowcaseSections({
   );
 
   return (
-    <section className="section alt home-contact-section" id="contact">
-      <div className="container">
-        <div className="techfix-contact-grid">
-          <div className="home-contact-main">
+    <>
+      {/* Features Section */}
+      <section className="section home-features-section" id="features">
+        <div className="container">
+          <ScrollReveal className="section-header home-features-header" variant="fade-up">
+            <span className="section-badge">
+              <AppIcon name="sparkles" size={14} />
+              لماذا TechZone؟
+            </span>
+            <h2>كل ما تحتاجه في مكان واحد</h2>
+            <p>منصة متكاملة للمنتجات والخدمات الرقمية بأفضل الأسعار.</p>
+          </ScrollReveal>
+
+          <div className="home-features-grid">
+            {FEATURES.map((feature, index) => (
+              <FeatureCard
+                key={feature.title}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                delayMs={getStaggeredRevealDelay(index, 80)}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="section alt home-contact-section" id="contact">
+        <div className="container">
+          <div className="home-contact-wrapper">
             <ScrollReveal className="section-header home-contact-header" variant="fade-up">
               <span className="section-badge">
                 <AppIcon name="message" size={14} />
@@ -33,8 +104,6 @@ export default function HomeShowcaseSections({
               <h2>قنوات سريعة للحجز والاستفسار ومتابعة الطلبات</h2>
               <p>اختر القناة المناسبة وسنوجهك إلى أسرع طريقة لخدمتك.</p>
             </ScrollReveal>
-
-
 
             <ScrollReveal variant="slide-in-right" delayMs={160}>
               <aside className="techfix-cta-panel home-contact-panel">
@@ -47,6 +116,7 @@ export default function HomeShowcaseSections({
 
                 <div className="hero-actions home-contact-actions">
                   <Link href="/contact" className="btn btn-secondary">
+                    <AppIcon name="mail" size={16} />
                     صفحة التواصل
                   </Link>
                   {whatsappSupportLink ? (
@@ -56,6 +126,7 @@ export default function HomeShowcaseSections({
                       target="_blank"
                       rel="noreferrer"
                     >
+                      <AppIcon name="message-circle" size={16} />
                       واتساب
                     </a>
                   ) : null}
@@ -64,7 +135,7 @@ export default function HomeShowcaseSections({
             </ScrollReveal>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
