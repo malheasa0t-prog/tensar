@@ -1,4 +1,2 @@
-/* SPA fallback — serve index.html for all routes */
-/* Static assets and API functions are served normally */
-/api/* /api/:splat 200
-/* /index.html 200
+# Cloudflare Pages serves unmatched routes to the SPA root by default.
+# API routes are handled by Pages Functions in /functions/api.

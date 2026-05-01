@@ -60,9 +60,8 @@ function escapeJsString(value) {
 /**
  * Builds the temporary admin gate page.
  *
- * The page checks whether a session exists. When it does, it validates the
- * session through the secured admin endpoint. When it does not, it still loads
- * the protected shell so the admin login overlay can be shown.
+ * The page checks whether a session exists, then validates it through the
+ * secured admin endpoint before loading the protected shell.
  *
  * @param {{ supabaseUrl: string, supabaseAnonKey: string }} config - Runtime config.
  * @returns {string} Complete HTML gate document.
@@ -98,10 +97,12 @@ body{margin:0;padding:0;font-family:system-ui,sans-serif;background:#0f172a;colo
 <div id="gateLoading"><div class="g-s"></div><div class="g-t" id="gateStatus">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642...</div></div>
 <div id="gateDenied" class="g-d"><div class="g-i">\u26D4</div><div class="g-t g-e" id="gateDeniedMsg"></div><a href="/" class="g-b">\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0631\u0626\u064A\u0633\u064A\u0629</a></div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.__tzAdminSupabaseLoaded=false;window.__tzAdminSupabaseLoadFailed=false;</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer onload="window.__tzAdminSupabaseLoaded=true" onerror="window.__tzAdminSupabaseLoadFailed=true"></script>
 <script>
 (function(){
 var U="${safeUrl}",K="${safeKey}",P="${safePanelPath}",S="${safeSessionRoute}";
+var ADMIN_LIBRARY_TIMEOUT_MS=5000,ADMIN_LIBRARY_POLL_MS=100;
 var statusNode=document.getElementById("gateStatus");
 var loadingNode=document.getElementById("gateLoading");
 var deniedNode=document.getElementById("gateDenied");
@@ -187,21 +188,31 @@ if(!U||!K){
   setMessage("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
   return;
 }
-if(!window.supabase||typeof window.supabase.createClient!=="function"){
-  setMessage("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644.");
-  return;
+function startAdminGate(){
+  var client=window.supabase.createClient(U,K);
+  client.auth.getSession()
+    .then(function(result){
+      var session=result&&result.data&&result.data.session;
+      if(!session||!session.access_token){
+        showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
+        return;
+      }
+      validateAdminSession(session.access_token);
+    })
+    .catch(function(){showDenied("\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062C\u0644\u0633\u0629.");});
 }
-var client=window.supabase.createClient(U,K);
-client.auth.getSession()
-  .then(function(result){
-    var session=result&&result.data&&result.data.session;
-    if(!session||!session.access_token){
-      showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
-      return;
-    }
-    validateAdminSession(session.access_token);
-  })
-  .catch(function(){showDenied("\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062C\u0644\u0633\u0629.");});
+function waitForSupabaseLibrary(startedAt){
+  if(window.supabase&&typeof window.supabase.createClient==="function"){
+    startAdminGate();
+    return;
+  }
+  if(window.__tzAdminSupabaseLoadFailed||Date.now()-startedAt>=ADMIN_LIBRARY_TIMEOUT_MS){
+    showDenied("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629.");
+    return;
+  }
+  window.setTimeout(function(){waitForSupabaseLibrary(startedAt);},ADMIN_LIBRARY_POLL_MS);
+}
+waitForSupabaseLibrary(Date.now());
 })();
 </script>
 </body>

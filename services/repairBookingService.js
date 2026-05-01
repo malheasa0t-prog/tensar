@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient.js";
+import { isMissingAuthSessionError } from "../lib/supabaseAuthError.js";
 
 const REPAIR_BOOKING_SAVE_ERROR = "[RBK-301] تعذر إرسال طلب الصيانة حالياً. حاول مرة أخرى.";
 const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات الحساب لحجز الصيانة.";
@@ -49,15 +50,16 @@ function shouldRetryWithoutUserId(error) {
 /**
  * Loads the authenticated account snapshot used to prefill the repair form.
  *
+ * @param {typeof supabase} [client]
  * @returns {Promise<{ userId: string, name: string, phone: string, isAccountPrefilled: boolean }>}
  */
-export async function getRepairBookingAccountSnapshot() {
+export async function getRepairBookingAccountSnapshot(client = supabase) {
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } = await client.auth.getUser();
 
-  if (userError) {
+  if (userError && !isMissingAuthSessionError(userError)) {
     console.error(`${REPAIR_BOOKING_PREFILL_ERROR} Failed to load authenticated user:`, userError);
   }
 
@@ -70,7 +72,7 @@ export async function getRepairBookingAccountSnapshot() {
     };
   }
 
-  const profileResponse = await supabase
+  const profileResponse = await client
     .from("user_profiles")
     .select("full_name, phone")
     .eq("user_id", user.id)

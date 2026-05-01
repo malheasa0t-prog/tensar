@@ -55,7 +55,12 @@ test("buildAdminGateHtml should validate access through the secured admin sessio
 
   assert.match(html, /\/api\/admin\/session/);
   assert.match(html, /\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642/);
-  assert.match(html, /if\(!token\)\{loadShell\(\);return;\}/);
+  assert.match(html, /supabase-js@2" defer/);
+  assert.match(html, /__tzAdminSupabaseLoadFailed/);
+  assert.match(html, /waitForSupabaseLibrary/);
+  assert.match(html, /if\(!token\)\{showDenied\(/);
+  assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>/);
+  assert.doesNotMatch(html, /if\(!token\)\{loadShell\(\);return;\}/);
   assert.doesNotMatch(html, MOJIBAKE_TRIGGER_PATTERN);
   assert.doesNotMatch(html, /user_profiles/);
   assert.doesNotMatch(html, /app_users/);

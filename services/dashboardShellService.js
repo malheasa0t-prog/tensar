@@ -3,6 +3,7 @@
  */
 
 import { supabase } from "../lib/supabaseClient.js";
+import { isMissingAuthSessionError } from "../lib/supabaseAuthError.js";
 
 /**
  * Fetches the authenticated dashboard user from Supabase auth.
@@ -17,6 +18,10 @@ export async function fetchDashboardSessionUser({ client = supabase } = {}) {
   } = await client.auth.getUser();
 
   if (error) {
+    if (isMissingAuthSessionError(error)) {
+      return null;
+    }
+
     throw new Error("[DSH-306] تعذر التحقق من جلسة المستخدم الحالية.");
   }
 

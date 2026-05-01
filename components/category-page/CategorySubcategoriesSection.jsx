@@ -8,6 +8,18 @@ import { getCategoryHref } from "@/lib/categoryPageModel";
 import styles from "./CategorySubcategoriesSection.module.css";
 
 /**
+ * Returns a trusted image source for a category card.
+ *
+ * @param {Record<string, unknown>} subCategory - Category row from Supabase.
+ * @returns {string} Renderable image source, or an empty string for icon fallback.
+ */
+function getRenderableSubCategoryImage(subCategory) {
+  const image = typeof subCategory.image === "string" ? subCategory.image.trim() : "";
+
+  return isOptimizableImageSrc(image) ? image : "";
+}
+
+/**
  * Lists subcategories for a main category.
  *
  * @param {{
@@ -40,12 +52,15 @@ export default function CategorySubcategoriesSection({
         </div>
 
         <div className="balanced-card-grid">
-          {subCategories.map((subCategory, index) => (
-            <ScrollReveal
-              key={subCategory.id}
-              variant="slide-in-right"
-              delayMs={getStaggeredRevealDelay(index, 85)}
-            >
+          {subCategories.map((subCategory, index) => {
+            const image = getRenderableSubCategoryImage(subCategory);
+
+            return (
+              <ScrollReveal
+                key={subCategory.id}
+                variant="slide-in-right"
+                delayMs={getStaggeredRevealDelay(index, 85)}
+              >
               <Link
                 href={getCategoryHref(subCategory)}
                 className={`surface-card category-section-card ${styles.card}`}
@@ -53,15 +68,15 @@ export default function CategorySubcategoriesSection({
                 <div
                   className={styles.mediaFrame}
                 >
-                  {subCategory.image ? (
+                  {image ? (
                     <Image
-                      src={subCategory.image}
+                      src={image}
                       alt={subCategory.name}
                       fill
                       loading="lazy"
                       quality={80}
                       sizes="(max-width: 700px) min(100vw - 3rem, 320px), 280px"
-                      unoptimized={!isOptimizableImageSrc(subCategory.image)}
+                      unoptimized={!isOptimizableImageSrc(image)}
                       className={styles.mediaImage}
                     />
                   ) : (
@@ -84,8 +99,9 @@ export default function CategorySubcategoriesSection({
                   {subCategoryProductsCount[subCategory.id] || 0} عنصر
                 </span>
               </Link>
-            </ScrollReveal>
-          ))}
+              </ScrollReveal>
+            );
+          })}
         </div>
       </div>
     </ScrollReveal>

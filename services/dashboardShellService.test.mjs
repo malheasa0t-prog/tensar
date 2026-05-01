@@ -105,6 +105,19 @@ test("fetchDashboardSessionUser should throw a stable error when auth lookup fai
   );
 });
 
+test("fetchDashboardSessionUser should return null when auth session is missing", async () => {
+  const result = await fetchDashboardSessionUser({
+    client: createDashboardShellClient({
+      authError: {
+        message: "Auth session missing!",
+        name: "AuthSessionMissingError",
+      },
+    }),
+  });
+
+  assert.equal(result, null);
+});
+
 test("fetchDashboardProfile should return the profile snapshot when it exists", async () => {
   const result = await fetchDashboardProfile({
     client: createDashboardShellClient({ profile: { full_name: "Ali" } }),
