@@ -17,6 +17,21 @@ import { resolveMobileMenuIcon } from "@/lib/mobileMenuModel";
 const GlobalSearchOverlay = lazy(() => import("./GlobalSearchOverlay"));
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
+const DESKTOP_SIDEBAR_MEDIA_QUERY = "(min-width: 1024px)";
+const HEADER_SCROLL_THRESHOLD_PX = 60;
+
+/**
+ * Determines whether the header should use the compact scrolled state.
+ *
+ * @returns {boolean}
+ */
+function shouldCompactHeaderOnScroll() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+
+  return !window.matchMedia(DESKTOP_SIDEBAR_MEDIA_QUERY).matches;
+}
 
 /**
  * Main public site header with dynamic navigation and quick actions.
@@ -44,12 +59,32 @@ export default function SiteHeader() {
 
   useEffect(() => {
     function handleHeaderScroll() {
-      setScrolled(window.scrollY > 60);
+      if (!shouldCompactHeaderOnScroll()) {
+        setScrolled(false);
+        return;
+      }
+
+      setScrolled(window.scrollY > HEADER_SCROLL_THRESHOLD_PX);
     }
+
+    const desktopSidebarQuery = window.matchMedia(DESKTOP_SIDEBAR_MEDIA_QUERY);
 
     handleHeaderScroll();
     window.addEventListener("scroll", handleHeaderScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleHeaderScroll);
+
+    if (typeof desktopSidebarQuery.addEventListener === "function") {
+      desktopSidebarQuery.addEventListener("change", handleHeaderScroll);
+      return () => {
+        window.removeEventListener("scroll", handleHeaderScroll);
+        desktopSidebarQuery.removeEventListener("change", handleHeaderScroll);
+      };
+    }
+
+    desktopSidebarQuery.addListener(handleHeaderScroll);
+    return () => {
+      window.removeEventListener("scroll", handleHeaderScroll);
+      desktopSidebarQuery.removeListener(handleHeaderScroll);
+    };
   }, []);
 
   useEffect(() => {
