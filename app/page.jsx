@@ -9,6 +9,8 @@
 
 import { useState, useEffect } from 'react';
 import '@/app/techfix-pages.css';
+import '@/app/techfix-neon.css';
+import '@/app/techfix-neon-effects.css';
 import '@/app/techfix-home-purple.css';
 import HomeHeroSection from '@/components/home/HomeHeroSection';
 import HomeShowcaseSections from '@/components/home/HomeShowcaseSections';

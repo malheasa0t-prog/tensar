@@ -1,13 +1,14 @@
-import { supabase } from '@/lib/supabaseClient';
 import { slugifyArabic } from '@/lib/categoryPageModel';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 /**
  * Loads a category either by its raw id or normalized slug.
  *
  * @param {string} routeValue
+ * @param {Record<string, unknown>} supabase
  * @returns {Promise<Record<string, unknown> | null>}
  */
-async function findCategory(routeValue) {
+async function findCategory(routeValue, supabase) {
   let decodedValue = String(routeValue || '').trim();
 
   try {
@@ -45,9 +46,10 @@ async function findCategory(routeValue) {
  * Counts active products and services for the provided subcategory ids.
  *
  * @param {string[]} subCategoryIds
+ * @param {Record<string, unknown>} supabase
  * @returns {Promise<Record<string, number>>}
  */
-async function loadSubCategoryItemCounts(subCategoryIds) {
+async function loadSubCategoryItemCounts(subCategoryIds, supabase) {
   if (!subCategoryIds.length) {
     return {};
   }
@@ -102,7 +104,8 @@ export async function loadCategoryPageSnapshot(routeValue) {
     };
   }
 
-  const category = await findCategory(routeValue);
+  const supabase = await loadSupabaseClient();
+  const category = await findCategory(routeValue, supabase);
   if (!category) {
     return {
       error: true,
@@ -169,7 +172,7 @@ export async function loadCategoryPageSnapshot(routeValue) {
 
   const subCategories = subCategoriesResponse.data || [];
   const subCategoryProductsCount = !category.parent_id
-    ? await loadSubCategoryItemCounts(subCategories.map((subCategory) => subCategory.id))
+    ? await loadSubCategoryItemCounts(subCategories.map((subCategory) => subCategory.id), supabase)
     : {};
 
   return {

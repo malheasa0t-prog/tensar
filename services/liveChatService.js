@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient.js';
+import { loadSupabaseClient } from '../lib/loadSupabaseClient.js';
 import {
   LIVE_CHAT_OPEN_STATUS,
   LIVE_CHAT_ERROR_MESSAGES,
@@ -19,11 +19,12 @@ const LIVE_CHAT_READ_SYNC_ERROR = '[LCH-306] تعذر تحديث حالة الر
 /**
  * Loads the authenticated user and the best matching profile data for live chat.
  *
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ user: Record<string, unknown> | null, profile: Record<string, unknown> | null, error: string }>}
  */
-export async function getLiveChatAuthSnapshot(client = supabase) {
-  const authResponse = await client.auth.getUser();
+export async function getLiveChatAuthSnapshot(client) {
+  const resolvedClient = client || await loadSupabaseClient();
+  const authResponse = await resolvedClient.auth.getUser();
   const user = authResponse?.data?.user || null;
 
   if (!user) {
@@ -31,8 +32,8 @@ export async function getLiveChatAuthSnapshot(client = supabase) {
   }
 
   const [profileResponse, legacyResponse] = await Promise.all([
-    client.from('user_profiles').select('full_name, phone').eq('user_id', user.id).maybeSingle(),
-    client.from('app_users').select('full_name, phone, email').eq('auth_user_id', user.id).maybeSingle(),
+    resolvedClient.from('user_profiles').select('full_name, phone').eq('user_id', user.id).maybeSingle(),
+    resolvedClient.from('app_users').select('full_name, phone, email').eq('auth_user_id', user.id).maybeSingle(),
   ]);
 
   return {
@@ -50,15 +51,16 @@ export async function getLiveChatAuthSnapshot(client = supabase) {
  * Fetches the latest customer conversation.
  *
  * @param {string} userId
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ conversation: Record<string, unknown> | null, error: string }>}
  */
-export async function fetchLatestCustomerConversation(userId, client = supabase) {
+export async function fetchLatestCustomerConversation(userId, client) {
   if (!userId) {
     return { conversation: null, error: '' };
   }
 
-  const response = await client
+  const resolvedClient = client || await loadSupabaseClient();
+  const response = await resolvedClient
     .from('support_conversations')
     .select('*')
     .eq('user_id', userId)
@@ -76,15 +78,16 @@ export async function fetchLatestCustomerConversation(userId, client = supabase)
  * Fetches all messages for a conversation in chronological order.
  *
  * @param {string} conversationId
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ messages: Array<Record<string, unknown>>, error: string }>}
  */
-export async function fetchConversationMessages(conversationId, client = supabase) {
+export async function fetchConversationMessages(conversationId, client) {
   if (!conversationId) {
     return { messages: [], error: '' };
   }
 
-  const response = await client
+  const resolvedClient = client || await loadSupabaseClient();
+  const response = await resolvedClient
     .from('support_chat_messages')
     .select('*')
     .eq('conversation_id', conversationId)
@@ -100,17 +103,18 @@ export async function fetchConversationMessages(conversationId, client = supabas
  * Ensures the customer has an open conversation ready for the next message.
  *
  * @param {{ user: Record<string, unknown>, profile?: Record<string, unknown> | null }} input
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ conversation: Record<string, unknown> | null, error: string }>}
  */
-export async function ensureCustomerConversation(input, client = supabase) {
+export async function ensureCustomerConversation(input, client) {
+  const resolvedClient = client || await loadSupabaseClient();
   const userId = String(input?.user?.id || '').trim();
 
   if (!userId) {
     return { conversation: null, error: LIVE_CHAT_LOGIN_REQUIRED_ERROR };
   }
 
-  const existingResponse = await client
+  const existingResponse = await resolvedClient
     .from('support_conversations')
     .select('*')
     .eq('user_id', userId)
@@ -124,7 +128,7 @@ export async function ensureCustomerConversation(input, client = supabase) {
   }
 
   const payload = buildLiveChatConversationPayload(input);
-  const createResponse = await client
+  const createResponse = await resolvedClient
     .from('support_conversations')
     .insert([payload])
     .select('*')
@@ -140,17 +144,18 @@ export async function ensureCustomerConversation(input, client = supabase) {
  * Inserts a customer message and refreshes the conversation metadata.
  *
  * @param {{ user: Record<string, unknown>, profile?: Record<string, unknown> | null, conversation?: Record<string, unknown> | null, body: unknown }} input
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{ conversation: Record<string, unknown> | null, message: Record<string, unknown> | null, error: string }>}
  */
-export async function sendCustomerChatMessage(input, client = supabase) {
+export async function sendCustomerChatMessage(input, client) {
+  const resolvedClient = client || await loadSupabaseClient();
   const user = input?.user || null;
   const profile = resolveLiveChatProfile({ user, profile: input?.profile });
   const conversationState = input?.conversation;
   const hasOpenConversation = conversationState?.id && conversationState?.status === LIVE_CHAT_OPEN_STATUS;
   const ensuredConversation = hasOpenConversation
     ? { conversation: conversationState, error: '' }
-    : await ensureCustomerConversation({ user, profile }, client);
+    : await ensureCustomerConversation({ user, profile }, resolvedClient);
 
   if (ensuredConversation.error || !ensuredConversation.conversation) {
     return { conversation: null, message: null, error: ensuredConversation.error || LIVE_CHAT_OPEN_ERROR };
@@ -173,7 +178,7 @@ export async function sendCustomerChatMessage(input, client = supabase) {
     };
   }
 
-  const insertResponse = await client
+  const insertResponse = await resolvedClient
     .from('support_chat_messages')
     .insert([messagePayload])
     .select('*')
@@ -183,7 +188,7 @@ export async function sendCustomerChatMessage(input, client = supabase) {
     return { conversation: ensuredConversation.conversation, message: null, error: LIVE_CHAT_SEND_ERROR };
   }
 
-  const updateResponse = await client
+  const updateResponse = await resolvedClient
     .from('support_conversations')
     .update(buildLiveChatConversationUpdate({ body: input?.body, senderRole: 'customer' }))
     .eq('id', ensuredConversation.conversation.id)
@@ -201,15 +206,16 @@ export async function sendCustomerChatMessage(input, client = supabase) {
  * Marks unseen admin replies as read for the customer.
  *
  * @param {string} conversationId
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<string>}
  */
-export async function markAdminRepliesAsRead(conversationId, client = supabase) {
+export async function markAdminRepliesAsRead(conversationId, client) {
   if (!conversationId) {
     return '';
   }
 
-  const response = await client
+  const resolvedClient = client || await loadSupabaseClient();
+  const response = await resolvedClient
     .from('support_chat_messages')
     .update({ is_read_by_customer: true })
     .eq('conversation_id', conversationId)
@@ -224,26 +230,65 @@ export async function markAdminRepliesAsRead(conversationId, client = supabase) 
  *
  * @param {string} userId
  * @param {() => void} onChange
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {() => void}
  */
-export function subscribeToCustomerConversations(userId, onChange, client = supabase) {
+export function subscribeToCustomerConversations(userId, onChange, client) {
   if (!userId || typeof onChange !== 'function') {
     return () => {};
   }
 
-  const channel = client
-    .channel(`live-chat-conversations-${userId}`)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'support_conversations',
-      filter: `user_id=eq.${userId}`,
-    }, onChange)
-    .subscribe();
+  if (client) {
+    const channel = client
+      .channel(`live-chat-conversations-${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'support_conversations',
+        filter: `user_id=eq.${userId}`,
+      }, onChange)
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }
+
+  let active = true;
+  let cleanup = () => {};
+
+  /**
+   * Attaches the customer conversation channel after loading Supabase.
+   *
+   * @returns {Promise<void>}
+   */
+  async function attachChannel() {
+    const resolvedClient = await loadSupabaseClient();
+
+    if (!active) {
+      return;
+    }
+
+    const channel = resolvedClient
+      .channel(`live-chat-conversations-${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'support_conversations',
+        filter: `user_id=eq.${userId}`,
+      }, onChange)
+      .subscribe();
+
+    cleanup = () => {
+      resolvedClient.removeChannel(channel);
+    };
+  }
+
+  void attachChannel();
 
   return () => {
-    client.removeChannel(channel);
+    active = false;
+    cleanup();
   };
 }
 
@@ -252,25 +297,64 @@ export function subscribeToCustomerConversations(userId, onChange, client = supa
  *
  * @param {string} conversationId
  * @param {() => void} onChange
- * @param {typeof supabase} [client=supabase]
+ * @param {Record<string, unknown>} [client]
  * @returns {() => void}
  */
-export function subscribeToConversationMessages(conversationId, onChange, client = supabase) {
+export function subscribeToConversationMessages(conversationId, onChange, client) {
   if (!conversationId || typeof onChange !== 'function') {
     return () => {};
   }
 
-  const channel = client
-    .channel(`live-chat-messages-${conversationId}`)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'support_chat_messages',
-      filter: `conversation_id=eq.${conversationId}`,
-    }, onChange)
-    .subscribe();
+  if (client) {
+    const channel = client
+      .channel(`live-chat-messages-${conversationId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'support_chat_messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, onChange)
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }
+
+  let active = true;
+  let cleanup = () => {};
+
+  /**
+   * Attaches the conversation messages channel after loading Supabase.
+   *
+   * @returns {Promise<void>}
+   */
+  async function attachChannel() {
+    const resolvedClient = await loadSupabaseClient();
+
+    if (!active) {
+      return;
+    }
+
+    const channel = resolvedClient
+      .channel(`live-chat-messages-${conversationId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'support_chat_messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, onChange)
+      .subscribe();
+
+    cleanup = () => {
+      resolvedClient.removeChannel(channel);
+    };
+  }
+
+  void attachChannel();
 
   return () => {
-    client.removeChannel(channel);
+    active = false;
+    cleanup();
   };
 }

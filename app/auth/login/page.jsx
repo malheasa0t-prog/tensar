@@ -10,6 +10,7 @@ import AuthProviderButton from '@/components/auth/AuthProviderButton';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
 import { getPostAuthDestination, syncProfileFromAuthUser } from '@/lib/authProfileSync';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
   AUTH_SOCIAL_PROVIDERS,
   LOGIN_EXPERIENCE_PANEL,
@@ -17,7 +18,6 @@ import {
   mapOAuthProviderError,
   validateLoginForm,
 } from '@/lib/loginPageModel';
-import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Renders the account login page and starts email or OAuth authentication.
@@ -65,6 +65,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
+    const supabase = await loadSupabaseClient();
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -95,6 +96,7 @@ export default function LoginPage() {
     setActiveProvider(provider);
     setError('');
 
+    const supabase = await loadSupabaseClient();
     const { error: providerError } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}/auth/callback` },

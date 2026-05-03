@@ -3,8 +3,8 @@
  */
 
 import { normalizeFavoriteIds } from "../lib/favoritesModel.js";
+import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 import { mapProductsExplorerProduct } from "../lib/productsExplorerModel.js";
-import { supabase } from "../lib/supabaseClient.js";
 
 const FAVORITE_PRODUCTS_SELECT_FIELDS =
   "id,name,price,discount_price,images,status,quantity,category_id,icon,brand,description,rating,review_count,reviews_count,sold,product_type,created_at";
@@ -14,17 +14,18 @@ const FAVORITES_CATEGORY_FALLBACK = "منتجات عامة";
 /**
  * Loads live product snapshots for the saved favorite ids.
  *
- * @param {{ client?: typeof supabase, productIds: Array<unknown> }} input
+ * @param {{ client?: Record<string, unknown>, productIds: Array<unknown> }} input
  * @returns {Promise<Array<Record<string, unknown>>>}
  * @throws {Error}
  */
-export async function fetchFavoriteProductSnapshots({ client = supabase, productIds }) {
+export async function fetchFavoriteProductSnapshots({ client, productIds }) {
   const normalizedIds = normalizeFavoriteIds(productIds);
   if (normalizedIds.length === 0) {
     return [];
   }
 
-  const response = await client
+  const resolvedClient = client || await loadSupabaseClient();
+  const response = await resolvedClient
     .from("products")
     .select(FAVORITE_PRODUCTS_SELECT_FIELDS)
     .in("id", normalizedIds)
@@ -40,17 +41,18 @@ export async function fetchFavoriteProductSnapshots({ client = supabase, product
 /**
  * Loads the visible category names for the provided favorite products.
  *
- * @param {{ categoryIds: Array<unknown>, client?: typeof supabase }} input
+ * @param {{ categoryIds: Array<unknown>, client?: Record<string, unknown> }} input
  * @returns {Promise<Record<string, string>>}
  * @throws {Error}
  */
-export async function fetchFavoriteCategoryMap({ categoryIds, client = supabase }) {
+export async function fetchFavoriteCategoryMap({ categoryIds, client }) {
   const normalizedIds = normalizeFavoriteIds(categoryIds);
   if (normalizedIds.length === 0) {
     return {};
   }
 
-  const response = await client
+  const resolvedClient = client || await loadSupabaseClient();
+  const response = await resolvedClient
     .from("categories")
     .select("id,name")
     .in("id", normalizedIds)

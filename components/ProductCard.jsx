@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { ArrowRight, Bell, Check, Heart, RefreshCw, ShoppingCart } from "lucide-react";
 import { useCart } from "./CartProvider";
 import { useComparison } from "./ComparisonProvider";
@@ -52,7 +52,7 @@ function buildCardActionState({ cartFeedbackActive, isOutOfStock, stockAlertActi
   };
 }
 
-export default function ProductCard({ layout = "grid", product, revealIndex = 0 }) {
+const ProductCard = memo(function ProductCard({ layout = "grid", product, revealIndex = 0 }) {
   const { addToCart, openSidebar } = useCart();
   const { isCompared, toggleCompare } = useComparison();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -301,4 +301,6 @@ export default function ProductCard({ layout = "grid", product, revealIndex = 0 
       </div>
     </article>
   );
-}
+});
+
+export default ProductCard;

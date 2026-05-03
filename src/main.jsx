@@ -11,11 +11,9 @@ import AppRouter from './router';
 import { registerServiceWorker } from '@/lib/serviceWorkerRegistration';
 
 import '@/app/globals.css';
-import '@/app/site.css';
 import '@/app/techfix-layout.css';
 import '@/app/techfix-tokens.css';
-import '@/app/techfix-neon.css';
-import '@/app/techfix-neon-effects.css';
+import '@/app/techfix-support.css';
 import '@/app/techfix-footer.css';
 import '@/app/techfix-sidebar-layout.css';
 

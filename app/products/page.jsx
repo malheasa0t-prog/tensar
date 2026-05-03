@@ -10,13 +10,15 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import '@/app/techfix-pages.css';
+import '@/app/techfix-neon.css';
+import '@/app/techfix-neon-effects.css';
 import PageSectionBreadcrumbs from '@/components/PageSectionBreadcrumbs';
 import ProductsExplorerClient from '@/components/ProductsExplorerClient';
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import Link from 'next/link';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { mapProductsExplorerProduct } from '@/lib/productsExplorerModel';
-import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Renders the products explorer page with filtering and search.
@@ -36,6 +38,7 @@ export default function ProductsPage() {
 
     async function loadData() {
       try {
+        const supabase = await loadSupabaseClient();
         const [productsResult, categoriesResult] = await Promise.all([
           supabase.from('products').select('*').in('status', ['active', 'out_of_stock']),
           supabase.from('categories').select('id, name').eq('status', 'active'),

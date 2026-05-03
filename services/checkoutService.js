@@ -1,6 +1,6 @@
-import { supabase } from '@/lib/supabaseClient';
 import { normalizeSiteSettings } from '@/lib/contactChannels';
 import { buildCheckoutRequestPayload } from '@/lib/checkoutRequestPayload';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { loadSiteSettingsClient } from '@/lib/siteSettingsClient';
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
@@ -45,6 +45,7 @@ export async function fetchCheckoutOptions() {
  * @returns {Promise<Record<string, unknown>>}
  */
 export async function submitCheckoutOrder({ items, form }) {
+  const supabase = await loadSupabaseClient();
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
 

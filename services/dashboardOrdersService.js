@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 const PRODUCT_ORDERS_LOAD_ERROR = '[DOR-301] تعذر تحميل طلبات المنتجات';
 const REPAIR_BOOKINGS_LOAD_ERROR = '[DOR-303] تعذر تحميل بعض حجوزات الصيانة';
@@ -6,9 +6,10 @@ const REPAIR_BOOKINGS_LOAD_ERROR = '[DOR-303] تعذر تحميل بعض حجو�
 /**
  * Loads the current signed-in user and profile snapshot used by the dashboard orders page.
  *
+ * @param {Record<string, unknown>} supabase
  * @returns {Promise<{ user: any, profile: { full_name?: string, phone?: string } | null, userEmail: string, profilePhone: string }>}
  */
-async function getDashboardOrdersIdentity() {
+async function getDashboardOrdersIdentity(supabase) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -41,6 +42,7 @@ async function getDashboardOrdersIdentity() {
 /**
  * Loads product orders and their nested order items for the signed-in customer.
  *
+ * @param {Record<string, unknown>} supabase
  * @param {string} userId
  * @returns {Promise<{
  *   orders: Array<Record<string, unknown>>,
@@ -48,7 +50,7 @@ async function getDashboardOrdersIdentity() {
  *   error: { message?: string } | null
  * }>}
  */
-async function getProductOrdersSnapshot(userId) {
+async function getProductOrdersSnapshot(supabase, userId) {
   const ordersResponse = await supabase
     .from('orders')
     .select('*')
@@ -88,10 +90,11 @@ async function getProductOrdersSnapshot(userId) {
 /**
  * Loads repair bookings linked to the user directly, by email, or by phone.
  *
+ * @param {Record<string, unknown>} supabase
  * @param {{ userId: string, userEmail: string, profilePhone: string }} params
  * @returns {Promise<{ bookings: Array<Record<string, unknown>>, error: boolean }>}
  */
-async function getRepairBookingsSnapshot({ userId, userEmail, profilePhone }) {
+async function getRepairBookingsSnapshot(supabase, { userId, userEmail, profilePhone }) {
   const queries = [
     supabase
       .from('repair_bookings')
@@ -151,7 +154,8 @@ async function getRepairBookingsSnapshot({ userId, userEmail, profilePhone }) {
  * }>}
  */
 export async function loadDashboardOrdersSnapshot() {
-  const identity = await getDashboardOrdersIdentity();
+  const supabase = await loadSupabaseClient();
+  const identity = await getDashboardOrdersIdentity(supabase);
 
   if (!identity.user) {
     return {
@@ -165,8 +169,8 @@ export async function loadDashboardOrdersSnapshot() {
   }
 
   const [productOrdersSnapshot, repairBookingsSnapshot] = await Promise.all([
-    getProductOrdersSnapshot(identity.user.id),
-    getRepairBookingsSnapshot({
+    getProductOrdersSnapshot(supabase, identity.user.id),
+    getRepairBookingsSnapshot(supabase, {
       userId: identity.user.id,
       userEmail: identity.userEmail,
       profilePhone: identity.profilePhone,
@@ -195,18 +199,45 @@ export async function loadDashboardOrdersSnapshot() {
  * @returns {() => void}
  */
 export function subscribeToDashboardOrders(onChange) {
-  const channels = [
-    supabase
-      .channel('dashboard-orders-products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, onChange)
-      .subscribe(),
-    supabase
-      .channel('dashboard-orders-repairs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'repair_bookings' }, onChange)
-      .subscribe(),
-  ];
+  if (typeof onChange !== 'function') {
+    return () => {};
+  }
+
+  let active = true;
+  let cleanup = () => {};
+
+  /**
+   * Attaches the realtime order channels after loading Supabase.
+   *
+   * @returns {Promise<void>}
+   */
+  async function attachChannels() {
+    const supabase = await loadSupabaseClient();
+
+    if (!active) {
+      return;
+    }
+
+    const channels = [
+      supabase
+        .channel('dashboard-orders-products')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, onChange)
+        .subscribe(),
+      supabase
+        .channel('dashboard-orders-repairs')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'repair_bookings' }, onChange)
+        .subscribe(),
+    ];
+
+    cleanup = () => {
+      channels.forEach((channel) => supabase.removeChannel(channel));
+    };
+  }
+
+  void attachChannels();
 
   return () => {
-    channels.forEach((channel) => supabase.removeChannel(channel));
+    active = false;
+    cleanup();
   };
 }

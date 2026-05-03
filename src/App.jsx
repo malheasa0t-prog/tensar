@@ -19,8 +19,47 @@ import { fetchHeaderSnapshot } from '@/services/headerService';
 const AiChatbot = lazy(() => import('@/components/AiChatbot'));
 const SITE_SKIP_LINK_LABEL =
   '\u062A\u062C\u0627\u0648\u0632 \u0625\u0644\u0649 \u0627\u0644\u0645\u062D\u062A\u0648\u0649';
-const SITE_DATA_IDLE_TIMEOUT_MS = 1500;
-const SITE_DATA_FALLBACK_TIMEOUT_MS = 180;
+const SITE_DATA_IDLE_TIMEOUT_MS = 500;
+const SITE_DATA_FALLBACK_TIMEOUT_MS = 50;
+const CHATBOT_IDLE_TIMEOUT_MS = 3000;
+
+/**
+ * Enables the chatbot after the first navigation-critical work settles.
+ *
+ * @returns {boolean}
+ */
+function useDeferredChatbotEnabled() {
+  const [chatbotEnabled, setChatbotEnabled] = useState(false);
+
+  useEffect(() => {
+    let idleCallbackId = 0;
+    let timeoutId = 0;
+
+    function enableChatbot() {
+      setChatbotEnabled(true);
+    }
+
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleCallbackId = window.requestIdleCallback(enableChatbot, {
+        timeout: CHATBOT_IDLE_TIMEOUT_MS,
+      });
+    } else {
+      timeoutId = window.setTimeout(enableChatbot, CHATBOT_IDLE_TIMEOUT_MS);
+    }
+
+    return () => {
+      if (idleCallbackId && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
+  return chatbotEnabled;
+}
 
 /**
  * Root application component that manages global state and layout.
@@ -30,6 +69,7 @@ const SITE_DATA_FALLBACK_TIMEOUT_MS = 180;
 export default function App() {
   const [siteSettings, setSiteSettings] = useState(() => normalizeSiteSettings());
   const [dynamicLinks, setDynamicLinks] = useState([]);
+  const chatbotEnabled = useDeferredChatbotEnabled();
   const location = useLocation();
   const errorBoundaryResetKey = `${location.pathname}${location.search}`;
 
@@ -89,7 +129,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }, [location.pathname]);
 
   return (
@@ -111,9 +151,11 @@ export default function App() {
             </PageTransitionShell>
           </main>
           <SiteFooter siteSettings={siteSettings} />
-          <Suspense fallback={null}>
-            <AiChatbot />
-          </Suspense>
+          {chatbotEnabled ? (
+            <Suspense fallback={null}>
+              <AiChatbot />
+            </Suspense>
+          ) : null}
         </ClientProviders>
       </div>
     </ErrorBoundary>

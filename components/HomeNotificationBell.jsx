@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { loadSupabaseClient } from "@/lib/loadSupabaseClient";
 
 function getUnreadLabel(count) {
   if (count <= 0) return "لا توجد إشعارات جديدة";
@@ -20,8 +20,11 @@ export default function HomeNotificationBell() {
   useEffect(() => {
     let mounted = true;
     let refreshInterval = null;
+    let unsubscribe = () => {};
 
     async function loadUnreadCount(userId) {
+      const supabase = await loadSupabaseClient();
+
       if (!userId) {
         if (mounted) setUnreadCount(0);
         return;
@@ -39,6 +42,7 @@ export default function HomeNotificationBell() {
     }
 
     async function init() {
+      const supabase = await loadSupabaseClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -63,30 +67,47 @@ export default function HomeNotificationBell() {
 
     init();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const sessionUser = session?.user || null;
+    /**
+     * Attaches the auth listener after Supabase is available.
+     *
+     * @returns {Promise<void>}
+     */
+    async function attachAuthListener() {
+      const supabase = await loadSupabaseClient();
 
-      if (!sessionUser) {
-        if (mounted) {
-          setIsAuthenticated(false);
-          setUnreadCount(0);
-          setAuthLoading(false);
-        }
+      if (!mounted) {
         return;
       }
 
-      if (mounted) {
-        setIsAuthenticated(true);
-        setAuthLoading(false);
-      }
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const sessionUser = session?.user || null;
 
-      await loadUnreadCount(sessionUser.id);
-    });
+        if (!sessionUser) {
+          if (mounted) {
+            setIsAuthenticated(false);
+            setUnreadCount(0);
+            setAuthLoading(false);
+          }
+          return;
+        }
+
+        if (mounted) {
+          setIsAuthenticated(true);
+          setAuthLoading(false);
+        }
+
+        await loadUnreadCount(sessionUser.id);
+      });
+
+      unsubscribe = () => subscription.unsubscribe();
+    }
+
+    void attachAuthListener();
 
     function handleNotificationsUpdated() {
-      supabase.auth.getUser().then(({ data }) => {
+      loadSupabaseClient().then((supabase) => supabase.auth.getUser()).then(({ data }) => {
         const currentUser = data?.user;
         if (currentUser) {
           loadUnreadCount(currentUser.id);
@@ -98,7 +119,7 @@ export default function HomeNotificationBell() {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
       if (refreshInterval) {
         window.clearInterval(refreshInterval);
       }

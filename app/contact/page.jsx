@@ -9,6 +9,8 @@
 
 import { useState, useEffect } from 'react';
 import '@/app/techfix-pages.css';
+import '@/app/techfix-neon.css';
+import '@/app/techfix-neon-effects.css';
 import Link from 'next/link';
 import AppIcon from '@/components/AppIcon';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';

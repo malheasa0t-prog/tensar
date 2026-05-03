@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 /**
  * Retrieves the current access token from Supabase auth.
@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
  * @returns {Promise<string | null>}
  */
 export async function getProfileAccessToken() {
+  const supabase = await loadSupabaseClient();
   const { data } = await supabase.auth.getSession();
   return data?.session?.access_token || null;
 }

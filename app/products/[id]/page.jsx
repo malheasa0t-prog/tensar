@@ -14,16 +14,17 @@ import ProductPurchaseActions from '@/components/ProductPurchaseActions';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { buildProductStructuredData } from '@/lib/seo';
-import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Attempts to find an active product by id.
  *
  * @param {string} id
+ * @param {Record<string, unknown>} supabase
  * @returns {Promise<Record<string, unknown> | null>}
  */
-async function findItem(id) {
+async function findItem(id, supabase) {
   if (id?.startsWith('srv-')) {
     const { data: service } = await supabase
       .from('services')
@@ -147,7 +148,8 @@ export default function ProductDetailPage() {
 
     async function loadProduct() {
       try {
-        const item = await findItem(id);
+        const supabase = await loadSupabaseClient();
+        const item = await findItem(id, supabase);
 
         if (cancelled) return;
 

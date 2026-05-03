@@ -16,8 +16,8 @@ import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { buildServiceStructuredData } from '@/lib/seo';
-import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Generates a simple Arabic slug from text.
@@ -40,9 +40,21 @@ function slugifyArabic(text) {
  * Finds an active repair service by slug or id.
  *
  * @param {string} slug
+ * @param {Record<string, unknown>} supabase
  * @returns {Promise<Record<string, unknown> | null>}
  */
-async function findActiveServiceBySlug(slug) {
+async function findActiveServiceBySlug(slug, supabase) {
+  const serviceByIdResponse = await supabase
+    .from('repair_services')
+    .select('*')
+    .eq('id', slug)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (serviceByIdResponse.data || serviceByIdResponse.error) {
+    return serviceByIdResponse.data || null;
+  }
+
   const { data, error } = await supabase
     .from('repair_services')
     .select('*')
@@ -68,7 +80,8 @@ export default function ServiceDetailsPage() {
 
     async function loadService() {
       try {
-        const found = await findActiveServiceBySlug(slug);
+        const supabase = await loadSupabaseClient();
+        const found = await findActiveServiceBySlug(slug, supabase);
         if (cancelled) return;
 
         if (!found) {

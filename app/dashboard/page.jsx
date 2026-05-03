@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
 import { filterVisibleNotifications } from '@/lib/dashboardNotificationsModel';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 /**
  * Loads the dashboard summary snapshot for the current user.
  *
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{
  *   userId: string,
  *   recentOrders: Array<Record<string, unknown>>,
  *   notifications: Array<Record<string, unknown>>,
  * }>}
  */
-async function fetchDashboardHomeSnapshot() {
+async function fetchDashboardHomeSnapshot(client) {
+  const supabase = client || await loadSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -60,7 +62,8 @@ export default function DashboardHome() {
     let cleanupNotifications = () => {};
 
     async function refreshSnapshot() {
-      const snapshot = await fetchDashboardHomeSnapshot();
+      const supabase = await loadSupabaseClient();
+      const snapshot = await fetchDashboardHomeSnapshot(supabase);
 
       if (!active) {
         return null;
@@ -74,6 +77,7 @@ export default function DashboardHome() {
     }
 
     async function initialize() {
+      const supabase = await loadSupabaseClient();
       const snapshot = await refreshSnapshot();
 
       if (!active || !snapshot?.userId) {

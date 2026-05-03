@@ -9,6 +9,8 @@
 
 import { useState, useEffect } from 'react';
 import '@/app/techfix-pages.css';
+import '@/app/techfix-neon.css';
+import '@/app/techfix-neon-effects.css';
 import '@/app/techfix-services.css';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -21,8 +23,8 @@ import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { getSiteSettings } from '@/lib/siteSettings';
-import { supabase } from '@/lib/supabaseClient';
 
 const REPAIR_BOOKING_STEPS = [
   'بيانات التواصل',
@@ -46,8 +48,9 @@ export default function ServicesPage() {
 
     async function loadData() {
       try {
+        const supabase = await loadSupabaseClient();
         const [settings, servicesResult] = await Promise.all([
-          getSiteSettings(),
+          getSiteSettings(supabase),
           supabase
             .from('repair_services')
             .select('*')

@@ -1,33 +1,61 @@
 'use client';
 
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import { getPostAuthDestination, syncProfileFromAuthUser } from '@/lib/authProfileSync';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 export default function AuthCallback() {
   useEffect(() => {
+    let active = true;
     let redirected = false;
+    let unsubscribe = () => {};
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session && !redirected) {
-        redirected = true;
-        await syncProfileFromAuthUser(session.user);
-        window.location.href = await getPostAuthDestination(session.user);
+    /**
+     * Resolves the post-auth redirect once a session is available.
+     *
+     * @param {{ user?: Record<string, unknown> | null } | null} session
+     * @returns {Promise<void>}
+     */
+    async function redirectFromSession(session) {
+      if (!active || !session?.user || redirected) {
+        return;
       }
-    });
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data?.session && !redirected) {
-        redirected = true;
-        await syncProfileFromAuthUser(data.session.user);
-        window.location.href = await getPostAuthDestination(data.session.user);
+      redirected = true;
+      await syncProfileFromAuthUser(session.user);
+      window.location.href = await getPostAuthDestination(session.user);
+    }
+
+    /**
+     * Attaches auth callbacks after loading the Supabase client.
+     *
+     * @returns {Promise<void>}
+     */
+    async function attachAuthCallback() {
+      const supabase = await loadSupabaseClient();
+
+      if (!active) {
+        return;
       }
-    });
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN') {
+          void redirectFromSession(session);
+        }
+      });
+
+      unsubscribe = () => subscription.unsubscribe();
+      const { data } = await supabase.auth.getSession();
+      await redirectFromSession(data?.session || null);
+    }
+
+    void attachAuthCallback();
 
     return () => {
-      subscription.unsubscribe();
+      active = false;
+      unsubscribe();
     };
   }, []);
 

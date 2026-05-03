@@ -5,7 +5,7 @@ import Link from 'next/link';
 import AppIcon from '@/components/AppIcon';
 import Button from '@/components/Button';
 import { useToast } from '@/components/ToastProvider';
-import { supabase } from '@/lib/supabaseClient';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
   mapRegisterAuthError,
   normalizeRegisterProfileData,
@@ -51,6 +51,7 @@ export default function RegisterPage() {
     }
 
     try {
+      const supabase = await loadSupabaseClient();
       const { error: authError } = await supabase.auth.signUp({
         email,
         password,

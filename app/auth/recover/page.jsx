@@ -8,7 +8,7 @@ import Button from '@/components/Button';
 import { useToast } from '@/components/ToastProvider';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
-import { supabase } from '@/lib/supabaseClient';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
   RECOVERY_EXPERIENCE_PANEL,
   isPasswordRecoveryUrl,
@@ -36,21 +36,42 @@ export default function RecoverPasswordPage() {
   }, [initialEmail]);
 
   useEffect(() => {
+    let active = true;
+    let unsubscribe = () => {};
+
     if (typeof window !== 'undefined' && isPasswordRecoveryUrl(window.location.href)) {
       setMode('reset');
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('reset');
-        setError('');
+    /**
+     * Attaches the password-recovery auth listener after loading Supabase.
+     *
+     * @returns {Promise<void>}
+     */
+    async function attachRecoveryListener() {
+      const supabase = await loadSupabaseClient();
+
+      if (!active) {
+        return;
       }
-    });
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setMode('reset');
+          setError('');
+        }
+      });
+
+      unsubscribe = () => subscription.unsubscribe();
+    }
+
+    void attachRecoveryListener();
 
     return () => {
-      subscription.unsubscribe();
+      active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -74,6 +95,7 @@ export default function RecoverPasswordPage() {
     setError('');
     setSuccessMessage('');
 
+    const supabase = await loadSupabaseClient();
     const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/recover`,
     });
@@ -115,6 +137,7 @@ export default function RecoverPasswordPage() {
     setError('');
     setSuccessMessage('');
 
+    const supabase = await loadSupabaseClient();
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
       const nextError = 'رابط الاستعادة غير صالح أو انتهت صلاحيته.';

@@ -58,11 +58,11 @@
   position: relative;
   z-index: 1;
   min-height: inherit;
-  animation: pageEnter 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: pageEnter 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .shell[data-phase="exit"] .page {
-  animation: pageExit 80ms cubic-bezier(0.55, 0, 0.45, 1) forwards;
+  animation: none;
 }
 
 .transitionOverlay {

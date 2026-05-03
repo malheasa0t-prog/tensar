@@ -31,10 +31,19 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link
-      rel="stylesheet"
+      rel="preload"
+      as="style"
       href="/fonts/fonts.css"
       integrity="sha384-9OZeJ2MnqWntiV3TguadXC2ROtGkfi2t2G3dGpnjHQ6wZRAkfoDsdApAs7iFZarc"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="/fonts/fonts.css"
+        integrity="sha384-9OZeJ2MnqWntiV3TguadXC2ROtGkfi2t2G3dGpnjHQ6wZRAkfoDsdApAs7iFZarc"
+      />
+    </noscript>
     <style>
       body {
         margin: 0;

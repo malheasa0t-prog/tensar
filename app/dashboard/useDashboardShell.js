@@ -10,7 +10,7 @@ import {
   DASHBOARD_SHELL_TIMEOUT_MS,
   resolveDashboardDisplayName,
 } from "@/lib/dashboardShellModel";
-import { supabase } from "@/lib/supabaseClient";
+import { loadSupabaseClient } from "@/lib/loadSupabaseClient";
 import {
   fetchDashboardProfile,
   fetchDashboardSessionUser,
@@ -198,24 +198,47 @@ export default function useDashboardShell() {
       return undefined;
     }
 
-    const notificationsChannel = supabase
-      .channel(`dashboard-shell-notifications-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          void refreshUnreadNotifications(user.id);
-        }
-      )
-      .subscribe();
+    let active = true;
+    let cleanup = () => {};
+
+    /**
+     * Attaches the realtime notifications channel after loading the client.
+     *
+     * @returns {Promise<void>}
+     */
+    async function attachNotificationsChannel() {
+      const supabase = await loadSupabaseClient();
+
+      if (!active) {
+        return;
+      }
+
+      const notificationsChannel = supabase
+        .channel(`dashboard-shell-notifications-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            void refreshUnreadNotifications(user.id);
+          }
+        )
+        .subscribe();
+
+      cleanup = () => {
+        void supabase.removeChannel(notificationsChannel);
+      };
+    }
+
+    void attachNotificationsChannel();
 
     return () => {
-      supabase.removeChannel(notificationsChannel);
+      active = false;
+      cleanup();
     };
   }, [error, refreshUnreadNotifications, user?.id]);
 
@@ -224,24 +247,47 @@ export default function useDashboardShell() {
       return undefined;
     }
 
-    const walletChannel = supabase
-      .channel(`dashboard-shell-wallet-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "wallets",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          void refreshWallet(user.id);
-        }
-      )
-      .subscribe();
+    let active = true;
+    let cleanup = () => {};
+
+    /**
+     * Attaches the realtime wallet channel after loading the client.
+     *
+     * @returns {Promise<void>}
+     */
+    async function attachWalletChannel() {
+      const supabase = await loadSupabaseClient();
+
+      if (!active) {
+        return;
+      }
+
+      const walletChannel = supabase
+        .channel(`dashboard-shell-wallet-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "wallets",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            void refreshWallet(user.id);
+          }
+        )
+        .subscribe();
+
+      cleanup = () => {
+        void supabase.removeChannel(walletChannel);
+      };
+    }
+
+    void attachWalletChannel();
 
     return () => {
-      supabase.removeChannel(walletChannel);
+      active = false;
+      cleanup();
     };
   }, [error, refreshWallet, user?.id]);
 
@@ -261,6 +307,7 @@ export default function useDashboardShell() {
   }, [error, refreshUnreadNotifications, user?.id]);
 
   const handleLogout = useCallback(async () => {
+    const supabase = await loadSupabaseClient();
     await supabase.auth.signOut();
     window.location.href = "/";
   }, []);

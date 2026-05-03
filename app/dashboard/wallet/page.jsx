@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 const WALLET_LOAD_ERROR = '[WLT-301] تعذر تحميل بيانات المحفظة';
 
 /**
  * Loads the authenticated wallet snapshot and transaction history.
  *
+ * @param {Record<string, unknown>} [client]
  * @returns {Promise<{
  *   userId: string,
  *   wallet: Record<string, unknown> | null,
@@ -15,7 +16,8 @@ const WALLET_LOAD_ERROR = '[WLT-301] تعذر تحميل بيانات المحف
  *   error: string,
  * }>}
  */
-async function fetchWalletSnapshot() {
+async function fetchWalletSnapshot(client) {
+  const supabase = client || await loadSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -63,6 +65,7 @@ export default function WalletPage() {
     /**
      * Refreshes wallet data without recreating realtime channels.
      *
+     * @param {Record<string, unknown>} [client]
      * @returns {Promise<{
      *   userId: string,
      *   wallet: Record<string, unknown> | null,
@@ -70,8 +73,9 @@ export default function WalletPage() {
      *   error: string,
      * } | null>}
      */
-    async function refreshSnapshot() {
-      const snapshot = await fetchWalletSnapshot();
+    async function refreshSnapshot(client) {
+      const supabase = client || await loadSupabaseClient();
+      const snapshot = await fetchWalletSnapshot(supabase);
 
       if (!active) {
         return null;
@@ -92,7 +96,8 @@ export default function WalletPage() {
      * @returns {Promise<void>}
      */
     async function initialize() {
-      const snapshot = await refreshSnapshot();
+      const supabase = await loadSupabaseClient();
+      const snapshot = await refreshSnapshot(supabase);
 
       if (!active || !snapshot?.userId) {
         return;

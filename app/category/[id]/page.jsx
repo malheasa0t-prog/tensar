@@ -1,6 +1,8 @@
 'use client';
 
 import "../../techfix-pages.css";
+import "@/app/techfix-neon.css";
+import "@/app/techfix-neon-effects.css";
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';

@@ -1,6 +1,8 @@
 'use client';
 
 import "../techfix-pages.css";
+import "@/app/techfix-neon.css";
+import "@/app/techfix-neon-effects.css";
 import "../techfix-checkout.css";
 import CheckoutFormCard from '@/components/checkout/CheckoutFormCard';
 import CheckoutHero from '@/components/checkout/CheckoutHero';

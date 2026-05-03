@@ -157,13 +157,10 @@ function handleNavigationIntent(input) {
   input.event.preventDefault();
   clearTimer(input.pendingTimerRef);
 
-  /* Start loading the destination chunk immediately, in parallel with exit animation */
+  /* Start loading the destination chunk immediately, in parallel with navigation */
   void prefetchRouteModule(result.destination);
 
   input.setPendingDestination(result.destination);
   input.setPhase("exit");
-  input.pendingTimerRef.current = window.setTimeout(
-    () => startTransition(() => input.router.push(result.destination)),
-    PAGE_TRANSITION_EXIT_MS
-  );
+  startTransition(() => input.router.push(result.destination));
 }

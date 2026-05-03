@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import Button from '@/components/Button';
 import { useToast } from '@/components/ToastProvider';
-import { supabase } from '@/lib/supabaseClient';
 import { hasDepositTransferDetails } from '@/lib/contactChannels/depositTransfer';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
   DEPOSIT_STATUS_MAP,
   MAX_DEPOSIT_AMOUNT,
@@ -56,10 +56,12 @@ export default function DepositPage() {
     /**
      * Loads the latest deposit page snapshot into component state.
      *
+     * @param {Record<string, unknown>} [client]
      * @returns {Promise<{ userId: string } | null>}
      */
-    async function refreshSnapshot() {
+    async function refreshSnapshot(client) {
       try {
+        const supabase = client || await loadSupabaseClient();
         const snapshot = await fetchDepositPageSnapshot({ client: supabase });
         if (!active) return null;
         setUserId(snapshot.userId);
@@ -80,7 +82,8 @@ export default function DepositPage() {
      * @returns {Promise<void>}
      */
     async function initialize() {
-      const snapshot = await refreshSnapshot();
+      const supabase = await loadSupabaseClient();
+      const snapshot = await refreshSnapshot(supabase);
       if (!active || !snapshot?.userId) return;
 
       const channel = supabase
@@ -125,6 +128,7 @@ export default function DepositPage() {
 
     setLoading(true);
     try {
+      const supabase = await loadSupabaseClient();
       const result = await createDepositRequest({ client: supabase, amount, proofFile });
       const snapshot = await fetchDepositPageSnapshot({ client: supabase });
       setUserId(result.userId);
