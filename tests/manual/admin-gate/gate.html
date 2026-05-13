@@ -1,4 +1,22 @@
-
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>TechZone</title>
+<style>
+body{margin:0;padding:0;font-family:system-ui,sans-serif;background:#0f172a;color:#94a3b8;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.g-l{text-align:center}
+.g-s{width:36px;height:36px;border:3px solid #1e293b;border-top-color:#6366f1;border-radius:50%;animation:r .8s linear infinite;margin:0 auto 16px}
+@keyframes r{to{transform:rotate(360deg)}}
+.g-t{font-size:14px;opacity:.8}
+</style>
+</head>
+<body>
+<div class="g-l"><div class="g-s"></div><div class="g-t" id="gateStatus">جاري التحقق...</div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
 (function(){
 var U="",K="",P="/__tz-panel.html?v=20260426-4",S="/api/admin/session";
 var statusNode=document.getElementById("gateStatus");
@@ -19,7 +37,8 @@ function unregisterAdminServiceWorkers(){
   return navigator.serviceWorker.getRegistrations()
     .then(function(registrations){
       var adminRegistrations=registrations.filter(function(registration){
-        return //admin-sw.js(?:?|$)/.test(String(registration?.active?.scriptURL || registration?.waiting?.scriptURL || registration?.installing?.scriptURL || ""));
+        var url=String(registration?.active?.scriptURL || registration?.waiting?.scriptURL || registration?.installing?.scriptURL || "");
+        return url.indexOf("admin-sw.js") !== -1;
       });
       return Promise.all(adminRegistrations.map(function(registration){return registration.unregister();}));
     })
@@ -77,3 +96,6 @@ client.auth.getSession()
   })
   .catch(function(){loadShell();});
 })();
+</script>
+</body>
+</html>
