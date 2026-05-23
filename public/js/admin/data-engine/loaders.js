@@ -1,4 +1,4 @@
-// ===== TechZone Admin Data Engine - Loaders =====
+﻿// ===== TechZone Admin Data Engine - Loaders =====
 // Scoped Supabase loading and DB hydration.
 
 import {
@@ -9,7 +9,7 @@ import {
     nowIso,
     supabase,
     updateHealthStatus
-} from './core.js?v=20260426-5';
+} from './core.js?v=20260523-2';
 import {
     buildItemsByOrder,
     mapAuditLog,
@@ -17,10 +17,11 @@ import {
     mapCoupon,
     mapDeposit,
     mapOrder,
-    mapRepairBooking
-} from './orders.js?v=20260426-5';
-import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260426-5';
-import { mergeUsers } from './users.js?v=20260426-5';
+    mapRepairBooking,
+    mapServiceOrder
+} from './orders.js?v=20260523-2';
+import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260523-2';
+import { mergeUsers } from './users.js?v=20260523-2';
 
 const LEGACY_USER_SAFE_FIELDS = 'id,auth_user_id,full_name,email,phone,role,status,created_at,updated_at';
 const PROFILE_SAFE_FIELDS = [
@@ -51,6 +52,7 @@ const QUERY_BUILDERS = {
     settings: () => supabase.from('settings').select('*').limit(1),
     coupons: () => supabase.from('coupons').select('*'),
     repairServices: () => supabase.from('repair_services').select('*').order('created_at', { ascending: true }),
+    serviceOrders: () => supabase.from('service_orders').select('*').order('created_at', { ascending: false }),
     repairBookings: () => supabase.from('repair_bookings').select('*').order('created_at', { ascending: false }),
     messages: () => supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
     logs: () => supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
@@ -88,6 +90,7 @@ function hydrateOrders(results) {
         const itemsByOrder = buildItemsByOrder(results.orderItems?.data || []);
         db.orders = results.orders.data.map((order) => mapOrder(order, itemsByOrder[order.id] || []));
     }
+    if (results.serviceOrders?.data) db.serviceOrders = results.serviceOrders.data.map(mapServiceOrder);
     if (results.repairBookings?.data) db.repairBookings = results.repairBookings.data.map(mapRepairBooking);
     if (results.deposits?.data) db.deposits = results.deposits.data.map(mapDeposit);
 }

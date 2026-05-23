@@ -1,12 +1,75 @@
 import { slugifyArabic } from '@/lib/categoryPageModel';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
+const CATEGORY_PAGE_CACHE_TTL_MS = 60_000;
+const categoryPageSnapshotCache = new Map();
+const pendingCategoryPageSnapshots = new Map();
+
+/**
+ * Normalizes category route values for cache keys.
+ *
+ * @param {unknown} routeValue - Raw category id or slug from the route.
+ * @returns {string} Trimmed cache key.
+ */
+function normalizeCategoryPageCacheKey(routeValue) {
+  return String(routeValue || '').trim();
+}
+
+/**
+ * Normalizes category/service labels for text matching.
+ *
+ * @param {unknown} value - Raw label value.
+ * @returns {string} Search-safe label.
+ */
+function normalizeCategoryLabel(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ar');
+}
+
+/**
+ * Returns the standard category-not-found snapshot.
+ *
+ * @returns {{
+ *   error: boolean,
+ *   category: null,
+ *   mainCategory: null,
+ *   subCategories: Array<Record<string, unknown>>,
+ *   repairServices: Array<Record<string, unknown>>,
+ *   products: Array<Record<string, unknown>>,
+ *   subCategoryServiceCounts: Record<string, number>,
+ *   subCategoryProductsCount: Record<string, number>,
+ * }}
+ */
+function createEmptyCategoryPageSnapshot() {
+  return {
+    error: true,
+    category: null,
+    mainCategory: null,
+    subCategories: [],
+    repairServices: [],
+    products: [],
+    subCategoryServiceCounts: {},
+    subCategoryProductsCount: {},
+  };
+}
+
+/**
+ * Checks whether a cached category snapshot can still be reused.
+ *
+ * @param {{ cached?: { timestamp: number }, now: number }} input - Cache metadata.
+ * @returns {boolean} True when the cached value is still fresh.
+ */
+function isFreshCategoryPageSnapshot(input) {
+  return Boolean(
+    input.cached && input.now - input.cached.timestamp < CATEGORY_PAGE_CACHE_TTL_MS
+  );
+}
+
 /**
  * Loads a category either by its raw id or normalized slug.
  *
- * @param {string} routeValue
- * @param {Record<string, unknown>} supabase
- * @returns {Promise<Record<string, unknown> | null>}
+ * @param {string} routeValue - Category id or slug from the URL.
+ * @param {Record<string, unknown>} supabase - Supabase client instance.
+ * @returns {Promise<Record<string, unknown> | null>} Active category row.
  */
 async function findCategory(routeValue, supabase) {
   let decodedValue = String(routeValue || '').trim();
@@ -43,37 +106,195 @@ async function findCategory(routeValue, supabase) {
 }
 
 /**
- * Counts active products and services for the provided subcategory ids.
+ * Builds a category lookup keyed by id.
  *
- * @param {string[]} subCategoryIds
- * @param {Record<string, unknown>} supabase
- * @returns {Promise<Record<string, number>>}
+ * @param {Array<Record<string, unknown>>} categories - Active category rows.
+ * @returns {Map<string, Record<string, unknown>>} Lookup map.
  */
-async function loadSubCategoryItemCounts(subCategoryIds, supabase) {
-  if (!subCategoryIds.length) {
-    return {};
+function buildCategoryById(categories) {
+  return new Map(categories.map((category) => [String(category.id), category]));
+}
+
+/**
+ * Returns direct children for a category.
+ *
+ * @param {Array<Record<string, unknown>>} categories - Active category rows.
+ * @param {unknown} parentId - Parent category id.
+ * @returns {Array<Record<string, unknown>>} Ordered direct children.
+ */
+function getDirectSubCategories(categories, parentId) {
+  const parentKey = String(parentId || '');
+
+  return categories
+    .filter((category) => String(category.parent_id || '') === parentKey)
+    .sort((first, second) => Number(first.sort_order || 0) - Number(second.sort_order || 0));
+}
+
+/**
+ * Recursively collects all descendants for a category.
+ *
+ * @param {Array<Record<string, unknown>>} categories - Active category rows.
+ * @param {unknown} parentId - Parent category id.
+ * @returns {Array<Record<string, unknown>>} Descendant categories.
+ */
+function collectDescendantCategories(categories, parentId) {
+  const directChildren = getDirectSubCategories(categories, parentId);
+  const descendants = [...directChildren];
+
+  for (const child of directChildren) {
+    descendants.push(...collectDescendantCategories(categories, child.id));
   }
 
-  const [productsResponse, servicesResponse] = await Promise.all([
-    supabase
-      .from('products')
-      .select('category_id')
-      .eq('status', 'active')
-      .or('product_type.is.null,product_type.eq.physical')
-      .in('category_id', subCategoryIds),
-    supabase
-      .from('services')
-      .select('category_id')
-      .eq('status', 'active')
-      .in('category_id', subCategoryIds),
-  ]);
+  return descendants;
+}
 
+/**
+ * Finds the top-level parent category.
+ *
+ * @param {Record<string, unknown>} category - Current category.
+ * @param {Map<string, Record<string, unknown>>} categoryById - Category lookup.
+ * @returns {Record<string, unknown>} Root category.
+ */
+function findRootCategory(category, categoryById) {
+  let current = category;
+  const visitedIds = new Set();
+
+  while (current?.parent_id && !visitedIds.has(String(current.id))) {
+    visitedIds.add(String(current.id));
+    current = categoryById.get(String(current.parent_id)) || current;
+    if (!current?.parent_id) break;
+  }
+
+  return current || category;
+}
+
+/**
+ * Builds a label-to-category map for services visible under a category.
+ *
+ * @param {Array<Record<string, unknown>>} categories - Category rows.
+ * @returns {Map<string, Record<string, unknown>>} Normalized label lookup.
+ */
+function buildCategoryLabelMap(categories) {
+  const labelMap = new Map();
+
+  for (const category of categories) {
+    const key = normalizeCategoryLabel(category.name);
+    if (key) labelMap.set(key, category);
+  }
+
+  return labelMap;
+}
+
+/**
+ * Returns whether a repair service belongs to a visible category.
+ *
+ * @param {Record<string, unknown>} service - Repair service row.
+ * @param {Map<string, Record<string, unknown>>} categoryLabelMap - Label lookup.
+ * @returns {Record<string, unknown> | null} Matched category row.
+ */
+function matchServiceCategory(service, categoryLabelMap) {
+  const serviceCategoryKey = normalizeCategoryLabel(service.category);
+
+  return categoryLabelMap.get(serviceCategoryKey) || null;
+}
+
+/**
+ * Returns the visible category linked to a catalog service row.
+ *
+ * @param {{
+ *   categoryById: Map<string, Record<string, unknown>>,
+ *   service: Record<string, unknown>,
+ *   visibleCategoryIds: Set<string>,
+ * }} input - Service/category lookup input.
+ * @returns {Record<string, unknown> | null} Matched category row.
+ */
+function matchCatalogServiceCategory(input) {
+  const categoryId = String(input.service.category_id || '');
+
+  if (!categoryId || !input.visibleCategoryIds.has(categoryId)) {
+    return null;
+  }
+
+  return input.categoryById.get(categoryId) || null;
+}
+
+/**
+ * Adds category display metadata to a repair service.
+ *
+ * @param {{
+ *   service: Record<string, unknown>,
+ *   matchedCategory: Record<string, unknown>,
+ *   currentCategory: Record<string, unknown>,
+ * }} input - Service and matched category context.
+ * @returns {Record<string, unknown>} Enriched repair service.
+ */
+function mapVisibleRepairService(input) {
+  const isFromChildCategory = String(input.matchedCategory.id) !== String(input.currentCategory.id);
+
+  return {
+    ...input.service,
+    category_id: input.matchedCategory.id,
+    categoryLabel: input.matchedCategory.name || input.service.category || '',
+    categorySlug: input.matchedCategory.slug || input.matchedCategory.id,
+    isSubCategoryService: Boolean(isFromChildCategory),
+  };
+}
+
+/**
+ * Adds display metadata to a catalog service row.
+ *
+ * @param {{
+ *   service: Record<string, unknown>,
+ *   matchedCategory: Record<string, unknown>,
+ *   currentCategory: Record<string, unknown>,
+ * }} input - Service and matched category context.
+ * @returns {Record<string, unknown>} Enriched catalog service.
+ */
+function mapVisibleCatalogService(input) {
+  const isFromChildCategory = String(input.matchedCategory.id) !== String(input.currentCategory.id);
+
+  return {
+    ...input.service,
+    sourceType: 'catalog-service',
+    categoryLabel: input.matchedCategory.name || '',
+    categorySlug: input.matchedCategory.slug || input.matchedCategory.id,
+    isSubCategoryService: Boolean(isFromChildCategory),
+  };
+}
+
+/**
+ * Counts services for each direct subcategory including deeper descendants.
+ *
+ * @param {{
+ *   subCategories: Array<Record<string, unknown>>,
+ *   allCategories: Array<Record<string, unknown>>,
+ *   catalogServices: Array<Record<string, unknown>>,
+ *   repairServices: Array<Record<string, unknown>>,
+ * }} input - Category/service rows.
+ * @returns {Record<string, number>} Counts keyed by subcategory id.
+ */
+function countServicesForSubCategories(input) {
   const counts = {};
-  for (const item of (productsResponse.data || [])) {
-    counts[item.category_id] = (counts[item.category_id] || 0) + 1;
-  }
-  for (const item of (servicesResponse.data || [])) {
-    counts[item.category_id] = (counts[item.category_id] || 0) + 1;
+
+  for (const subCategory of input.subCategories) {
+    const visibleCategories = [
+      subCategory,
+      ...collectDescendantCategories(input.allCategories, subCategory.id),
+    ];
+    const categoryLabels = new Set(
+      visibleCategories
+        .map((category) => normalizeCategoryLabel(category.name))
+        .filter(Boolean)
+    );
+    const categoryIds = new Set(visibleCategories.map((category) => String(category.id)));
+    const repairCount = input.repairServices.filter((service) =>
+      categoryLabels.has(normalizeCategoryLabel(service.category))
+    ).length;
+    const catalogCount = input.catalogServices.filter((service) =>
+      categoryIds.has(String(service.category_id || ''))
+    ).length;
+
+    counts[subCategory.id] = repairCount + catalogCount;
   }
 
   return counts;
@@ -82,105 +303,139 @@ async function loadSubCategoryItemCounts(subCategoryIds, supabase) {
 /**
  * Loads the full category view model used by the category page.
  *
- * @param {string} routeValue
+ * @param {string} routeValue - Category id or slug.
  * @returns {Promise<{
  *   error: boolean,
  *   category: Record<string, unknown> | null,
  *   mainCategory: Record<string, unknown> | null,
  *   subCategories: Array<Record<string, unknown>>,
+ *   repairServices: Array<Record<string, unknown>>,
  *   products: Array<Record<string, unknown>>,
+ *   subCategoryServiceCounts: Record<string, number>,
  *   subCategoryProductsCount: Record<string, number>,
- * }>}
+ * }>} Category page snapshot.
  */
 export async function loadCategoryPageSnapshot(routeValue) {
-  if (!routeValue) {
-    return {
-      error: true,
-      category: null,
-      mainCategory: null,
-      subCategories: [],
-      products: [],
-      subCategoryProductsCount: {},
-    };
+  const cacheKey = normalizeCategoryPageCacheKey(routeValue);
+  const now = Date.now();
+  const cached = categoryPageSnapshotCache.get(cacheKey);
+
+  if (!cacheKey) return createEmptyCategoryPageSnapshot();
+  if (isFreshCategoryPageSnapshot({ cached, now })) return cached.snapshot;
+  if (pendingCategoryPageSnapshots.has(cacheKey)) {
+    return pendingCategoryPageSnapshots.get(cacheKey);
   }
 
+  const pendingSnapshot = loadFreshCategoryPageSnapshot(cacheKey, now)
+    .catch((error) => {
+      if (cached?.snapshot) return cached.snapshot;
+      throw error;
+    })
+    .finally(() => pendingCategoryPageSnapshots.delete(cacheKey));
+
+  pendingCategoryPageSnapshots.set(cacheKey, pendingSnapshot);
+  return pendingSnapshot;
+}
+
+/**
+ * Warms a category page snapshot without surfacing background errors.
+ *
+ * @param {string} routeValue - Category id or slug.
+ * @returns {Promise<unknown>} Prefetch result.
+ */
+export function prefetchCategoryPageSnapshot(routeValue) {
+  return loadCategoryPageSnapshot(routeValue).catch(() => null);
+}
+
+/**
+ * Loads a fresh category page snapshot from Supabase.
+ *
+ * @param {string} routeValue - Category id or slug.
+ * @param {number} now - Snapshot timestamp.
+ * @returns {ReturnType<typeof loadCategoryPageSnapshot>} Fresh snapshot.
+ */
+async function loadFreshCategoryPageSnapshot(routeValue, now) {
   const supabase = await loadSupabaseClient();
   const category = await findCategory(routeValue, supabase);
   if (!category) {
-    return {
-      error: true,
-      category: null,
-      mainCategory: null,
-      subCategories: [],
-      products: [],
-      subCategoryProductsCount: {},
-    };
+    return createEmptyCategoryPageSnapshot();
   }
 
-  const rootCategoryId = category.parent_id || category.id;
-  const [rootResponse, subCategoriesResponse, productsResponse, servicesResponse] = await Promise.all([
+  const [categoriesResponse, repairServicesResponse, catalogServicesResponse] = await Promise.all([
     supabase
       .from('categories')
       .select('*')
-      .eq('id', rootCategoryId)
-      .eq('status', 'active')
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('categories')
-      .select('*')
-      .eq('parent_id', rootCategoryId)
       .eq('status', 'active')
       .order('sort_order', { ascending: true }),
     supabase
-      .from('products')
+      .from('repair_services')
       .select('*')
       .eq('status', 'active')
-      .or('product_type.is.null,product_type.eq.physical')
-      .eq('category_id', category.id)
-      .order('created_at', { ascending: false }),
+      .order('sort_order', { ascending: true }),
     supabase
       .from('services')
       .select('*')
       .eq('status', 'active')
-      .eq('category_id', category.id)
       .order('created_at', { ascending: false }),
   ]);
 
-  const physicalProducts = productsResponse.data || [];
-  const digitalServices = (servicesResponse.data || []).map((service) => ({
-    id: service.id,
-    name: service.name,
-    price: service.price,
-    discount_price: null,
-    description: service.description,
-    images: service.image ? [service.image] : [],
-    category_id: service.category_id,
-    status: service.status,
-    product_type: 'digital',
-    brand: null,
-    quantity: service.max_qty || 999,
-    sold: 0,
-    min_qty: service.min_qty,
-    max_qty: service.max_qty,
-    provider_service_id: service.provider_service_id,
-    created_at: service.created_at,
-    updated_at: service.updated_at,
-  }));
+  const allCategories = categoriesResponse.data || [];
+  const activeCategory = allCategories.find((item) => String(item.id) === String(category.id)) || category;
+  const categoryById = buildCategoryById(allCategories);
+  const subCategories = getDirectSubCategories(allCategories, activeCategory.id);
+  const visibleCategories = [
+    activeCategory,
+    ...collectDescendantCategories(allCategories, activeCategory.id),
+  ];
+  const visibleCategoryLabels = buildCategoryLabelMap(visibleCategories);
+  const visibleCategoryIds = new Set(visibleCategories.map((item) => String(item.id)));
+  const catalogServices = (catalogServicesResponse.data || [])
+    .map((service) => {
+      const matchedCategory = matchCatalogServiceCategory({
+        categoryById,
+        service,
+        visibleCategoryIds,
+      });
+      if (!matchedCategory) return null;
 
-  const allProducts = [...physicalProducts, ...digitalServices];
+      return mapVisibleCatalogService({
+        service,
+        matchedCategory,
+        currentCategory: activeCategory,
+      });
+    })
+    .filter(Boolean);
+  const repairServices = (repairServicesResponse.data || [])
+    .map((service) => {
+      const matchedCategory = matchServiceCategory(service, visibleCategoryLabels);
+      if (!matchedCategory) return null;
 
-  const subCategories = subCategoriesResponse.data || [];
-  const subCategoryProductsCount = !category.parent_id
-    ? await loadSubCategoryItemCounts(subCategories.map((subCategory) => subCategory.id), supabase)
-    : {};
-
-  return {
-    error: false,
-    category,
-    mainCategory: rootResponse.data || null,
+      return mapVisibleRepairService({
+        service,
+        matchedCategory,
+        currentCategory: activeCategory,
+      });
+    })
+    .filter(Boolean);
+  const subCategoryServiceCounts = countServicesForSubCategories({
     subCategories,
-    products: allProducts,
-    subCategoryProductsCount,
+    allCategories,
+    catalogServices: catalogServicesResponse.data || [],
+    repairServices: repairServicesResponse.data || [],
+  });
+  const visibleServices = [...catalogServices, ...repairServices];
+
+  const snapshot = {
+    error: false,
+    category: activeCategory,
+    mainCategory: findRootCategory(activeCategory, categoryById),
+    subCategories,
+    repairServices: visibleServices,
+    products: [],
+    subCategoryServiceCounts,
+    subCategoryProductsCount: subCategoryServiceCounts,
   };
+
+  categoryPageSnapshotCache.set(routeValue, { snapshot, timestamp: now });
+  return snapshot;
 }

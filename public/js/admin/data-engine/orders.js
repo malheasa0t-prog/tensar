@@ -39,6 +39,7 @@ export function mapCoupon(row) {
 export function mapServiceOrder(row) {
     return {
         id: row.id,
+        displayNumber: Number(row.display_number || 0) || null,
         userId: row.user_id,
         serviceId: row.service_id,
         serviceName: row.service_name,
@@ -59,6 +60,7 @@ export function mapServiceOrder(row) {
 export function mapRepairBooking(row) {
     return {
         id: row.id,
+        displayNumber: Number(row.display_number || 0) || null,
         name: row.name,
         phone: row.phone,
         email: row.email,

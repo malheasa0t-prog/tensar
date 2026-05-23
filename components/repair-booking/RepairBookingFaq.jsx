@@ -24,42 +24,52 @@ export default function RepairBookingFaq({ items = [] }) {
 
   return (
     <section className={styles.section}>
-      <div className={styles.introCard}>
-        <div className={styles.introHead}>
-          <span className={styles.badge}>
-            <AppIcon name="message" size={14} />
-            الأسئلة الشائعة
+      <details className={styles.introCard}>
+        <summary className={styles.introSummary}>
+          <span className={styles.introSummaryMain}>
+            <span className={styles.introHead}>
+              <span className={styles.badge}>
+                <AppIcon name="message" size={13} />
+                الأسئلة الشائعة
+              </span>
+
+              <span className={styles.inlineCount}>
+                <AppIcon name="info" size={13} />
+                {items.length} أسئلة
+              </span>
+            </span>
+
+            <span className={styles.introTitle}>إجابات سريعة قبل إرسال طلب الصيانة</span>
+            <span className={styles.introHint}>اضغط لعرض التفاصيل كاملة</span>
           </span>
 
-          <span className={styles.inlineCount}>
-            <AppIcon name="info" size={14} />
-            {items.length} أسئلة
+          <span className={styles.introSummaryIcon}>
+            <AppIcon name="chevron-left" size={18} />
           </span>
-        </div>
+        </summary>
 
-        <div className={styles.introCopy}>
-          <h2>إجابات سريعة قبل إرسال طلب الصيانة</h2>
+        <div className={styles.introDetails}>
           <p>
             هذه أكثر الأسئلة التي يكررها العملاء قبل الحجز، جمعناها هنا بشكل واضح
             ومباشر حتى تختار الخدمة المناسبة بثقة وهدوء.
           </p>
-        </div>
 
-        <div className={styles.stats}>
-          <div className={styles.stat}>
-            <strong>{items.length}</strong>
-            <span>أسئلة أساسية قبل الحجز</span>
-          </div>
-          <div className={styles.stat}>
-            <strong>رد واضح</strong>
-            <span>مباشر وسريع قبل الإرسال</span>
+          <div className={styles.stats}>
+            <div className={styles.stat}>
+              <strong>{items.length}</strong>
+              <span>أسئلة أساسية قبل الحجز</span>
+            </div>
+            <div className={styles.stat}>
+              <strong>رد واضح</strong>
+              <span>مباشر وسريع قبل الإرسال</span>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <div className={styles.list}>
         {items.map((item, index) => (
-          <details key={item.question || index} className={styles.faqItem} open={index === 0}>
+          <details key={item.question || index} className={styles.faqItem}>
             <summary className={styles.summary}>
               <span className={styles.summaryMeta}>
                 <span className={styles.index}>{formatFaqIndex(index)}</span>

@@ -118,7 +118,7 @@ export default function SharedFavoritesPage() {
                 <AppIcon name="shopping-bag" size={14} />
                 {favoriteProducts.length} منتج ظاهر
               </span>
-              <Link href="/products" className="btn btn-primary">
+              <Link href="/services" className="btn btn-primary">
                 تصفح كل المنتجات
               </Link>
             </div>

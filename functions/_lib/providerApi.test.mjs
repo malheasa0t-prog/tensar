@@ -25,8 +25,23 @@ test("readProviderConfig should normalize environment values", () => {
   );
 });
 
+test("readProviderConfig should use the production Serva endpoint by default", () => {
+  assert.deepEqual(
+    readProviderConfig({
+      PROVIDER_API_KEY: " api-key ",
+    }),
+    {
+      apiKey: "api-key",
+      baseUrl: "https://serva-s.com/api/v1",
+      timeoutMs: 15000,
+    }
+  );
+});
+
 test("translateProviderError should localize known provider errors", () => {
   assert.equal(translateProviderError("invalid_api_key"), "مفتاح API غير صالح.");
+  assert.equal(translateProviderError("SERVICE_NOT_FOUND_OR_INACTIVE"), "الخدمة غير موجودة أو غير مفعّلة عند المزود.");
+  assert.equal(translateProviderError("duplicate order cooldown"), "تم رفض الطلب لأنه مكرر خلال فترة قصيرة.");
   assert.equal(translateProviderError("custom message"), "custom message");
 });
 

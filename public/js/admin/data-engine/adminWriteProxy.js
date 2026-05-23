@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Compatibility wrapper around the secured admin Supabase proxy helpers.
  */
 
 import {
   createAdminSupabaseClient,
 } from "./adminDbProxyCore.js";
-import { executeAdminDbOperation } from "./adminDbRequest.js?v=20260426-5";
+import { executeAdminDbOperation } from "./adminDbRequest.js?v=20260523-2";
 
 /**
  * Executes one secured admin write operation through the shared DB proxy.

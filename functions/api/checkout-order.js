@@ -20,6 +20,21 @@ function getShippingFee(deliveryMethod, deliveryMethods) {
 }
 
 /**
+ * Formats a checkout order number for notifications and responses.
+ *
+ * @param {{ displayNumber?: number | string, orderId: string }} input
+ * @returns {string}
+ */
+function formatCheckoutOrderNumber({ displayNumber, orderId }) {
+  const numericDisplayNumber = Number(displayNumber);
+  if (Number.isInteger(numericDisplayNumber) && numericDisplayNumber > 0) {
+    return `#${numericDisplayNumber}`;
+  }
+
+  return String(orderId || "-").trim() || "-";
+}
+
+/**
  * Resolves the delivery methods snapshot from settings storage.
  *
  * @param {import('@supabase/supabase-js').SupabaseClient} admin
@@ -148,7 +163,7 @@ function resolveProviderContactValue({ customerContactLink, customerPhone, produ
  *   subtotal: number,
  *   userId: string | null,
  * }} input
- * @returns {Promise<{ orderId: string, total: number }>}
+ * @returns {Promise<{ displayNumber: number | null, orderId: string, total: number }>}
  * @throws {Error}
  */
 export async function createCheckoutOrderRecord({
@@ -187,7 +202,7 @@ export async function createCheckoutOrderRecord({
         notes: notes || null,
       },
     ])
-    .select("id")
+    .select("id, display_number")
     .single();
 
   if (orderError || !orderRow) {
@@ -197,6 +212,7 @@ export async function createCheckoutOrderRecord({
   }
 
   const orderId = orderRow.id;
+  const displayNumber = Number(orderRow.display_number || 0) || null;
   const { error: itemsError } = await admin
     .from("order_items")
     .insert(orderItems.map((item) => ({ order_id: orderId, ...item })));
@@ -208,7 +224,7 @@ export async function createCheckoutOrderRecord({
     );
   }
 
-  return { orderId, total };
+  return { displayNumber, orderId, total };
 }
 
 /**
@@ -280,6 +296,7 @@ export async function syncCheckoutProviderOrders({
  *
  * @param {{
  *   admin: import('@supabase/supabase-js').SupabaseClient,
+ *   displayNumber?: number | null,
  *   orderId: string,
  *   orderItemsCount: number,
  *   total: number,
@@ -289,6 +306,7 @@ export async function syncCheckoutProviderOrders({
  */
 export async function sendCheckoutNotification({
   admin,
+  displayNumber,
   orderId,
   orderItemsCount,
   total,
@@ -302,7 +320,7 @@ export async function sendCheckoutNotification({
     {
       user_id: userId,
       title: "تم إنشاء طلبك بنجاح",
-      body: `طلب #${orderId} — ${orderItemsCount} منتج — المبلغ: ${total.toFixed(2)} د.أ`,
+      body: `طلب ${formatCheckoutOrderNumber({ displayNumber, orderId })} — ${orderItemsCount} منتج — المبلغ: ${total.toFixed(2)} د.أ`,
       type: "success",
       reference_type: "order",
       reference_id: orderId,

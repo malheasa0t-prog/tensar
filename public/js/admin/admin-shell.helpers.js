@@ -6,7 +6,11 @@
         dashboard: { label: 'لوحة المعلومات', group: '' },
         orders: { label: 'كل الطلبات', group: 'إدارة الطلبات' },
         'product-orders': { label: 'طلبات المنتجات', group: 'إدارة الطلبات' },
-        'accessory-orders': { label: 'طلبات الإكسسوارات', group: 'إدارة الطلبات' }
+        'service-orders': { label: 'طلبات الخدمات', group: 'إدارة الطلبات' },
+        'accessory-orders': { label: 'طلبات الإكسسوارات', group: 'إدارة الطلبات' },
+        'repair-orders': { label: 'حجوزات الصيانة', group: 'إدارة الطلبات' },
+        'serva-catalog': { label: 'استيراد خدمات Serva-S', group: 'النظام' },
+        'provider-alerts': { label: 'تنبيهات المزود', group: 'النظام' }
     };
 
     const COMMANDS = [
@@ -41,6 +45,30 @@
             icon: 'fa-headphones',
             keywords: ['accessory orders', 'طلبات الإكسسوارات'],
             action: 'navigate:accessory-orders'
+        },
+        {
+            id: 'service-orders',
+            title: 'طلبات الخدمات',
+            description: 'الانتقال إلى طلبات الخدمات الرقمية',
+            icon: 'fa-bolt',
+            keywords: ['service orders', 'طلبات الخدمات', 'serva'],
+            action: 'navigate:service-orders'
+        },
+        {
+            id: 'repair-orders',
+            title: 'حجوزات الصيانة',
+            description: 'متابعة طلبات وحجوزات الصيانة',
+            icon: 'fa-screwdriver-wrench',
+            keywords: ['repair orders', 'صيانة', 'حجوزات'],
+            action: 'navigate:repair-orders'
+        },
+        {
+            id: 'serva-catalog',
+            title: 'استيراد خدمات Serva-S',
+            description: 'إضافة خدمات من كتالوج serva-s.com عبر API',
+            icon: 'fa-cloud-download-alt',
+            keywords: ['serva', 'serva-s', 'استيراد الخدمات', 'api'],
+            action: 'navigate:serva-catalog'
         },
         {
             id: 'view-site',

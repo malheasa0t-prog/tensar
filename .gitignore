@@ -47,6 +47,14 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Local AI/eval dev scripts (may contain hardcoded API keys - never commit)
+scripts/chat_ai.py
+scripts/eval_test.py
+scripts/fill_ai.mjs
+scripts/fill_ai_pro.py
+scripts/gradio_chat.py
+scripts/setup_chat_table.py
+
 # IDE
 .vscode
 .edge-headless

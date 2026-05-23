@@ -61,58 +61,49 @@ export default function ProfileInfoCard({
           />
         </div>
 
-        <form onSubmit={onSubmit} style={formStyle}>
+        <div style={fieldGroupStyle}>
+          <label style={mutedFieldLabelStyle}>الاسم الكامل</label>
+          <input
+            type="text"
+            value={form.full_name}
+            disabled
+            style={disabledInputStyle}
+          />
+        </div>
+
+        <div style={fieldGroupStyle}>
+          <label style={mutedFieldLabelStyle}>رقم الهاتف</label>
+          <input
+            type="tel"
+            value={form.phone}
+            disabled
+            style={{ ...disabledInputStyle, direction: 'ltr', textAlign: 'left' }}
+          />
+        </div>
+
+        <div style={fieldGridStyle}>
           <div style={fieldGroupStyle}>
-            <label style={fieldLabelStyle}>الاسم الكامل</label>
+            <label style={mutedFieldLabelStyle}>الدولة</label>
             <input
               type="text"
-              name="full_name"
-              value={form.full_name}
-              onChange={onFieldChange}
-              placeholder="أدخل اسمك الكامل"
-              style={inputStyle}
+              value={form.country}
+              disabled
+              style={disabledInputStyle}
             />
           </div>
 
           <div style={fieldGroupStyle}>
-            <label style={fieldLabelStyle}>رقم الهاتف</label>
+            <label style={mutedFieldLabelStyle}>العملة المفضلة</label>
             <input
-              type="tel"
-              name="phone"
-              value={form.phone}
-              onChange={onFieldChange}
-              placeholder="07XXXXXXXX"
-              style={{ ...inputStyle, direction: 'ltr', textAlign: 'left' }}
+              type="text"
+              value={form.preferred_currency}
+              disabled
+              style={disabledInputStyle}
             />
           </div>
+        </div>
 
-          <div style={fieldGridStyle}>
-            <div style={fieldGroupStyle}>
-              <label style={fieldLabelStyle}>الدولة</label>
-              <input
-                type="text"
-                name="country"
-                value={form.country}
-                onChange={onFieldChange}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={fieldGroupStyle}>
-              <label style={fieldLabelStyle}>العملة المفضلة</label>
-              <select
-                name="preferred_currency"
-                value={form.preferred_currency}
-                onChange={onFieldChange}
-                style={inputStyle}
-              >
-                <option value="JOD">JOD</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
-          </div>
-
+        <form onSubmit={onSubmit} style={formStyle}>
           <div style={fieldGroupStyle}>
             <label style={fieldLabelStyle}>اللغة المفضلة</label>
             <select

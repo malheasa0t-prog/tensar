@@ -4,7 +4,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 /**
  * Renders the checkout hero and breadcrumb trail.
  *
- * @returns {JSX.Element}
+ * @returns {JSX.Element} Checkout hero.
  */
 export default function CheckoutHero() {
   return (
@@ -14,15 +14,15 @@ export default function CheckoutHero() {
           <Breadcrumbs
             items={[
               { href: '/', label: 'الرئيسية' },
-              { href: '/products', label: 'المنتجات' },
-              { label: 'إتمام الشراء' },
+              { href: '/services', label: 'خدمات الصيانة' },
+              { label: 'إتمام الطلب' },
             ]}
             currentPath="/checkout"
           />
 
           <span className="section-badge">
             <AppIcon name="credit-card" size={14} />
-            إتمام الشراء
+            إتمام الطلب
           </span>
         </div>
 

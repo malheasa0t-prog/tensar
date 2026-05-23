@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cloudflare Pages Function - Admin panel gate page.
  *
  * Intercepts GET /admin.html and serves a lightweight bootstrap page that
@@ -14,7 +14,7 @@ const NO_CACHE_HEADERS = Object.freeze({
   "X-Robots-Tag": "noindex, nofollow, noarchive",
 });
 const ADMIN_SESSION_ROUTE = "/api/admin/session";
-const ADMIN_SHELL_VERSION = "20260426-5";
+const ADMIN_SHELL_VERSION = "20260523-2";
 const PANEL_FETCH_PATH = `/__tz-panel.html?v=${ADMIN_SHELL_VERSION}`;
 
 /**

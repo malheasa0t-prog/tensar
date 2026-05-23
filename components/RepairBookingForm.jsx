@@ -88,14 +88,18 @@ function RepairFormContent({ form, services, deliveryOptions, error, message, on
 /**
  * Coordinates the repair booking experience while keeping the form layout direct and compact.
  *
- * @param {{ services?: Array<{ id?: string, name?: string, price?: number | string }>, deliveryMethods?: Array<{ value?: string, label?: string }> }} props
+ * @param {{ services?: Array<{ id?: string, name?: string, price?: number | string }>, deliveryMethods?: Array<{ value?: string, label?: string }>, selectedServiceId?: string }} props
  * @returns {JSX.Element}
  */
-export default function RepairBookingForm({ services = [], deliveryMethods = [] }) {
-  const formState = useRepairBookingForm({ services, deliveryMethods });
+export default function RepairBookingForm({
+  services = [],
+  deliveryMethods = [],
+  selectedServiceId = "",
+}) {
+  const formState = useRepairBookingForm({ services, deliveryMethods, selectedServiceId });
 
   return (
-    <div className={`${styles.card} repair-form-card`}>
+    <div className={`${styles.card} repair-form-card`} id="repair-booking-form">
       <RepairBookingHeader isAccountPrefilled={formState.isAccountPrefilled} />
 
       <form className={styles.form} onSubmit={formState.handleSubmit}>

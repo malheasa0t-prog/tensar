@@ -70,13 +70,13 @@ export default function WelcomeOnboardingModal() {
         </span>
         <h2 id="welcome-onboarding-title">مرحباً بك في TechZone</h2>
         <p className={styles.description}>
-          استكشف المنتجات، احجز الصيانة، أو راجع الاشتراكات والخدمات من واجهة واحدة مصممة لتوصلك
+          استكشف الخدمات، احجز الصيانة، أو راجع الاشتراكات من واجهة واحدة مصممة لتوصلك
           مباشرة لما تحتاجه.
         </p>
 
         <div className={styles.features}>
           {[
-            { icon: "shopping-bag", title: "منتجات وتقنيات", description: "ابحث وقارن وأضف للسلة بسرعة." },
+            { icon: "zap", title: "خدمات رقمية", description: "اشتراكات وخدمات تقنية متنوعة." },
             { icon: "wrench", title: "صيانة مرنة", description: "احجز خدمة داخل المحل أو عن بعد." },
             { icon: "wallet", title: "رصيد واشتراكات", description: "إدارة أسهل للدفع والطلبات." },
           ].map((item) => (
@@ -93,11 +93,11 @@ export default function WelcomeOnboardingModal() {
         </div>
 
         <div className={styles.actions}>
-          <Link href="/products" className={styles.primaryButton} onClick={dismiss}>
-            ابدأ التسوق
-          </Link>
-          <Link href="/services" className={styles.secondaryButton} onClick={dismiss}>
+          <Link href="/services" className={styles.primaryButton} onClick={dismiss}>
             استكشف الخدمات
+          </Link>
+          <Link href="/contact" className={styles.secondaryButton} onClick={dismiss}>
+            تواصل معنا
           </Link>
         </div>
       </section>

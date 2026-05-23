@@ -5,8 +5,8 @@ import { formatCurrency } from "@/lib/formatCurrency";
 /**
  * Displays the current cart summary beside the checkout form.
  *
- * @param {{ items: Array<Record<string, unknown>>, cartTotal: number, shippingFee: number, checkoutTotal: number }} props
- * @returns {JSX.Element}
+ * @param {{ items: Array<Record<string, unknown>>, cartTotal: number, shippingFee: number, checkoutTotal: number }} props - Checkout totals.
+ * @returns {JSX.Element} Checkout summary card.
  */
 export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, checkoutTotal }) {
   return (
@@ -19,8 +19,8 @@ export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, che
             <AppIcon name="shopping-cart" size={28} />
           </div>
           السلة فارغة حالياً.
-          <Link href="/products" className="btn btn-ghost btn-sm">
-            تصفح المنتجات
+          <Link href="/services" className="btn btn-ghost btn-sm">
+            تصفح الخدمات
           </Link>
         </div>
       ) : (

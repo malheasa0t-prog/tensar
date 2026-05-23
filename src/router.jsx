@@ -6,15 +6,13 @@
  */
 
 import { lazy } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import App from './App';
 import { routeModuleLoaders } from './routePrefetch';
 
 /* Lazy-loaded Pages */
 
 const HomePage = lazy(routeModuleLoaders.home);
-const ProductsPage = lazy(routeModuleLoaders.products);
-const ProductDetailPage = lazy(routeModuleLoaders['product-detail']);
 const ServicesPage = lazy(routeModuleLoaders.services);
 const ServiceDetailPage = lazy(routeModuleLoaders['service-detail']);
 const CategoryPage = lazy(routeModuleLoaders.category);
@@ -51,8 +49,8 @@ export default function AppRouter() {
     <Routes>
       <Route element={<App />}>
         <Route index element={<HomePage />} />
-        <Route path="products" element={<ProductsPage />} />
-        <Route path="products/:id" element={<ProductDetailPage />} />
+        <Route path="products" element={<Navigate to="/services" replace />} />
+        <Route path="products/:id" element={<Navigate to="/services" replace />} />
         <Route path="services" element={<ServicesPage />} />
         <Route path="services/:slug" element={<ServiceDetailPage />} />
         <Route path="category/:id" element={<CategoryPage />} />

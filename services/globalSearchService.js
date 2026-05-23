@@ -19,8 +19,8 @@ let pendingSnapshotPromise = null;
 /**
  * Resolves the Supabase client used by the global search loader.
  *
- * @param {Record<string, unknown> | null | undefined} client
- * @returns {Promise<Record<string, unknown>>}
+ * @param {Record<string, unknown> | null | undefined} client - Optional injected client.
+ * @returns {Promise<Record<string, unknown>>} Supabase client.
  */
 async function resolveSearchClient(client) {
   return client || loadSupabaseClient();
@@ -29,8 +29,8 @@ async function resolveSearchClient(client) {
 /**
  * Converts a Supabase response into a safe rows array.
  *
- * @param {{ data?: unknown, error?: unknown } | null | undefined} response
- * @returns {Array<Record<string, unknown>>}
+ * @param {{ data?: unknown, error?: unknown } | null | undefined} response - Query response.
+ * @returns {Array<Record<string, unknown>>} Safe row list.
  */
 function readSearchRows(response) {
   return Array.isArray(response?.data) ? response.data : [];
@@ -39,8 +39,8 @@ function readSearchRows(response) {
 /**
  * Extracts a readable error message from a Supabase response.
  *
- * @param {{ error?: { message?: string } | null } | null | undefined} response
- * @returns {string}
+ * @param {{ error?: { message?: string } | null } | null | undefined} response - Query response.
+ * @returns {string} Error message.
  */
 function readSearchError(response) {
   return String(response?.error?.message || "").trim();
@@ -49,7 +49,7 @@ function readSearchError(response) {
 /**
  * Checks whether the in-memory search cache is still fresh.
  *
- * @returns {boolean}
+ * @returns {boolean} True when cache can be reused.
  */
 function hasFreshSearchCache() {
   return Boolean(cachedSnapshot) && Date.now() < cacheExpiryTimestamp;
@@ -58,8 +58,8 @@ function hasFreshSearchCache() {
 /**
  * Writes one freshly loaded search snapshot to the in-memory cache.
  *
- * @param {Record<string, unknown>} snapshot
- * @returns {Record<string, unknown>}
+ * @param {Record<string, unknown>} snapshot - Search snapshot.
+ * @returns {Record<string, unknown>} Cached snapshot.
  */
 function cacheSearchSnapshot(snapshot) {
   cachedSnapshot = snapshot;
@@ -68,17 +68,13 @@ function cacheSearchSnapshot(snapshot) {
 }
 
 /**
- * Loads the raw search sources from Supabase.
+ * Loads the raw service search sources from Supabase.
  *
- * @param {Record<string, unknown>} client
- * @returns {Promise<[Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]>}
+ * @param {Record<string, unknown>} client - Supabase client.
+ * @returns {Promise<[Record<string, unknown>, Record<string, unknown>]>} Query responses.
  */
 async function loadSearchSources(client) {
   return Promise.all([
-    client
-      .from("products")
-      .select("id,name,description,brand,icon,price,discount_price,sold,review_count,reviews_count,category_id,product_type")
-      .in("status", ["active", "out_of_stock"]),
     client
       .from("repair_services")
       .select("id,name,description,category,icon,price,duration")
@@ -89,51 +85,25 @@ async function loadSearchSources(client) {
       .select("id,name,slug,parent_id")
       .eq("status", "active")
       .order("sort_order", { ascending: true }),
-    client
-      .from("services")
-      .select("id,name,description,price,category_id,status,provider_service_id")
-      .eq("status", "active"),
   ]);
 }
 
 /**
  * Builds a normalized global search snapshot from the raw Supabase sources.
  *
- * @param {Record<string, unknown>} [client]
- * @returns {Promise<{ items: Array<Record<string, unknown>>, popularSuggestions: string[], quickFilters: Array<Record<string, unknown>>, sourceErrors: string[] }>}
- * @throws {Error}
+ * @param {Record<string, unknown>} [client] - Optional injected Supabase client.
+ * @returns {Promise<{ items: Array<Record<string, unknown>>, popularSuggestions: string[], quickFilters: Array<Record<string, unknown>>, sourceErrors: string[] }>} Search snapshot.
+ * @throws {Error} When all search sources fail to produce usable data.
  */
 export async function loadGlobalSearchSnapshot(client) {
   const resolvedClient = await resolveSearchClient(client);
-  const [productsResponse, repairServicesResponse, categoriesResponse, digitalServicesResponse] = await loadSearchSources(
-    resolvedClient
-  );
+  const [repairServicesResponse, categoriesResponse] = await loadSearchSources(resolvedClient);
   const sourceErrors = [
-    readSearchError(productsResponse),
     readSearchError(repairServicesResponse),
     readSearchError(categoriesResponse),
-    readSearchError(digitalServicesResponse),
   ].filter(Boolean);
-
-  const digitalProducts = readSearchRows(digitalServicesResponse).map(service => ({
-    id: service.id,
-    name: service.name,
-    description: service.description,
-    brand: null,
-    icon: 'code',
-    price: service.price,
-    discount_price: null,
-    sold: 0,
-    review_count: 0,
-    reviews_count: 0,
-    category_id: service.category_id,
-    product_type: 'digital'
-  }));
-
-  const allProducts = [...readSearchRows(productsResponse), ...digitalProducts];
-
   const items = buildGlobalSearchItems({
-    products: allProducts,
+    products: [],
     services: readSearchRows(repairServicesResponse),
     categories: readSearchRows(categoriesResponse),
   });
@@ -153,8 +123,8 @@ export async function loadGlobalSearchSnapshot(client) {
 /**
  * Returns a cached global search snapshot or loads it on demand.
  *
- * @param {Record<string, unknown>} [client]
- * @returns {Promise<{ items: Array<Record<string, unknown>>, popularSuggestions: string[], quickFilters: Array<Record<string, unknown>>, sourceErrors: string[] }>}
+ * @param {Record<string, unknown>} [client] - Optional injected Supabase client.
+ * @returns {Promise<{ items: Array<Record<string, unknown>>, popularSuggestions: string[], quickFilters: Array<Record<string, unknown>>, sourceErrors: string[] }>} Search snapshot.
  */
 export async function fetchGlobalSearchSnapshot(client) {
   if (hasFreshSearchCache()) {

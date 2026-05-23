@@ -6,8 +6,8 @@ import styles from "./HeroActionsInteractive.module.css";
 import { buildMagneticOffset } from "@/lib/interactiveEffectsModel";
 
 const HERO_ACTIONS = [
-  { href: "/products", icon: "shopping-bag", label: "استكشف المنتجات", variant: "primary" },
-  { href: "/services", icon: "wrench", label: "احجز صيانة الآن", variant: "secondary" },
+  { href: "/services", icon: "zap", label: "استكشف الخدمات", variant: "primary" },
+  { href: "/contact", icon: "wrench", label: "احجز صيانة الآن", variant: "secondary" },
   { href: "/deposit", icon: "wallet", label: "إيداع رصيد", variant: "outline" },
 ];
 

@@ -14,56 +14,8 @@ import ProductPurchaseActions from '@/components/ProductPurchaseActions';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
-import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { buildProductStructuredData } from '@/lib/seo';
-
-/**
- * Attempts to find an active product by id.
- *
- * @param {string} id
- * @param {Record<string, unknown>} supabase
- * @returns {Promise<Record<string, unknown> | null>}
- */
-async function findItem(id, supabase) {
-  if (id?.startsWith('srv-')) {
-    const { data: service } = await supabase
-      .from('services')
-      .select('*')
-      .eq('id', id)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    if (service) {
-      return {
-        id: service.id,
-        name: service.name,
-        price: service.price,
-        discount_price: null,
-        description: service.description,
-        images: service.image ? [service.image] : [],
-        category_id: service.category_id,
-        status: service.status,
-        product_type: 'digital',
-        brand: null,
-        quantity: service.max_qty || 999,
-        min_qty: service.min_qty,
-        max_qty: service.max_qty,
-        provider_service_id: service.provider_service_id,
-      };
-    }
-    return null;
-  }
-
-  const { data: product } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', id)
-    .eq('status', 'active')
-    .or('product_type.is.null,product_type.eq.physical')
-    .maybeSingle();
-
-  return product || null;
-}
+import { loadProductDetailSnapshot } from '@/services/productDetailService';
 
 /**
  * Builds the breadcrumb items for the detail page.
@@ -148,29 +100,17 @@ export default function ProductDetailPage() {
 
     async function loadProduct() {
       try {
-        const supabase = await loadSupabaseClient();
-        const item = await findItem(id, supabase);
+        const snapshot = await loadProductDetailSnapshot({ id });
 
         if (cancelled) return;
 
-        if (!item) {
+        if (!snapshot.product) {
           navigate('/not-found', { replace: true });
           return;
         }
 
-        setProduct(item);
-
-        if (item.category_id) {
-          const { data: categoryData } = await supabase
-            .from('categories')
-            .select('name,slug')
-            .eq('id', item.category_id)
-            .maybeSingle();
-
-          if (!cancelled) {
-            setCategory(categoryData || null);
-          }
-        }
+        setProduct(snapshot.product);
+        setCategory(snapshot.category);
       } catch (error) {
         console.error('[PPG-500] ProductDetailPage: failed to load', error);
       } finally {

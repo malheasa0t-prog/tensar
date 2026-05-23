@@ -1,2 +1,5 @@
-# Cloudflare Pages serves unmatched routes to the SPA root by default.
+# Cloudflare Pages SPA fallback.
 # API routes are handled by Pages Functions in /functions/api.
+# Everything else falls back to the SPA shell (index.html).
+/auth/callback  /index.html  200
+/*  /index.html  200

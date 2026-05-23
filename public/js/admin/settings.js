@@ -33,6 +33,7 @@
             + '<button class="admin-tab" data-stab="contact"><i class="fas fa-phone"></i> التواصل</button>'
             + '<button class="admin-tab" data-stab="payment"><i class="fas fa-credit-card"></i> الدفع والشحن</button>'
             + '<button class="admin-tab" data-stab="social"><i class="fas fa-share-alt"></i> التواصل الاجتماعي</button>'
+            + '<button class="admin-tab" data-stab="system"><i class="fas fa-server"></i> النظام</button>'
             + '</div>';
 
         /* ── General Tab ── */
@@ -66,6 +67,27 @@
             + field('تيك توك', 'fa-tiktok', 'url', 'setSocTt', s.tiktok || '')
             + '</div><div class="admin-form-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ</button></div></form></div></div>';
 
+        /* ── System Tab (Maintenance Mode) ── */
+        var isMaintenanceOn = !!s.maintenanceMode;
+        html += '<div class="admin-panel settings-tab-content" id="tab-system" style="display:none;"><div class="panel-body padded">'
+            + '<div class="admin-maintenance-card">'
+            + '<div class="admin-maintenance-header">'
+            + '<div class="admin-maintenance-icon"><i class="fas fa-hard-hat"></i></div>'
+            + '<div><h3>تفعيل وضع الصيانة</h3>'
+            + '<p>عند التفعيل، سيرى الزوار صفحة صيانة بدلاً من الموقع. أنت كأدمن ستتمكن من تصفح الموقع بشكل طبيعي.</p></div>'
+            + '</div>'
+            + '<div class="admin-maintenance-toggle">'
+            + '<label class="admin-switch" for="maintenanceModeToggle">'
+            + '<input type="checkbox" id="maintenanceModeToggle"' + (isMaintenanceOn ? ' checked' : '') + '>'
+            + '<span class="admin-switch-slider"></span>'
+            + '</label>'
+            + '<span class="admin-maintenance-status" id="maintenanceStatus">'
+            + (isMaintenanceOn ? '<i class="fas fa-circle" style="color:#ef4444;font-size:8px"></i> وضع الصيانة مفعّل' : '<i class="fas fa-circle" style="color:#22c55e;font-size:8px"></i> الموقع يعمل بشكل طبيعي')
+            + '</span>'
+            + '</div>'
+            + '</div>'
+            + '</div></div>';
+
         A.adminContent.innerHTML = html;
 
         /* Tab switching */
@@ -77,6 +99,30 @@
                 document.getElementById('tab-' + tab.dataset.stab).style.display = 'block';
             });
         });
+
+        /* Maintenance mode toggle */
+        var toggleEl = document.getElementById('maintenanceModeToggle');
+        if (toggleEl) {
+            toggleEl.addEventListener('change', async function () {
+                var on = toggleEl.checked;
+                var currentData = getSettings();
+                var merged = Object.assign({}, currentData, { maintenanceMode: on });
+                toggleEl.disabled = true;
+                var ok = await saveSettings(merged);
+                toggleEl.disabled = false;
+                if (ok) {
+                    await TZ.refreshData();
+                    var statusEl = document.getElementById('maintenanceStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = on
+                            ? '<i class="fas fa-circle" style="color:#ef4444;font-size:8px"></i> وضع الصيانة مفعّل'
+                            : '<i class="fas fa-circle" style="color:#22c55e;font-size:8px"></i> الموقع يعمل بشكل طبيعي';
+                    }
+                } else {
+                    toggleEl.checked = !on;
+                }
+            });
+        }
 
         /* Form handlers */
         bindSettingsForm('settingsGeneralForm', { storeName: 'setStoreName', storeDescription: 'setStoreDesc', currency: 'setCurrency', language: 'setLanguage' });

@@ -1,8 +1,26 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
+    <script>
+    /* Force clear old admin SW caches — v20260523-2 */
+    (function(){
+        var EXPECTED='tz-admin-shell-20260523-2';
+        if(!('caches' in window))return;
+        caches.keys().then(function(k){
+            k.forEach(function(n){if(n!==EXPECTED&&n.indexOf('tz-admin-shell')===0)caches.delete(n);});
+        });
+        if('serviceWorker' in navigator){
+            navigator.serviceWorker.getRegistrations().then(function(regs){
+                regs.forEach(function(r){
+                    var u=String(r.active&&r.active.scriptURL||r.installing&&r.installing.scriptURL||'');
+                    if(u.indexOf('admin-sw.js')!==-1&&u.indexOf('20260523-2')===-1)r.unregister();
+                });
+            });
+        }
+    })();
+    </script>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">
@@ -78,6 +96,12 @@
                         <a href="#" class="sidebar-link sidebar-link--nested" data-section="product-orders">
                             <i class="fas fa-box"></i><span>طلبات المنتجات</span>
                         </a>
+                        <a href="#" class="sidebar-link sidebar-link--nested" data-section="service-orders">
+                            <i class="fas fa-bolt"></i><span>طلبات الخدمات</span>
+                        </a>
+                        <a href="#" class="sidebar-link sidebar-link--nested" data-section="repair-orders">
+                            <i class="fas fa-screwdriver-wrench"></i><span>حجوزات الصيانة</span>
+                        </a>
                     </div>
                 </section>
                 <section class="sidebar-group is-open" data-sidebar-group="store">
@@ -86,9 +110,6 @@
                         <i class="fas fa-chevron-down sidebar-group-chevron"></i>
                     </button>
                     <div class="sidebar-group-links">
-                        <a href="#" class="sidebar-link" data-section="products">
-                            <i class="fas fa-box"></i><span>المنتجات</span>
-                        </a>
                         <a href="#" class="sidebar-link" data-section="categories">
                             <i class="fas fa-tags"></i><span>الفئات</span>
                         </a>
@@ -105,6 +126,9 @@
                     <div class="sidebar-group-links">
                         <a href="#" class="sidebar-link" data-section="customers">
                             <i class="fas fa-users"></i><span>العملاء</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="sellers">
+                            <i class="fas fa-user-tag"></i><span>البائعين</span>
                         </a>
                         <a href="#" class="sidebar-link" data-section="messages">
                             <i class="fas fa-envelope"></i><span>رسائل التواصل</span>
@@ -129,6 +153,9 @@
                         <a href="#" class="sidebar-link" data-section="coupons">
                             <i class="fas fa-percent"></i><span>الكوبونات</span>
                         </a>
+                        <a href="#" class="sidebar-link" data-section="refunds">
+                            <i class="fas fa-undo-alt"></i><span>طلبات الاسترجاع</span>
+                        </a>
                     </div>
                 </section>
                 <section class="sidebar-group is-open" data-sidebar-group="system">
@@ -139,6 +166,15 @@
                     <div class="sidebar-group-links">
                         <a href="#" class="sidebar-link" data-section="settings">
                             <i class="fas fa-cog"></i><span>الإعدادات</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="platform-updates">
+                            <i class="fas fa-bullhorn"></i><span>تحديثات المنصة</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="provider-alerts">
+                            <i class="fas fa-satellite-dish"></i><span>تنبيهات المزود</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="serva-catalog">
+                            <i class="fas fa-cloud-download-alt"></i><span>استيراد الخدمات</span>
                         </a>
                         <a href="#" class="sidebar-link" data-section="logs">
                             <i class="fas fa-history"></i><span>سجل العمليات</span>
@@ -237,9 +273,9 @@
         </div>
     </div>
 
-    <script src="/admin-config.js?v=20260426-5"></script>
+    <script src="/admin-config.js?v=20260523-2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="/js/admin/bootstrap.js?v=20260426-5" defer></script>
+    <script src="/js/admin/bootstrap.js?v=20260523-2" defer></script>
 </body>
 
 </html>

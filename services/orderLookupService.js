@@ -2,12 +2,14 @@ import {
   PRODUCT_STATUS_MAP,
   REPAIR_STATUS_MAP,
   formatDashboardDateTime,
+  formatDashboardOrderNumber,
   getDashboardDeliveryLabel,
   getDashboardRepairModeLabel,
 } from "../lib/dashboardOrdersModel.js";
 
 const LOOKUP_TYPE_VALUES = new Set(["all", "repair", "delivery"]);
-const ORDER_NUMBER_PATTERN = /^(ord|bk)-[a-z0-9-]+$/i;
+const DISPLAY_ORDER_NUMBER_PATTERN = /^#?\d+$/;
+const LEGACY_ORDER_NUMBER_PATTERN = /^(ord|bk)-[a-z0-9-]+$/i;
 
 /**
  * Normalizes the public lookup type into a supported value.
@@ -30,11 +32,30 @@ export function normalizeLookupType(value) {
 export function normalizeOrderNumber(value) {
   const normalized = String(value || "").trim().toLowerCase();
 
-  if (!ORDER_NUMBER_PATTERN.test(normalized)) {
-    throw new Error("[OLK-101] أدخل رقم طلب صحيح مثل ord-123 أو bk-123.");
+  if (DISPLAY_ORDER_NUMBER_PATTERN.test(normalized)) {
+    return normalized.startsWith("#") ? normalized : `#${normalized}`;
+  }
+
+  if (!LEGACY_ORDER_NUMBER_PATTERN.test(normalized)) {
+    throw new Error("[OLK-101] أدخل رقم طلب صحيح مثل #2000 أو ord-123 أو bk-123.");
   }
 
   return normalized;
+}
+
+/**
+ * Extracts the numeric display number from a normalized lookup value.
+ *
+ * @param {string} orderNumber
+ * @returns {number | null}
+ */
+function getDisplayNumberValue(orderNumber) {
+  if (!DISPLAY_ORDER_NUMBER_PATTERN.test(orderNumber)) {
+    return null;
+  }
+
+  const displayNumber = Number(String(orderNumber).replace("#", ""));
+  return Number.isInteger(displayNumber) && displayNumber > 0 ? displayNumber : null;
 }
 
 /**
@@ -70,7 +91,7 @@ export function resolveLookupStatus({ requestType, status }) {
 /**
  * Builds a compact response payload for a public delivery lookup.
  *
- * @param {{ created_at?: string, delivery_method?: string, id: string, status?: string, updated_at?: string }} order
+ * @param {{ created_at?: string, delivery_method?: string, display_number?: number, id: string, status?: string, updated_at?: string }} order
  * @returns {{
  *   details: Array<{ label: string, value: string }>,
  *   orderNumber: string,
@@ -84,13 +105,13 @@ export function buildDeliveryLookupResult(order) {
   const status = resolveLookupStatus({ requestType: "delivery", status: order.status });
 
   return {
-    orderNumber: order.id,
+    orderNumber: formatDashboardOrderNumber(order),
     requestType: "delivery",
     requestTypeLabel: "طلب توصيل",
     status,
     title: "متابعة طلب التوصيل",
     details: [
-      { label: "رقم الطلب", value: order.id },
+      { label: "رقم الطلب", value: formatDashboardOrderNumber(order) },
       { label: "طريقة الاستلام", value: getDashboardDeliveryLabel(order.delivery_method) },
       { label: "تاريخ الإنشاء", value: formatDashboardDateTime(order.created_at) },
       { label: "آخر تحديث", value: formatDashboardDateTime(order.updated_at || order.created_at) },
@@ -101,7 +122,7 @@ export function buildDeliveryLookupResult(order) {
 /**
  * Builds a compact response payload for a public repair lookup.
  *
- * @param {{ created_at?: string, id: string, mode?: string, service_name?: string, status?: string, updated_at?: string }} booking
+ * @param {{ created_at?: string, display_number?: number, id: string, mode?: string, service_name?: string, status?: string, updated_at?: string }} booking
  * @returns {{
  *   details: Array<{ label: string, value: string }>,
  *   orderNumber: string,
@@ -115,13 +136,13 @@ export function buildRepairLookupResult(booking) {
   const status = resolveLookupStatus({ requestType: "repair", status: booking.status });
 
   return {
-    orderNumber: booking.id,
+    orderNumber: formatDashboardOrderNumber(booking),
     requestType: "repair",
     requestTypeLabel: "طلب صيانة",
     status,
     title: booking.service_name || "متابعة طلب الصيانة",
     details: [
-      { label: "رقم الطلب", value: booking.id },
+      { label: "رقم الطلب", value: formatDashboardOrderNumber(booking) },
       { label: "طريقة التنفيذ", value: getDashboardRepairModeLabel(booking.mode) },
       { label: "تاريخ الإنشاء", value: formatDashboardDateTime(booking.created_at) },
       { label: "آخر تحديث", value: formatDashboardDateTime(booking.updated_at || booking.created_at) },
@@ -136,12 +157,13 @@ export function buildRepairLookupResult(booking) {
  * @returns {Promise<{ created_at?: string, delivery_method?: string, id: string, status?: string, updated_at?: string } | null>}
  */
 async function loadDeliveryOrder({ adminClient, orderNumber }) {
-  const response = await adminClient
+  const displayNumber = getDisplayNumberValue(orderNumber);
+  const query = adminClient
     .from("orders")
-    .select("id, delivery_method, status, created_at, updated_at")
-    .eq("id", orderNumber)
-    .eq("delivery_method", "delivery")
-    .maybeSingle();
+    .select("id, display_number, delivery_method, status, created_at, updated_at");
+  const response = displayNumber
+    ? await query.eq("display_number", displayNumber).eq("delivery_method", "delivery").maybeSingle()
+    : await query.eq("id", orderNumber).eq("delivery_method", "delivery").maybeSingle();
 
   return response.data || null;
 }
@@ -153,11 +175,13 @@ async function loadDeliveryOrder({ adminClient, orderNumber }) {
  * @returns {Promise<{ created_at?: string, id: string, mode?: string, service_name?: string, status?: string, updated_at?: string } | null>}
  */
 async function loadRepairBooking({ adminClient, orderNumber }) {
-  const response = await adminClient
+  const displayNumber = getDisplayNumberValue(orderNumber);
+  const query = adminClient
     .from("repair_bookings")
-    .select("id, service_name, mode, status, created_at, updated_at")
-    .eq("id", orderNumber)
-    .maybeSingle();
+    .select("id, display_number, service_name, mode, status, created_at, updated_at");
+  const response = displayNumber
+    ? await query.eq("display_number", displayNumber).maybeSingle()
+    : await query.eq("id", orderNumber).maybeSingle();
 
   return response.data || null;
 }

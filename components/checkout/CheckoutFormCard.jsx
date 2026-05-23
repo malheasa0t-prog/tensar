@@ -3,6 +3,21 @@ import CheckoutWalletTransferModal from "@/components/checkout/CheckoutWalletTra
 import { formatCurrency } from "@/lib/formatCurrency";
 
 /**
+ * Formats the order number returned by checkout.
+ *
+ * @param {{ display_number?: number | string, order_id?: string } | null | undefined} success
+ * @returns {string}
+ */
+function getCheckoutSuccessOrderNumber(success) {
+  const displayNumber = Number(success?.display_number || 0);
+  if (Number.isInteger(displayNumber) && displayNumber > 0) {
+    return `#${displayNumber}`;
+  }
+
+  return String(success?.order_id || "-").trim() || "-";
+}
+
+/**
  * Main checkout form card with dynamic payment and delivery options.
  *
  * @param {{
@@ -49,7 +64,7 @@ export default function CheckoutFormCard({
       {error ? <div className="form-alert error">{error}</div> : null}
       {success ? (
         <div className="form-alert success">
-          تم إنشاء الطلب بنجاح. رقم الطلب: <strong>{success.order_id}</strong>
+          تم إنشاء الطلب بنجاح. رقم الطلب: <strong>{getCheckoutSuccessOrderNumber(success)}</strong>
         </div>
       ) : null}
 

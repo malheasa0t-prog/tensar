@@ -2,10 +2,6 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { normalizeSiteSettings } from "@/lib/contactChannels";
-import {
-  fetchHeaderAuthSnapshot,
-  subscribeToHeaderAuthChanges,
-} from "@/services/headerService";
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
 const DEFAULT_AUTH_SNAPSHOT = {
@@ -59,6 +55,7 @@ export default function SiteRuntimeProvider({
 
   useEffect(() => {
     let active = true;
+    let unsubscribe = () => {};
 
     /**
      * Refreshes the auth-dependent header snapshot once for all consumers.
@@ -66,6 +63,7 @@ export default function SiteRuntimeProvider({
      * @returns {Promise<void>}
      */
     async function refreshAuthSnapshot() {
+      const { fetchHeaderAuthSnapshot } = await import("@/services/headerService");
       const snapshot = await fetchHeaderAuthSnapshot().catch(() => DEFAULT_AUTH_SNAPSHOT);
 
       if (!active) {
@@ -76,8 +74,23 @@ export default function SiteRuntimeProvider({
       setAuthLoading(false);
     }
 
+    /**
+     * Attaches the auth subscription after the Supabase-backed service is needed.
+     *
+     * @returns {Promise<void>}
+     */
+    async function subscribeToAuthSnapshotChanges() {
+      const { subscribeToHeaderAuthChanges } = await import("@/services/headerService");
+
+      if (!active) {
+        return;
+      }
+
+      unsubscribe = subscribeToHeaderAuthChanges(() => refreshAuthSnapshot());
+    }
+
     void refreshAuthSnapshot();
-    const unsubscribe = subscribeToHeaderAuthChanges(() => refreshAuthSnapshot());
+    void subscribeToAuthSnapshotChanges();
     window.addEventListener("tz-notifications-updated", refreshAuthSnapshot);
 
     return () => {

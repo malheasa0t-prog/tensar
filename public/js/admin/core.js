@@ -176,8 +176,11 @@
         const section = A.currentSection;
         if (section === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
         if (section === 'analytics' && A.sections.analytics) A.sections.analytics();
-        if (section === 'orders' && ['orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
+        if (section === 'orders' && ['orders', 'service_orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
         if (section === 'product-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['product-orders']) A.sections['product-orders']();
+        if (section === 'service-orders' && ['service_orders', 'all'].includes(table) && A.sections['service-orders']) A.sections['service-orders']();
+        if (section === 'accessory-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['accessory-orders']) A.sections['accessory-orders']();
+        if (section === 'repair-orders' && ['repair_bookings', 'all'].includes(table) && A.sections['repair-orders']) A.sections['repair-orders']();
         if (section === 'products' && ['products', 'all'].includes(table) && A.sections.products) A.sections.products();
         if (section === 'categories' && ['categories', 'all'].includes(table) && A.sections.categories) A.sections.categories();
         if (section === 'main-categories' && ['categories', 'all'].includes(table) && A.sections['main-categories']) A.sections['main-categories']();
@@ -191,6 +194,7 @@
         if (section === 'customers' && ['users', 'orders', 'all'].includes(table) && A.sections.customers) A.sections.customers();
         if (section === 'settings' && ['settings', 'all'].includes(table) && A.sections.settings) A.sections.settings();
         if (section === 'logs' && ['audit_logs', 'all'].includes(table) && A.sections.logs) A.sections.logs();
+        if (section === 'platform-updates' && ['platform_updates', 'all'].includes(table) && A.sections['platform-updates']) A.sections['platform-updates']();
         helpers.updateOrdersBadge(TZ);
     });
 

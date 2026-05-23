@@ -1,0 +1,113 @@
+/* ── Maintenance Mode — Admin Toggle ── */
+
+.admin-maintenance-card {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  background: var(--surface-secondary, rgba(255,255,255,0.04));
+  border: 1px solid var(--border-default, rgba(255,255,255,0.08));
+}
+
+.admin-maintenance-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.admin-maintenance-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.admin-maintenance-header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  color: var(--text-primary, #f8fbff);
+}
+
+.admin-maintenance-header p {
+  margin: 0;
+  color: var(--text-secondary, #a8b8d8);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.admin-maintenance-toggle {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-maintenance-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-secondary, #c9d5f1);
+}
+
+/* ── Toggle Switch ── */
+
+.admin-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.admin-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.admin-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.admin-switch-slider::before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 3px;
+  bottom: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.admin-switch input:checked + .admin-switch-slider {
+  background: #f59e0b;
+  border-color: #d97706;
+}
+
+.admin-switch input:checked + .admin-switch-slider::before {
+  transform: translateX(24px);
+}
+
+.admin-switch input:disabled + .admin-switch-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { loadCategoryPageSnapshot } from '@/services/categoryPageService';
 
 /**
- * Loads and stores the client-side category page snapshot.
+ * Loads and stores the client-side category services snapshot.
  *
  * @param {string} routeValue
  * @returns {{
@@ -13,8 +13,8 @@ import { loadCategoryPageSnapshot } from '@/services/categoryPageService';
  *   category: Record<string, unknown> | null,
  *   mainCategory: Record<string, unknown> | null,
  *   subCategories: Array<Record<string, unknown>>,
- *   products: Array<Record<string, unknown>>,
- *   subCategoryProductsCount: Record<string, number>,
+ *   repairServices: Array<Record<string, unknown>>,
+ *   subCategoryServiceCounts: Record<string, number>,
  * }}
  */
 export function useCategoryPage(routeValue) {
@@ -23,8 +23,8 @@ export function useCategoryPage(routeValue) {
   const [category, setCategory] = useState(null);
   const [mainCategory, setMainCategory] = useState(null);
   const [subCategories, setSubCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [subCategoryProductsCount, setSubCategoryProductsCount] = useState({});
+  const [repairServices, setRepairServices] = useState([]);
+  const [subCategoryServiceCounts, setSubCategoryServiceCounts] = useState({});
 
   useEffect(() => {
     if (!routeValue) {
@@ -36,7 +36,7 @@ export function useCategoryPage(routeValue) {
     let active = true;
 
     /**
-     * Refreshes the full category tree and product snapshot.
+     * Refreshes the full category tree and service snapshot.
      *
      * @returns {Promise<void>}
      */
@@ -52,8 +52,8 @@ export function useCategoryPage(routeValue) {
       setCategory(snapshot.category);
       setMainCategory(snapshot.mainCategory);
       setSubCategories(snapshot.subCategories);
-      setProducts(snapshot.products);
-      setSubCategoryProductsCount(snapshot.subCategoryProductsCount);
+      setRepairServices(snapshot.repairServices);
+      setSubCategoryServiceCounts(snapshot.subCategoryServiceCounts);
       setError(snapshot.error);
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export function useCategoryPage(routeValue) {
     category,
     mainCategory,
     subCategories,
-    products,
-    subCategoryProductsCount,
+    repairServices,
+    subCategoryServiceCounts,
   };
 }

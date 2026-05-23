@@ -171,6 +171,7 @@ export function createCheckoutHandler(dependencies = {}) {
 
       // Step 2: Create the order record AFTER inventory is secured
       let orderId;
+      let displayNumber;
       let total;
 
       try {
@@ -187,6 +188,7 @@ export function createCheckoutHandler(dependencies = {}) {
           userId,
         });
         orderId = orderResult.orderId;
+        displayNumber = orderResult.displayNumber;
         total = orderResult.total;
       } catch (orderError) {
         // Order creation failed after inventory was deducted — rollback inventory
@@ -214,6 +216,7 @@ export function createCheckoutHandler(dependencies = {}) {
 
         await sendCheckoutNotification({
           admin,
+          displayNumber,
           orderId,
           orderItemsCount: orderItems.length,
           total,
@@ -225,6 +228,7 @@ export function createCheckoutHandler(dependencies = {}) {
           response: successResponse({
             data: {
               order_id: orderId,
+              display_number: displayNumber,
               total,
               items_count: orderItems.length,
             },

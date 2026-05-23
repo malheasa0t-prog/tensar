@@ -47,7 +47,7 @@ export default function ProductPurchaseActions({ product }) {
       </Button>
 
       <Button
-        href="/products"
+        href="/services"
         variant="ghost"
         endIcon={<ArrowLeft size={16} />}
       >

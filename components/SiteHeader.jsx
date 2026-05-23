@@ -3,7 +3,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import MobileMenu from "./MobileMenu";
 import { useCart } from "./CartProvider";
 import { useComparison } from "./ComparisonProvider";
 import { useFavorites } from "./FavoritesProvider";
@@ -11,14 +10,18 @@ import { useSiteRuntime } from "./SiteRuntimeProvider";
 import { useTheme } from "./ThemeProvider";
 import AppIcon from "./AppIcon";
 import HeaderNotificationBell from "./HeaderNotificationBell";
+import HeaderWalletBadge from "./HeaderWalletBadge";
 import { getBrandMark, getSocialLinks, normalizeSiteSettings } from "@/lib/contactChannels";
 import { resolveMobileMenuIcon } from "@/lib/mobileMenuModel";
+import { prefetchRouteModule, shouldPrefetchRoute } from "@/src/routePrefetch";
 
 const GlobalSearchOverlay = lazy(() => import("./GlobalSearchOverlay"));
+const MobileMenu = lazy(() => import("./MobileMenu"));
 
 const DEFAULT_SITE_SETTINGS = normalizeSiteSettings();
 const DESKTOP_SIDEBAR_MEDIA_QUERY = "(min-width: 1024px)";
 const HEADER_SCROLL_THRESHOLD_PX = 60;
+const HEADER_ROUTE_PREFETCH_IDLE_TIMEOUT_MS = 1200;
 
 /**
  * Determines whether the header should use the compact scrolled state.
@@ -31,6 +34,33 @@ function shouldCompactHeaderOnScroll() {
   }
 
   return !window.matchMedia(DESKTOP_SIDEBAR_MEDIA_QUERY).matches;
+}
+
+/**
+ * Starts loading the search overlay before the click path needs it.
+ *
+ * @returns {void}
+ */
+function prefetchGlobalSearchOverlay() {
+  void import("./GlobalSearchOverlay");
+}
+
+/**
+ * Starts loading the mobile menu before the click path needs it.
+ *
+ * @returns {void}
+ */
+function prefetchMobileMenu() {
+  void import("./MobileMenu");
+}
+
+/**
+ * Starts loading the cart sidebar before the first open interaction.
+ *
+ * @returns {void}
+ */
+function prefetchCartSidebar() {
+  void import("./CartSidebar");
 }
 
 /**
@@ -110,21 +140,31 @@ export default function SiteHeader() {
     setMenuOpen(false);
   }, [pathname]);
 
+  const hasDynamicCategoryLinks = dynamicLinks.length > 0;
+  const desktopBaseLinks = hasDynamicCategoryLinks
+    ? siteSettings.navigation.headerBefore
+    : siteSettings.navigation.headerBefore;
   const desktopLinks = [
-    ...siteSettings.navigation.headerBefore,
-    ...dynamicLinks.slice(0, 2),
+    ...desktopBaseLinks,
+    ...dynamicLinks,
     ...siteSettings.navigation.headerAfter,
   ];
-  const mobileBaseLinks =
-    siteSettings.navigation.mobilePrimary.length > 0
-      ? siteSettings.navigation.mobilePrimary
-      : [...siteSettings.navigation.headerBefore, ...siteSettings.navigation.headerAfter];
-  const mobileLinks = [
-    ...mobileBaseLinks,
-    ...dynamicLinks.filter(
-      (link) => !mobileBaseLinks.some((existingLink) => existingLink.href === link.href)
-    ),
-  ];
+  const mobileLinks = siteSettings.navigation.mobilePrimary.length > 0
+    ? [
+        ...siteSettings.navigation.mobilePrimary,
+        ...dynamicLinks.filter(
+          (link) => !siteSettings.navigation.mobilePrimary.some((existing) => existing.href === link.href)
+        ),
+      ]
+    : [
+        ...siteSettings.navigation.headerBefore,
+        ...dynamicLinks,
+        ...siteSettings.navigation.headerAfter,
+      ];
+  const headerPrefetchKey = desktopLinks
+    .map((link) => link.href)
+    .filter((href, index, hrefs) => shouldPrefetchRoute(href) && hrefs.indexOf(href) === index)
+    .join("|");
   const desktopLinksWithIcons = desktopLinks.map((link) => ({
     ...link,
     icon: resolveMobileMenuIcon(link.href),
@@ -133,10 +173,47 @@ export default function SiteHeader() {
   const brandMark = getBrandMark(brandName);
   const socialLinks = getSocialLinks(siteSettings);
   const favoritesHref = authLoading ? "/auth/login" : user ? "/dashboard/favorites" : "/auth/login";
+
+  useEffect(() => {
+    if (!headerPrefetchKey) {
+      return undefined;
+    }
+
+    let idleCallbackId = 0;
+    let timeoutId = 0;
+
+    function warmHeaderRoutes() {
+      const headerHrefs = headerPrefetchKey.split("|");
+
+      for (const href of headerHrefs) {
+        void prefetchRouteModule(href, { includeData: false });
+      }
+
+      prefetchGlobalSearchOverlay();
+      prefetchMobileMenu();
+      prefetchCartSidebar();
+    }
+
+    if (typeof window.requestIdleCallback === "function") {
+      idleCallbackId = window.requestIdleCallback(warmHeaderRoutes, {
+        timeout: HEADER_ROUTE_PREFETCH_IDLE_TIMEOUT_MS,
+      });
+    } else {
+      timeoutId = window.setTimeout(warmHeaderRoutes, HEADER_ROUTE_PREFETCH_IDLE_TIMEOUT_MS);
+    }
+
+    return () => {
+      if (idleCallbackId && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [headerPrefetchKey]);
+
   function isPublicActive(href) {
     if (!href || href.includes("#")) return false;
     if (href === "/") return pathname === "/";
-    if (href === "/products" && pathname?.startsWith("/category/")) return true;
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
@@ -158,12 +235,13 @@ export default function SiteHeader() {
               type="button"
               className="nav-search-trigger"
               onClick={() => setSearchOpen(true)}
-              aria-keyshortcuts="Control+K /"
+              onFocus={prefetchGlobalSearchOverlay}
+              onMouseEnter={prefetchGlobalSearchOverlay}
+              onTouchStart={prefetchGlobalSearchOverlay}
               aria-label="فتح البحث العام"
             >
               <AppIcon name="search" size={18} />
               <span>ابحث في الموقع</span>
-              <small>Ctrl + K</small>
             </button>
 
             <HeaderNotificationBell user={user} authLoading={authLoading} />
@@ -181,11 +259,16 @@ export default function SiteHeader() {
             <button
               className="nav-icon-btn nav-cart-btn"
               onClick={openSidebar}
+              onFocus={prefetchCartSidebar}
+              onMouseEnter={prefetchCartSidebar}
+              onTouchStart={prefetchCartSidebar}
               aria-label="سلة التسوق"
             >
               <AppIcon name="cart" size={18} />
               {cartCount > 0 ? <span className="cart-badge is-bouncing">{cartCount}</span> : null}
             </button>
+
+            <HeaderWalletBadge balance={walletBalance} user={user} />
 
             {!authLoading
               ? user
@@ -206,6 +289,9 @@ export default function SiteHeader() {
             <button
               className="mobile-toggle"
               onClick={() => setMenuOpen((previousState) => !previousState)}
+              onFocus={prefetchMobileMenu}
+              onMouseEnter={prefetchMobileMenu}
+              onTouchStart={prefetchMobileMenu}
               aria-label="فتح القائمة"
               aria-expanded={menuOpen}
             >
@@ -232,24 +318,30 @@ export default function SiteHeader() {
         </div>
       </header>
 
-      <MobileMenu
-        compareCount={comparisonCount}
-        favoriteCount={favoriteCount}
-        links={mobileLinks}
-        onClose={() => setMenuOpen(false)}
-        onToggleTheme={toggleTheme}
-        open={menuOpen}
-        pathname={pathname || ""}
-        socialLinks={socialLinks}
-        themeLabel={themeLabel}
-        unreadNotifications={unreadNotifications}
-        user={user}
-        userLabel={userLabel}
-        walletBalance={walletBalance}
-      />
-      <Suspense fallback={null}>
-        <GlobalSearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      </Suspense>
+      {menuOpen ? (
+        <Suspense fallback={null}>
+          <MobileMenu
+            compareCount={comparisonCount}
+            favoriteCount={favoriteCount}
+            links={mobileLinks}
+            onClose={() => setMenuOpen(false)}
+            onToggleTheme={toggleTheme}
+            open={menuOpen}
+            pathname={pathname || ""}
+            socialLinks={socialLinks}
+            themeLabel={themeLabel}
+            unreadNotifications={unreadNotifications}
+            user={user}
+            userLabel={userLabel}
+            walletBalance={walletBalance}
+          />
+        </Suspense>
+      ) : null}
+      {searchOpen ? (
+        <Suspense fallback={null}>
+          <GlobalSearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+        </Suspense>
+      ) : null}
     </>
   );
 }

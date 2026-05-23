@@ -126,6 +126,12 @@ export default function DepositPage() {
       return;
     }
 
+    if (!proofFile) {
+      setError('[DPG-110] يجب رفع صورة إثبات التحويل.');
+      showToast('يجب رفع صورة إثبات التحويل', { type: 'warning', title: 'صورة الإثبات مطلوبة' });
+      return;
+    }
+
     setLoading(true);
     try {
       const supabase = await loadSupabaseClient();
@@ -275,7 +281,7 @@ export default function DepositPage() {
             </div>
 
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-              صورة إثبات التحويل
+              صورة إثبات التحويل <span style={{ color: '#e74c3c' }}>*</span>
             </label>
             <input
               type="file"

@@ -114,7 +114,7 @@ export default function DashboardFavoritesPage() {
               مشاركة المفضلة
             </button>
 
-            <Link href="/products" className="btn btn-primary">
+            <Link href="/services" className="btn btn-primary">
               <AppIcon name="shopping-bag" size={15} />
               تصفح المنتجات
             </Link>
@@ -135,7 +135,7 @@ export default function DashboardFavoritesPage() {
             <div className="dash-empty-icon">♡</div>
             لا توجد منتجات محفوظة في المفضلة حالياً
             <div className={styles.emptyActions}>
-              <Link href="/products" className="btn btn-outline">
+              <Link href="/services" className="btn btn-outline">
                 ابدأ بإضافة منتجات
               </Link>
             </div>

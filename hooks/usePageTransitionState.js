@@ -67,7 +67,7 @@ export default function usePageTransitionState() {
   const prefersReducedMotion = useReducedMotionPreference();
   const pendingTimerRef = useRef(null);
   const enterTimerRef = useRef(null);
-  const [phase, setPhase] = useState("enter");
+  const [phase, setPhase] = useState(PAGE_TRANSITION_ENTER_MS > 0 ? "enter" : "idle");
   const [pendingDestination, setPendingDestination] = useState("");
   const search = searchParams?.toString() || "";
   const routeKey = useMemo(() => buildRouteKey({ pathname, search }), [pathname, search]);
@@ -76,7 +76,7 @@ export default function usePageTransitionState() {
     clearTimer(enterTimerRef);
     setPendingDestination("");
 
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion || PAGE_TRANSITION_ENTER_MS <= 0) {
       setPhase("idle");
       return undefined;
     }

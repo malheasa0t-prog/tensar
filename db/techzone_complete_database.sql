@@ -240,6 +240,7 @@ CREATE TABLE IF NOT EXISTS public.repair_services (
 -- Repair Bookings
 CREATE TABLE IF NOT EXISTS public.repair_bookings (
   id text PRIMARY KEY DEFAULT public.generate_prefixed_id('bk-'),
+  display_number bigint NOT NULL DEFAULT nextval('public.order_display_number_seq'),
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   service_id text REFERENCES public.repair_services(id) ON DELETE SET NULL,
   service_name text, name text NOT NULL, email text, phone text,
@@ -296,6 +297,7 @@ CREATE TABLE IF NOT EXISTS public.support_chat_messages (
 -- Service Orders
 CREATE TABLE IF NOT EXISTS public.service_orders (
   id text PRIMARY KEY DEFAULT public.generate_prefixed_id('so-'),
+  display_number bigint NOT NULL DEFAULT nextval('public.order_display_number_seq'),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   service_id text REFERENCES public.services(id) ON DELETE SET NULL,
   service_name text NOT NULL, link text,
@@ -395,10 +397,12 @@ CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id, created_
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_display_number ON public.orders(display_number);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id, id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_repair_bookings_display_number ON public.repair_bookings(display_number);
 CREATE INDEX IF NOT EXISTS idx_repair_bookings_status ON public.repair_bookings(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON public.contact_messages(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_support_conversations_user_id ON public.support_conversations(user_id, last_message_at DESC);
 CREATE INDEX IF NOT EXISTS idx_service_orders_user_id ON public.service_orders(user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_service_orders_display_number ON public.service_orders(display_number);
 CREATE INDEX IF NOT EXISTS idx_service_orders_status ON public.service_orders(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON public.reviews(status, sort_order, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_coupons_code_unique ON public.coupons ((lower(code)));

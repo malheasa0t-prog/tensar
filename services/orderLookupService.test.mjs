@@ -30,7 +30,7 @@ function createAdminClientStub({ orders = [], repairBookings = [] } = {}) {
 
           function runQuery() {
             const rows = tables[table] || [];
-            const found = rows.find((row) => filters.every(([column, value]) => String(row[column] || "") === value));
+            const found = rows.find((row) => filters.every(([column, value]) => String(row[column] || "") === String(value)));
             return Promise.resolve({ data: found || null });
           }
 
@@ -59,15 +59,18 @@ test("normalizeLookupType should fallback to all for unsupported values", () => 
 
 test("normalizeOrderNumber should trim and normalize valid order numbers", () => {
   assert.equal(normalizeOrderNumber("  BK-12345 "), "bk-12345");
+  assert.equal(normalizeOrderNumber(" 2000 "), "#2000");
+  assert.equal(normalizeOrderNumber(" #2001 "), "#2001");
 });
 
 test("normalizeOrderNumber should reject invalid order numbers", () => {
-  assert.throws(() => normalizeOrderNumber("12345"), /أدخل رقم طلب صحيح/);
+  assert.throws(() => normalizeOrderNumber("not-real"), /رقم طلب صحيح/);
 });
 
 test("inferLookupType should prioritize the booking prefix", () => {
   assert.equal(inferLookupType({ lookupType: "all", orderNumber: "bk-123" }), "repair");
   assert.equal(inferLookupType({ lookupType: "all", orderNumber: "ord-123" }), "delivery");
+  assert.equal(inferLookupType({ lookupType: "repair", orderNumber: "#2000" }), "repair");
 });
 
 test("resolveLookupStatus should return mapped labels", () => {
@@ -81,6 +84,7 @@ test("resolveLookupStatus should return mapped labels", () => {
 test("buildRepairLookupResult should produce public-safe repair details", () => {
   const result = buildRepairLookupResult({
     id: "bk-101",
+    display_number: 2000,
     service_name: "صيانة لابتوب",
     mode: "delivery",
     status: "diagnosing",
@@ -90,12 +94,14 @@ test("buildRepairLookupResult should produce public-safe repair details", () => 
 
   assert.equal(result.requestType, "repair");
   assert.equal(result.title, "صيانة لابتوب");
+  assert.equal(result.orderNumber, "#2000");
   assert.equal(result.details[1].value, "استلام وتوصيل");
 });
 
 test("buildDeliveryLookupResult should produce delivery details", () => {
   const result = buildDeliveryLookupResult({
     id: "ord-301",
+    display_number: 2001,
     delivery_method: "delivery",
     status: "processing",
     created_at: "2026-04-08T01:00:00.000Z",
@@ -103,6 +109,7 @@ test("buildDeliveryLookupResult should produce delivery details", () => {
   });
 
   assert.equal(result.requestType, "delivery");
+  assert.equal(result.orderNumber, "#2001");
   assert.equal(result.status.label, "قيد التجهيز");
   assert.equal(result.details[1].value, "توصيل");
 });
@@ -112,6 +119,7 @@ test("lookupPublicOrderByNumber should resolve repair bookings", async () => {
     repairBookings: [
       {
         id: "bk-200",
+        display_number: 2002,
         service_name: "فحص جهاز",
         mode: "pickup",
         status: "pending",
@@ -128,7 +136,31 @@ test("lookupPublicOrderByNumber should resolve repair bookings", async () => {
   });
 
   assert.equal(result?.requestType, "repair");
-  assert.equal(result?.orderNumber, "bk-200");
+  assert.equal(result?.orderNumber, "#2002");
+});
+
+test("lookupPublicOrderByNumber should resolve display numbers", async () => {
+  const adminClient = createAdminClientStub({
+    repairBookings: [
+      {
+        id: "bk-201",
+        display_number: 2003,
+        service_name: "فحص جهاز",
+        mode: "pickup",
+        status: "pending",
+        created_at: "2026-04-08T01:00:00.000Z",
+      },
+    ],
+  });
+
+  const result = await lookupPublicOrderByNumber({
+    adminClient,
+    lookupType: "repair",
+    orderNumber: "#2003",
+  });
+
+  assert.equal(result?.requestType, "repair");
+  assert.equal(result?.orderNumber, "#2003");
 });
 
 test("lookupPublicOrderByNumber should resolve delivery orders", async () => {

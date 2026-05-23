@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   buildRepairBookingPayload,
   createRepairBookingFormState,
+  resolveRepairBookingServiceId,
   resolveRepairDeliveryOptions,
   validateRepairBookingForm,
 } from "@/lib/repairBookingModel.mjs";
@@ -29,7 +30,7 @@ const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات
 /**
  * Manages repair booking state, validation, account prefilling, and submission.
  *
- * @param {{ services?: Array<{ id?: string, name?: string }>, deliveryMethods?: Array<{ value?: string, label?: string }> }} params
+ * @param {{ services?: Array<{ id?: string, name?: string }>, deliveryMethods?: Array<{ value?: string, label?: string }>, selectedServiceId?: string }} params
  * @returns {{
  *   form: RepairBookingFormState,
  *   deliveryOptions: Array<{ value?: string, label?: string }>,
@@ -41,7 +42,11 @@ const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات
  *   handleSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>
  * }}
  */
-export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
+export function useRepairBookingForm({
+  services = [],
+  deliveryMethods = [],
+  selectedServiceId = "",
+}) {
   const deliveryOptions = useMemo(
     () => resolveRepairDeliveryOptions(deliveryMethods),
     [deliveryMethods]
@@ -50,6 +55,12 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
     createRepairBookingFormState({
       services,
       deliveryOptions,
+      preservedValues: {
+        serviceId: resolveRepairBookingServiceId({
+          services,
+          requestedServiceId: selectedServiceId,
+        }),
+      },
     })
   );
   const [currentUserId, setCurrentUserId] = useState("");
@@ -64,16 +75,16 @@ export function useRepairBookingForm({ services = [], deliveryMethods = [] }) {
   );
 
   useEffect(() => {
-    if (!services.length) {
-      return;
-    }
+    setForm((prev) => {
+      const serviceId = resolveRepairBookingServiceId({
+        services,
+        requestedServiceId: selectedServiceId,
+        currentServiceId: prev.serviceId,
+      });
 
-    setForm((prev) =>
-      services.some((service) => service.id === prev.serviceId)
-        ? prev
-        : { ...prev, serviceId: services[0].id }
-    );
-  }, [services]);
+      return serviceId === prev.serviceId ? prev : { ...prev, serviceId };
+    });
+  }, [services, selectedServiceId]);
 
   useEffect(() => {
     if (!deliveryOptions.length) {

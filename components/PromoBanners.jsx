@@ -27,8 +27,8 @@ const defaultBanners = [
     image:
       "https://images.unsplash.com/photo-1498049794561-7780e7231661?q=80&w=2670&auto=format&fit=crop",
     title: "أحدث التقنيات بين يديك",
-    subtitle: "اكتشف أجهزة لابتوب وإكسسوارات بأسعار لا تقبل المنافسة",
-    href: "/products",
+    subtitle: "اكتشف خدمات تقنية وإكسسوارات بأسعار لا تقبل المنافسة",
+    href: "/services",
   },
   {
     id: 2,
@@ -42,9 +42,9 @@ const defaultBanners = [
     id: 3,
     image:
       "https://images.unsplash.com/photo-1603302576837-37561b2e2302?q=80&w=2668&auto=format&fit=crop",
-    title: "إكسسوارات لكل الأجهزة",
-    subtitle: "تصفح أحدث السماعات والشواحن والكابلات الأصلية",
-    href: "/products",
+    title: "خدمات رقمية متنوعة",
+    subtitle: "تصفح أحدث الخدمات الرقمية والاشتراكات بأفضل الأسعار",
+    href: "/services",
   },
 ];
 

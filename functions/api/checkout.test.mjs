@@ -122,10 +122,11 @@ function createCheckoutAdminClient({ orderId = 'ord-1', products = [], services 
               calls.orderInserts.push(rows);
               return {
                 select(fields) {
-                  assert.equal(fields, 'id');
+                  assert.ok(fields.includes('id'));
+                  assert.ok(fields.includes('display_number'));
                   return {
                     async single() {
-                      return { data: { id: orderId }, error: null };
+                      return { data: { id: orderId, display_number: 2000 }, error: null };
                     },
                   };
                 },
@@ -217,6 +218,7 @@ test('createCheckoutHandler should use optimistic inventory updates for physical
   assert.equal(response.status, 200);
   assert.equal(payload.success, true);
   assert.equal(payload.data.order_id, 'ord-1');
+  assert.equal(payload.data.display_number, 2000);
   assert.equal(applyCalls.length, 1);
   assert.equal(applyCalls[0][0].productId, 'prd-1');
   assert.equal(calls.orderInserts.length, 1);

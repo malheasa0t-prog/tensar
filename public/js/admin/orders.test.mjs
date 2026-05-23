@@ -33,15 +33,19 @@ function escapeHtml(value) {
 /**
  * Loads the admin orders script and exposes its test hooks.
  *
+ * @param {Record<string, unknown>} [db]
  * @returns {{
  *   buildPhysicalStatusActionsMarkup: Function,
  *   getOrderDisplayStatus: Function,
+ *   getOrdersForTab: Function,
+ *   getOrderType: Function,
+ *   getOrderTypeLabel: Function,
  *   getStatusLabel: Function,
  *   getStatusOptionsForTab: Function,
  *   normalizePhysicalOrderStatus: Function,
  * }}
  */
-function loadOrderHooks() {
+function loadOrderHooks(db = {}) {
   const window = {
     __ENABLE_ORDER_ADMIN_TEST_HOOKS__: true,
     AdminApp: {
@@ -59,8 +63,16 @@ function loadOrderHooks() {
       },
     },
     TZ: {
-      db: {},
+      db: {
+        orders: [],
+        serviceOrders: [],
+        repairBookings: [],
+        ...db,
+      },
       escapeHtml,
+      getUserById() {
+        return null;
+      },
     },
   });
 
@@ -88,6 +100,10 @@ test('getStatusOptionsForTab should expose only four statuses for physical order
     normalizeValue(hooks.getStatusOptionsForTab('repair')),
     ['pending', 'in_progress', 'ready', 'completed', 'cancelled']
   );
+  assert.deepEqual(
+    normalizeValue(hooks.getStatusOptionsForTab('service')),
+    ['pending', 'processing', 'in_progress', 'completed', 'partial', 'failed', 'cancelled', 'refunded']
+  );
 });
 
 test('getOrderDisplayStatus should keep repair statuses untouched and simplify product statuses', () => {
@@ -95,6 +111,22 @@ test('getOrderDisplayStatus should keep repair statuses untouched and simplify p
 
   assert.equal(hooks.getOrderDisplayStatus({ status: 'shipped' }, 'physical'), 'processing');
   assert.equal(hooks.getOrderDisplayStatus({ status: 'ready' }, 'repair'), 'ready');
+  assert.equal(hooks.getOrderDisplayStatus({ status: 'partial', __orderType: 'service' }, 'all'), 'partial');
+});
+
+test('getOrdersForTab should merge product, service, and repair orders for all orders', () => {
+  const hooks = loadOrderHooks({
+    orders: [{ id: 'ord-1', items: [] }],
+    serviceOrders: [{ id: 'srv-1' }],
+    repairBookings: [{ id: 'bk-1' }],
+  });
+
+  const allOrders = normalizeValue(hooks.getOrdersForTab('all'));
+  assert.equal(allOrders.length, 3);
+  assert.equal(allOrders[0].__orderType, 'physical');
+  assert.equal(allOrders[1].__orderType, 'service');
+  assert.equal(allOrders[2].__orderType, 'repair');
+  assert.equal(hooks.getOrderTypeLabel('service'), 'خدمة');
 });
 
 test('buildPhysicalStatusActionsMarkup should render four inline status buttons', () => {

@@ -1,17 +1,17 @@
 import StatusPanel from '@/components/StatusPanel';
 
 /**
- * Empty state shown when a leaf category has no published products.
+ * Empty state shown when a service category has no published repair services.
  *
- * @returns {JSX.Element}
+ * @returns {JSX.Element} Empty state panel.
  */
 export default function CategoryEmptyState() {
   return (
     <StatusPanel
-      icon="shopping-bag"
-      eyebrow="لا توجد منتجات"
-      title="هذه الفئة لا تحتوي منتجات منشورة حالياً"
-      description="عند إضافة منتجات جديدة إلى هذه الفئة ستظهر هنا تلقائياً."
+      icon="wrench"
+      eyebrow="لا توجد خدمات"
+      title="هذه الفئة لا تحتوي خدمات صيانة منشورة حالياً"
+      description="عند إضافة خدمات صيانة لهذه الفئة أو لإحدى فئاتها الفرعية ستظهر هنا تلقائياً."
     />
   );
 }

@@ -77,7 +77,7 @@ export default function ComparePageClient() {
           title="لا توجد منتجات في لوحة المقارنة حالياً"
           description="أضف منتجين أو أكثر من الكتالوج عبر زر المقارنة داخل البطاقة، وسنرتب لك الفروقات هنا بشكل واضح."
           actions={
-            <Button href="/products" variant="secondary">
+            <Button href="/services" variant="secondary">
               تصفح المنتجات
             </Button>
           }

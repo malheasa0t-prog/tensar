@@ -99,7 +99,7 @@ export default function LoginPage() {
     const supabase = await loadSupabaseClient();
     const { error: providerError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback/` },
     });
 
     if (providerError) {

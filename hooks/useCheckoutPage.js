@@ -10,6 +10,7 @@ import {
   getWalletTransferInstructions,
   syncCheckoutSelections,
 } from '@/lib/checkoutModel';
+import { formatDashboardOrderNumber } from '@/lib/dashboardOrdersModel';
 import { PUBLIC_ANALYTICS_CONFIG } from '@/lib/publicAnalyticsConfig';
 import {
   fetchCheckoutOptions,
@@ -155,7 +156,10 @@ export function useCheckoutPage() {
 
       clearCart();
       setSuccess(nextSuccess);
-      showToast(`تم إنشاء الطلب بنجاح برقم ${nextSuccess.order_id}.`, {
+      showToast(`تم إنشاء الطلب بنجاح برقم ${formatDashboardOrderNumber({
+        id: nextSuccess.order_id,
+        display_number: nextSuccess.display_number,
+      })}.`, {
         type: 'success',
         title: 'تم استلام الطلب',
       });

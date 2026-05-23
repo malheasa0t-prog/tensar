@@ -8,31 +8,38 @@ import { useParams } from 'next/navigation';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import PageSectionBreadcrumbs from '@/components/PageSectionBreadcrumbs';
 import CategoryEmptyState from '@/components/category-page/CategoryEmptyState';
-import CategoryProductsSection from '@/components/category-page/CategoryProductsSection';
+import CategoryServicesSection from '@/components/category-page/CategoryServicesSection';
 import CategorySubcategoriesSection from '@/components/category-page/CategorySubcategoriesSection';
 import StatusPanel from '@/components/StatusPanel';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { useCategoryPage } from '@/hooks/useCategoryPage';
 
 /**
- * Product category explorer page with optional nested subcategories.
+ * Service category explorer page with optional nested subcategories.
  *
- * @returns {JSX.Element}
+ * @returns {JSX.Element} Category page.
  */
 export default function CategoryPage() {
   const params = useParams();
   const rawRouteValue = params?.id;
   const routeValue = Array.isArray(rawRouteValue) ? rawRouteValue[0] : rawRouteValue;
-  const { loading, error, category, mainCategory, subCategories, products, subCategoryProductsCount } =
-    useCategoryPage(routeValue);
+  const {
+    loading,
+    error,
+    category,
+    mainCategory,
+    subCategories,
+    repairServices,
+    subCategoryServiceCounts,
+  } = useCategoryPage(routeValue);
 
-  const hasSubCategories = !loading && !error && category && !category.parent_id && subCategories.length > 0;
+  const hasSubCategories = !loading && !error && category && subCategories.length > 0;
 
   usePageSeo(category ? {
     title: category.name,
     description:
       category.description ||
-      `تصفح فئة ${category.name} واكتشف المنتجات أو الأقسام الفرعية المتاحة لدى TechZone.`,
+      `تصفح فئة ${category.name} واكتشف خدمات الصيانة والفئات الفرعية المتاحة لدى TechZone.`,
     image: category.image || '',
     canonicalPath: `/category/${category.slug || category.id || routeValue}`,
     breadcrumbLabel: category.name,
@@ -57,8 +64,8 @@ export default function CategoryPage() {
                 <Link href="/" className="btn btn-primary">
                   العودة للرئيسية
                 </Link>
-                <Link href="/products" className="btn btn-outline">
-                  تصفح الفئات
+                <Link href="/services" className="btn btn-outline">
+                  تصفح الخدمات
                 </Link>
               </>
             }
@@ -78,17 +85,17 @@ export default function CategoryPage() {
         {hasSubCategories ? (
           <CategorySubcategoriesSection
             subCategories={subCategories}
-            subCategoryProductsCount={subCategoryProductsCount}
+            subCategoryServiceCounts={subCategoryServiceCounts}
           />
         ) : null}
 
-        <CategoryProductsSection
-          products={products}
+        <CategoryServicesSection
+          services={repairServices}
           categoryName={category.name}
           hasSubCategories={hasSubCategories}
         />
 
-        {products.length === 0 && !hasSubCategories ? (
+        {repairServices.length === 0 && !hasSubCategories ? (
           <CategoryEmptyState mainCategory={mainCategory} category={category} />
         ) : null}
       </div>

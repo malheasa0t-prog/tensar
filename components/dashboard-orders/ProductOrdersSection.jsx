@@ -8,6 +8,7 @@ import {
 import {
   formatDashboardDate,
   formatDashboardMoney,
+  formatDashboardOrderNumber,
   getDashboardDeliveryLabel,
   getDashboardPaymentLabel,
   PRODUCT_STATUS_MAP,
@@ -35,7 +36,7 @@ export default function ProductOrdersSection({ orders, orderItemsMap }) {
         }}
       >
         <h3 style={{ margin: 0 }}>🛍️ طلبات المنتجات</h3>
-        <Link href="/products" className="btn btn-outline btn-sm">
+        <Link href="/services" className="btn btn-outline btn-sm">
           شراء منتج جديد
         </Link>
       </div>
@@ -44,7 +45,7 @@ export default function ProductOrdersSection({ orders, orderItemsMap }) {
         <OrdersEmptyState
           title="لا توجد طلبات منتجات بعد"
           body="عندما تشتري قطعة أو اكسسوار سيظهر الطلب هنا مع حالته وتفاصيله."
-          href="/products"
+          href="/services"
           actionLabel="تصفح المنتجات"
         />
       ) : (
@@ -65,7 +66,7 @@ export default function ProductOrdersSection({ orders, orderItemsMap }) {
                 >
                   <div>
                     <h4 style={{ fontSize: '1.05rem', fontWeight: '700', marginBottom: '6px' }}>
-                      طلب منتج #{String(order.id || '').slice(-8)}
+                      طلب منتج {formatDashboardOrderNumber(order)}
                     </h4>
                     <div
                       style={{

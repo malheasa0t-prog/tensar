@@ -66,7 +66,7 @@ const ProductCard = memo(function ProductCard({ layout = "grid", product, reveal
   const [favoriteFeedbackActive, setFavoriteFeedbackActive] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
 
-  const href = product.link || `/products/${product.id}`;
+  const href = product.link || "/services";
   const productName =
     typeof product?.name === "string" && product.name.trim() ? product.name.trim() : "المنتج";
   const image = Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : "";

@@ -175,6 +175,13 @@ export async function onRequestPost(context) {
       return errorResponse("فشل إنشاء الطلب", 500);
     }
 
+    const { data: serviceOrderRow } = await admin
+      .from("service_orders")
+      .select("display_number")
+      .eq("id", orderId)
+      .maybeSingle();
+    const displayNumber = Number(serviceOrderRow?.display_number || 0) || null;
+
     /* Notification is already created inside the create_service_order_tx RPC */
 
     if (service.provider_service_id) {
@@ -205,6 +212,7 @@ export async function onRequestPost(context) {
     return successResponse(
       {
         order_id: orderId,
+        display_number: displayNumber,
         total,
         new_balance: newBalance,
         message: ORDER_MESSAGES.SUCCESS,

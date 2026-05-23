@@ -1,0 +1,263 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>TechZone | لوحة التحكم</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236c5ce7'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='50' font-family='Arial' font-weight='bold'>TZ</text></svg>">
+    <link rel="stylesheet" href="css/variables.css?v=20260420-1">
+    <link rel="stylesheet" href="css/base.css?v=20260420-1">
+    <link rel="stylesheet" href="css/utilities.css?v=20260420-1">
+    <link rel="stylesheet" href="css/admin/layout.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/surfaces.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/tables.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/dashboard.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/forms.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/inputs.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/modals.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/orders.css?v=20260425-1">
+    <link rel="stylesheet" href="css/admin/customers.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/notifications.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/chats.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/logs.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/search.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/shell-enhancements.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/loading-states.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/filters.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/table-enhancements.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/buttons.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/cards.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/bulk-actions.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/components.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/responsive-overrides.css?v=20260421-1">
+    <link rel="stylesheet" href="css/admin/responsive.css?v=20260421-1">
+    <link href="/fonts/fonts.css"
+        rel="stylesheet"
+        integrity="sha384-9OZeJ2MnqWntiV3TguadXC2ROtGkfi2t2G3dGpnjHQ6wZRAkfoDsdApAs7iFZarc">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body data-theme="dark">
+    <!-- Admin auth is enforced at the gate level -->
+
+    <div class="admin-layout" id="adminLayout" style="display:none;">
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">
+                    <i class="fas fa-microchip"></i>
+                    <span>Tech<span class="accent">Zone</span></span>
+                </a>
+                <button class="sidebar-close" id="sidebarClose"><i class="fas fa-times"></i></button>
+            </div>
+            <nav class="sidebar-nav">
+                <section class="sidebar-group is-open" data-sidebar-group="dashboard">
+                    <button class="sidebar-group-toggle" type="button" data-sidebar-group-toggle="dashboard">
+                        <span class="sidebar-group-label"><i class="fas fa-chart-pie"></i><span>لوحة المعلومات</span></span>
+                        <i class="fas fa-chevron-down sidebar-group-chevron"></i>
+                    </button>
+                    <div class="sidebar-group-links">
+                        <a href="#" class="sidebar-link active" data-section="dashboard">
+                            <i class="fas fa-chart-pie"></i><span>الرئيسية</span>
+                        </a>
+                    </div>
+                </section>
+                <section class="sidebar-group is-open" data-sidebar-group="orders">
+                    <button class="sidebar-group-toggle" type="button" data-sidebar-group-toggle="orders">
+                        <span class="sidebar-group-label"><i class="fas fa-box-open"></i><span>إدارة الطلبات</span></span>
+                        <i class="fas fa-chevron-down sidebar-group-chevron"></i>
+                    </button>
+                    <div class="sidebar-group-links">
+                        <a href="#" class="sidebar-link" data-section="orders">
+                            <i class="fas fa-shopping-bag"></i><span>كل الطلبات</span>
+                            <span class="sidebar-badge" id="ordersBadge">0</span>
+                        </a>
+                        <a href="#" class="sidebar-link sidebar-link--nested" data-section="product-orders">
+                            <i class="fas fa-box"></i><span>طلبات المنتجات</span>
+                        </a>
+                        <a href="#" class="sidebar-link sidebar-link--nested" data-section="service-orders">
+                            <i class="fas fa-bolt"></i><span>طلبات الخدمات</span>
+                        </a>
+                        <a href="#" class="sidebar-link sidebar-link--nested" data-section="repair-orders">
+                            <i class="fas fa-screwdriver-wrench"></i><span>حجوزات الصيانة</span>
+                        </a>
+                    </div>
+                </section>
+                <section class="sidebar-group is-open" data-sidebar-group="store">
+                    <button class="sidebar-group-toggle" type="button" data-sidebar-group-toggle="store">
+                        <span class="sidebar-group-label"><i class="fas fa-store"></i><span>المتجر</span></span>
+                        <i class="fas fa-chevron-down sidebar-group-chevron"></i>
+                    </button>
+                    <div class="sidebar-group-links">
+                        <a href="#" class="sidebar-link" data-section="categories">
+                            <i class="fas fa-tags"></i><span>الفئات</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="services">
+                            <i class="fas fa-bolt"></i><span>الخدمات</span>
+                        </a>
+                    </div>
+                </section>
+                <section class="sidebar-group is-open" data-sidebar-group="engagement">
+                    <button class="sidebar-group-toggle" type="button" data-sidebar-group-toggle="engagement">
+                        <span class="sidebar-group-label"><i class="fas fa-users"></i><span>العملاء والتواصل</span></span>
+                        <i class="fas fa-chevron-down sidebar-group-chevron"></i>
+                    </button>
+                    <div class="sidebar-group-links">
+                        <a href="#" class="sidebar-link" data-section="customers">
+                            <i class="fas fa-users"></i><span>العملاء</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="sellers">
+                            <i class="fas fa-user-tag"></i><span>البائعين</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="messages">
+                            <i class="fas fa-envelope"></i><span>رسائل التواصل</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="chats">
+                            <i class="fas fa-comments"></i><span>الدردشات</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="notifications">
+                            <i class="fas fa-bell"></i><span>الإشعارات</span>
+                        </a>
+                    </div>
+                </section>
+                <section class="sidebar-group is-open" data-sidebar-group="finance">
+                    <button class="sidebar-group-toggle" type="button" data-sidebar-group-toggle="finance">
+                        <span class="sidebar-group-label"><i class="fas fa-wallet"></i><span>المالية</span></span>
+                        <i class="fas fa-chevron-down sidebar-group-chevron"></i>
+                    </button>
+                    <div class="sidebar-group-links">
+                        <a href="#" class="sidebar-link" data-section="deposits">
+                            <i class="fas fa-money-check-alt"></i><span>طلبات الإيداع</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="coupons">
+                            <i class="fas fa-percent"></i><span>الكوبونات</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="refunds">
+                            <i class="fas fa-undo-alt"></i><span>طلبات الاسترجاع</span>
+                        </a>
+                    </div>
+                </section>
+                <section class="sidebar-group is-open" data-sidebar-group="system">
+                    <button class="sidebar-group-toggle" type="button" data-sidebar-group-toggle="system">
+                        <span class="sidebar-group-label"><i class="fas fa-cog"></i><span>النظام</span></span>
+                        <i class="fas fa-chevron-down sidebar-group-chevron"></i>
+                    </button>
+                    <div class="sidebar-group-links">
+                        <a href="#" class="sidebar-link" data-section="settings">
+                            <i class="fas fa-cog"></i><span>الإعدادات</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="platform-updates">
+                            <i class="fas fa-bullhorn"></i><span>تحديثات المنصة</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="provider-alerts">
+                            <i class="fas fa-satellite-dish"></i><span>تنبيهات المزود</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="serva-catalog">
+                            <i class="fas fa-cloud-download-alt"></i><span>استيراد الخدمات</span>
+                        </a>
+                        <a href="#" class="sidebar-link" data-section="logs">
+                            <i class="fas fa-history"></i><span>سجل العمليات</span>
+                        </a>
+                    </div>
+                </section>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="admin-user-info">
+                    <div class="admin-avatar"><i class="fas fa-user-shield"></i></div>
+                    <div>
+                        <strong id="adminName">المدير</strong>
+                        <small id="adminRole">مدير عام</small>
+                    </div>
+                </div>
+                <button class="btn-logout" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i><span>تسجيل خروج</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="admin-header-leading">
+                    <button class="sidebar-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <button type="button" class="admin-icon-button" id="sidebarCollapseToggle" title="تصغير الشريط الجانبي">
+                        <i class="fas fa-angles-left"></i>
+                    </button>
+                    <div class="admin-page-heading">
+                        <h1 id="pageTitle">لوحة المعلومات</h1>
+                        <div class="admin-header-breadcrumbs" id="adminHeaderBreadcrumbs"></div>
+                    </div>
+                </div>
+                <div class="admin-header-search" id="adminHeaderSearch">
+                    <div class="admin-search-input-wrap">
+                        <i class="fas fa-search"></i>
+                        <input type="search" id="adminGlobalSearchInput" placeholder="ابحث في المنتجات، الطلبات، العملاء..." autocomplete="off">
+                        <button type="button" class="admin-search-shortcut" id="adminSearchShortcut">Ctrl+K</button>
+                    </div>
+                    <div class="admin-search-dropdown" id="adminGlobalSearchDropdown" hidden></div>
+                </div>
+                <div class="admin-header-actions">
+                    <button type="button" class="btn btn-outline btn-sm" id="adminCommandPaletteBtn">
+                        <i class="fas fa-terminal"></i> الأوامر
+                    </button>
+                    <div class="admin-header-dropdown">
+                        <button type="button" class="admin-icon-button" id="adminHeaderAlertsBtn" aria-expanded="false" title="التنبيهات">
+                            <i class="fas fa-bell"></i>
+                            <span class="admin-header-alert-badge" id="adminHeaderAlertsCount" hidden>0</span>
+                        </button>
+                        <div class="admin-header-menu" id="adminHeaderAlertsDropdown" hidden></div>
+                    </div>
+                    <a href="/" class="btn btn-outline btn-sm" target="_blank" id="adminViewSiteBtn">
+                        <i class="fas fa-globe"></i> الموقع
+                    </a>
+                    <div class="admin-header-dropdown">
+                        <button type="button" class="admin-header-profile" id="adminHeaderProfileBtn" aria-expanded="false">
+                            <span class="admin-avatar"><i class="fas fa-user-shield"></i></span>
+                            <span class="admin-header-profile-meta" id="adminHeaderProfileMeta">
+                                <strong>المدير</strong>
+                                <small>مدير عام</small>
+                            </span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="admin-header-menu" id="adminHeaderProfileDropdown" hidden>
+                            <button type="button" class="admin-header-menu-item" id="adminThemeToggleBtn">
+                                <span class="admin-header-menu-icon admin-header-menu-icon--info"><i class="fas fa-circle-half-stroke"></i></span>
+                                <span>الوضع الفاتح</span>
+                            </button>
+                            <button type="button" class="admin-header-menu-item" data-profile-action="site">
+                                <span class="admin-header-menu-icon admin-header-menu-icon--success"><i class="fas fa-globe"></i></span>
+                                <span>عرض الموقع</span>
+                            </button>
+                            <button type="button" class="admin-header-menu-item" data-profile-action="logout">
+                                <span class="admin-header-menu-icon admin-header-menu-icon--danger"><i class="fas fa-sign-out-alt"></i></span>
+                                <span>تسجيل الخروج</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div class="admin-content" id="adminContent"></div>
+        </main>
+    </div>
+
+    <div class="admin-command-palette" id="adminCommandPalette" hidden>
+        <div class="admin-command-card">
+            <div class="admin-search-input-wrap">
+                <i class="fas fa-terminal"></i>
+                <input type="search" class="admin-command-input" id="adminCommandPaletteInput" placeholder="ابحث عن أمر سريع...  Ctrl+Shift+P" autocomplete="off">
+                <button type="button" class="admin-search-shortcut" data-close-command-palette>Esc</button>
+            </div>
+            <div class="admin-command-list" id="adminCommandPaletteList"></div>
+        </div>
+    </div>
+
+    <script src="/admin-config.js?v=20260523-2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="/js/admin/bootstrap.js?v=20260523-2" defer></script>
+</body>
+
+</html>

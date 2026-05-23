@@ -41,21 +41,10 @@ function validateProfileInput(body) {
   const payload = {};
   const raw = body || {};
 
-  // Only include fields that were explicitly sent in the request
-  if ('full_name' in raw) {
-    const fullName = typeof raw.full_name === 'string' ? raw.full_name.trim() : '';
-    if (fullName && (fullName.length < 2 || fullName.length > 120)) {
-      errors.push('[PRF-101] الاسم يجب أن يكون بين حرفين و120 حرفاً');
-    }
-    if (fullName) payload.full_name = fullName;
-  }
-
-  if ('phone' in raw) {
-    const phone = typeof raw.phone === 'string' ? raw.phone.trim() : '';
-    if (phone && !/^[+0-9\s()-]{7,20}$/.test(phone)) {
-      errors.push('[PRF-102] رقم الهاتف غير صالح');
-    }
-    if (phone) payload.phone = phone;
+  // Locked fields — users cannot change these; only admins can.
+  const LOCKED_FIELDS = ['full_name', 'phone', 'country', 'preferred_currency'];
+  for (const field of LOCKED_FIELDS) {
+    delete raw[field];
   }
 
   if ('avatar_url' in raw) {
@@ -64,14 +53,6 @@ function validateProfileInput(body) {
       errors.push('[PRF-103] رابط الصورة طويل جداً');
     }
     payload.avatar_url = avatarUrl || null;
-  }
-
-  if ('country' in raw) {
-    const country = typeof raw.country === 'string' ? raw.country.trim() : '';
-    if (country && country.length > 80) {
-      errors.push('[PRF-104] اسم الدولة طويل جداً');
-    }
-    if (country) payload.country = country;
   }
 
   if ('bio' in raw) {
@@ -88,14 +69,6 @@ function validateProfileInput(body) {
       errors.push('[PRF-106] قيمة اللغة غير صالحة');
     }
     payload.preferred_language = lang || 'ar';
-  }
-
-  if ('preferred_currency' in raw) {
-    const currency = typeof raw.preferred_currency === 'string' ? raw.preferred_currency.trim() : '';
-    if (currency && currency.length > 8) {
-      errors.push('[PRF-107] قيمة العملة غير صالحة');
-    }
-    payload.preferred_currency = currency || 'JOD';
   }
 
   // Always set updated_at if there's anything to update

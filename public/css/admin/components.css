@@ -1,4 +1,4 @@
-﻿/* Aggregated admin component styles */
+/* Aggregated admin component styles */
 @import url("./cards.css");
 @import url("./dashboard.css");
 @import url("./tables.css");
@@ -20,3 +20,4 @@
 @import url("./chats.css");
 @import url("./customers.css");
 @import url("./logs.css");
+@import url("./maintenance.css");

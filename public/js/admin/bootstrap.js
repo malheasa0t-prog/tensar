@@ -1,9 +1,9 @@
-// ===== TechZone Legacy Admin Bootstrap =====
+﻿// ===== TechZone Legacy Admin Bootstrap =====
 // Loads the heavy data engine lazily, then hydrates the legacy admin bundles in order.
 (function () {
     'use strict';
 
-    const ADMIN_ASSET_VERSION = '20260426-5';
+    const ADMIN_ASSET_VERSION = '20260523-2';
     const DATA_ENGINE_MODULE_PATH = `/js/admin/data-engine.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_SERVICE_WORKER_PATH = `/admin-sw.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_RUNTIME_ROUTE = '/api/admin/runtime';
@@ -38,7 +38,9 @@
         dashboard: ['js/admin/dashboard.js'],
         orders: ['js/admin/orders.js'],
         'product-orders': ['js/admin/orders.js'],
-        products: ['js/admin/products.js'],
+        'service-orders': ['js/admin/orders.js'],
+        'accessory-orders': ['js/admin/orders.js'],
+        'repair-orders': ['js/admin/orders.js'],
         categories: ['js/admin/categories.js'],
         'main-categories': ['js/admin/categories.js'],
         subcategories: ['js/admin/categories.js'],
@@ -54,7 +56,12 @@
         'contact-messages': ['js/admin/messages.js'],
         settings: ['js/admin/settings.js'],
         logs: ['js/admin/logs.js'],
-        'audit-logs': ['js/admin/logs.js']
+        'audit-logs': ['js/admin/logs.js'],
+        'platform-updates': ['js/admin/platform-updates.js'],
+        'refunds': ['js/admin/refunds.js'],
+        'sellers': ['js/admin/sellers.js'],
+        'provider-alerts': ['js/admin/provider-alerts.js'],
+        'serva-catalog': ['js/admin/serva-catalog.js']
     });
     const loadedScripts = new Set();
     const loadedExternalScripts = new Set();

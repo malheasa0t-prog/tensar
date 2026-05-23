@@ -11,32 +11,53 @@
     var API_PORT = window.__TZ_API_PORT || '3000';
     var CODED_ERROR_PATTERN = /^\[[A-Z]{2,4}-\d{3}\]/;
     var PAGE_SIZE = 15;
+    var ORDER_NOTES_PREVIEW_LENGTH = 96;
+    var TYPE_ALL = 'all';
+    var TYPE_PHYSICAL = 'physical';
+    var TYPE_ACCESSORY = 'accessory';
+    var TYPE_SERVICE = 'service';
+    var TYPE_REPAIR = 'repair';
     var TAB_CONFIG = [
-        { key: 'physical', label: 'طلبات المنتجات', icon: 'fa-box' },
-        { key: 'accessory', label: 'طلبات الإكسسوارات', icon: 'fa-headphones' },
-        { key: 'repair', label: 'حجوزات الصيانة', icon: 'fa-screwdriver-wrench' }
+        { key: TYPE_ALL, label: 'كل الطلبات', icon: 'fa-layer-group' },
+        { key: TYPE_PHYSICAL, label: 'طلبات المنتجات', icon: 'fa-box' },
+        { key: TYPE_SERVICE, label: 'طلبات الخدمات', icon: 'fa-bolt' },
+        { key: TYPE_ACCESSORY, label: 'طلبات الإكسسوارات', icon: 'fa-headphones' },
+        { key: TYPE_REPAIR, label: 'حجوزات الصيانة', icon: 'fa-screwdriver-wrench' }
     ];
     var ORDER_STATUSES = {
-        pending: 'قيد الانتظار', processing: 'قيد المعالجة', confirmed: 'تم التأكيد',
-        awaiting_delivery: 'بانتظار التنفيذ', shipped: 'تم الشحن', delivered: 'تم التسليم',
-        completed: 'مكتمل', cancelled: 'ملغي', failed: 'فشل', refunded: 'مسترجع',
-        in_progress: 'قيد التنفيذ', partial: 'جزئي', received: 'تم الاستلام',
-        diagnosing: 'تشخيص', waiting_approval: 'بانتظار الموافقة', ready: 'جاهز', rejected: 'مرفوض'
+        pending: 'قيد الانتظار',
+        processing: 'قيد المعالجة',
+        confirmed: 'تم التأكيد',
+        awaiting_delivery: 'بانتظار التنفيذ',
+        shipped: 'تم الشحن',
+        delivered: 'تم التسليم',
+        completed: 'مكتمل',
+        cancelled: 'ملغي',
+        failed: 'فشل',
+        refunded: 'مسترجع',
+        in_progress: 'قيد التنفيذ',
+        partial: 'جزئي',
+        received: 'تم الاستلام',
+        diagnosing: 'تشخيص',
+        waiting_approval: 'بانتظار الموافقة',
+        ready: 'جاهز',
+        rejected: 'مرفوض'
     };
-
-    var activeTab = 'physical';
-    var filterStatus = '';
-    var searchQuery = '';
-    var currentPage = 1;
-    var ORDER_NOTES_PREVIEW_LENGTH = 96;
+    var TYPE_LABELS = {
+        physical: 'منتج',
+        accessory: 'إكسسوار',
+        service: 'خدمة',
+        repair: 'صيانة'
+    };
     var PHYSICAL_STATUS_OPTIONS = Object.freeze(['pending', 'processing', 'delivered', 'cancelled']);
-    var PHYSICAL_STATUS_ACTION_LABELS = Object.freeze({
-        pending: '\u0641\u064a \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',
-        processing: '\u0642\u064a\u062f \u0627\u0644\u062a\u0646\u0641\u064a\u0630',
-        delivered: '\u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645',
-        cancelled: '\u0645\u0644\u063a\u064a'
-    });
+    var SERVICE_STATUS_OPTIONS = Object.freeze(['pending', 'processing', 'in_progress', 'completed', 'partial', 'failed', 'cancelled', 'refunded']);
     var REPAIR_STATUS_OPTIONS = Object.freeze(['pending', 'in_progress', 'ready', 'completed', 'cancelled']);
+    var PHYSICAL_STATUS_ACTION_LABELS = Object.freeze({
+        pending: 'في الانتظار',
+        processing: 'قيد التنفيذ',
+        delivered: 'تم التسليم',
+        cancelled: 'ملغي'
+    });
     var LEGACY_PHYSICAL_STATUS_MAP = Object.freeze({
         awaiting_delivery: 'processing',
         confirmed: 'processing',
@@ -45,26 +66,201 @@
         failed: 'cancelled',
         refunded: 'cancelled'
     });
+    var activeTab = TYPE_ALL;
+    var filterStatus = '';
+    var searchQuery = '';
+    var currentPage = 1;
     var pendingStatusOrderIds = new Set();
 
+    /**
+     * Escapes a value before injecting it into admin HTML.
+     *
+     * @param {unknown} value
+     * @returns {string}
+     */
     function esc(value) {
         return TZ.escapeHtml(value == null ? '' : String(value));
     }
 
+    /**
+     * Truncates long table text without changing short values.
+     *
+     * @param {unknown} value
+     * @param {number} maxLength
+     * @returns {string}
+     */
     function truncateText(value, maxLength) {
         var normalizedValue = String(value || '').trim();
         if (!normalizedValue || normalizedValue.length <= maxLength) return normalizedValue;
         return normalizedValue.slice(0, Math.max(0, maxLength - 3)).trim() + '...';
     }
 
+    /**
+     * Adds a stable UI-only type marker to an order row.
+     *
+     * @param {Record<string, unknown>} order
+     * @param {string} orderType
+     * @returns {Record<string, unknown>}
+     */
+    function withOrderType(order, orderType) {
+        return Object.assign({}, order, { __orderType: orderType });
+    }
+
+    /**
+     * Detects whether a product order belongs to the accessories tab.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {boolean}
+     */
+    function isAccessoryOrder(order) {
+        return typeof TZ.isAccessoryProduct === 'function' && (order.items || []).some(function (item) {
+            var categoryId = item.snapshot?.category_id || item.snapshot?.categoryId || '';
+            return TZ.isAccessoryProductCategoryId ? TZ.isAccessoryProductCategoryId(categoryId) : false;
+        });
+    }
+
+    /**
+     * Returns local product orders for one product tab.
+     *
+     * @param {string} tabKey
+     * @returns {Array<Record<string, unknown>>}
+     */
+    function getProductOrdersForTab(tabKey) {
+        return (TZ.db.orders || []).filter(function (order) {
+            var isAccessory = isAccessoryOrder(order);
+            if (tabKey === TYPE_ACCESSORY) return isAccessory;
+            if (tabKey === TYPE_PHYSICAL) return !isAccessory;
+            return true;
+        }).map(function (order) {
+            return withOrderType(order, isAccessoryOrder(order) ? TYPE_ACCESSORY : TYPE_PHYSICAL);
+        });
+    }
+
+    /**
+     * Returns service orders imported or synchronized from the provider flow.
+     *
+     * @returns {Array<Record<string, unknown>>}
+     */
+    function getServiceOrders() {
+        return (TZ.db.serviceOrders || []).map(function (order) {
+            return withOrderType(order, TYPE_SERVICE);
+        });
+    }
+
+    /**
+     * Returns repair bookings with the same table shape as orders.
+     *
+     * @returns {Array<Record<string, unknown>>}
+     */
+    function getRepairOrders() {
+        return (TZ.db.repairBookings || []).map(function (order) {
+            return withOrderType(order, TYPE_REPAIR);
+        });
+    }
+
+    /**
+     * Resolves the order collection for one tab.
+     *
+     * @param {string} tabKey
+     * @returns {Array<Record<string, unknown>>}
+     */
+    function getOrdersForTab(tabKey) {
+        if (tabKey === TYPE_SERVICE) return getServiceOrders();
+        if (tabKey === TYPE_REPAIR) return getRepairOrders();
+        if (tabKey === TYPE_PHYSICAL || tabKey === TYPE_ACCESSORY) return getProductOrdersForTab(tabKey);
+        return getProductOrdersForTab(TYPE_ALL).concat(getServiceOrders(), getRepairOrders());
+    }
+
+    /**
+     * Returns orders for the active tab.
+     *
+     * @returns {Array<Record<string, unknown>>}
+     */
+    function getOrders() {
+        return getOrdersForTab(activeTab);
+    }
+
+    /**
+     * Resolves the UI type for a mixed order record.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
+    function getOrderType(order) {
+        return order?.__orderType || (activeTab === TYPE_ALL ? TYPE_PHYSICAL : activeTab);
+    }
+
+    /**
+     * Returns the Arabic label for one order type.
+     *
+     * @param {string} orderType
+     * @returns {string}
+     */
+    function getOrderTypeLabel(orderType) {
+        return TYPE_LABELS[orderType] || TYPE_LABELS.physical;
+    }
+
+    /**
+     * Returns the Font Awesome icon for one order type.
+     *
+     * @param {string} orderType
+     * @returns {string}
+     */
+    function getOrderTypeIcon(orderType) {
+        if (orderType === TYPE_SERVICE) return 'fa-bolt';
+        if (orderType === TYPE_ACCESSORY) return 'fa-headphones';
+        if (orderType === TYPE_REPAIR) return 'fa-screwdriver-wrench';
+        return 'fa-box';
+    }
+
+    /**
+     * Returns a CSS modifier for one order type.
+     *
+     * @param {string} orderType
+     * @returns {string}
+     */
+    function getOrderTypeClass(orderType) {
+        return 'admin-order-kind--' + (TYPE_LABELS[orderType] ? orderType : TYPE_PHYSICAL);
+    }
+
+    /**
+     * Returns the best creation date for an order row.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
+    function getOrderDate(order) {
+        return order.createdAt || order.created_at || '';
+    }
+
+    /**
+     * Resolves a customer profile for a service order when the row only stores user_id.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {Record<string, unknown> | null}
+     */
+    function getLinkedCustomer(order) {
+        var userId = order.userId || order.user_id;
+        return userId && typeof TZ.getUserById === 'function' ? TZ.getUserById(userId) || null : null;
+    }
+
+    /**
+     * Builds the searchable values for one mixed order row.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {Array<unknown>}
+     */
     function getOrderSearchTokens(order) {
+        var customer = getLinkedCustomer(order);
         var itemNames = Array.isArray(order.items)
-            ? order.items.map(function (item) { return item.productName || ''; }).join(' ')
+            ? order.items.map(function (item) { return item.productName || item.product_name || ''; }).join(' ')
             : '';
 
         return [
             order.id,
             order.displayNumber,
+            order.display_number,
+            order.displayNumber ? '#' + order.displayNumber : '',
             A.formatOrderNumber ? A.formatOrderNumber(order) : '',
             order.customerName,
             order.customer_name,
@@ -75,28 +271,27 @@
             order.name,
             order.phone,
             order.email,
+            customer?.fullName,
+            customer?.email,
+            customer?.phone,
             order.device,
             order.service_name,
             order.serviceName,
+            order.externalOrderId,
+            order.providerName,
+            order.link,
             order.notes,
             order.description,
             itemNames
         ];
     }
 
-    function getOrders() {
-        var orders = TZ.db.orders || [];
-        if (activeTab === 'repair') return TZ.db.repairBookings || [];
-
-        return orders.filter(function (order) {
-            var isAccessory = typeof TZ.isAccessoryProduct === 'function' && (order.items || []).some(function (item) {
-                var categoryId = item.snapshot?.category_id || item.snapshot?.categoryId || '';
-                return TZ.isAccessoryProductCategoryId ? TZ.isAccessoryProductCategoryId(categoryId) : false;
-            });
-            return activeTab === 'accessory' ? isAccessory : !isAccessory;
-        });
-    }
-
+    /**
+     * Filters the active list by status and search text.
+     *
+     * @param {Array<Record<string, unknown>>} list
+     * @returns {Array<Record<string, unknown>>}
+     */
     function applyFilters(list) {
         return list.filter(function (order) {
             var matchesStatus = !filterStatus || getOrderDisplayStatus(order, activeTab) === filterStatus;
@@ -108,6 +303,12 @@
         });
     }
 
+    /**
+     * Paginates a sorted orders list.
+     *
+     * @param {Array<Record<string, unknown>>} list
+     * @returns {{ items: Array<Record<string, unknown>>, total: number, totalPages: number }}
+     */
     function paginate(list) {
         var start = (currentPage - 1) * PAGE_SIZE;
         return {
@@ -117,27 +318,28 @@
         };
     }
 
+    /**
+     * Returns a Supabase auth token for admin API calls.
+     *
+     * @returns {Promise<string>}
+     */
     async function getAdminAuthToken() {
         var sessionResult = await TZ.supabase.auth.getSession();
         return sessionResult?.data?.session?.access_token || '';
     }
 
+    /**
+     * Resolves the local API base URL while using Vite/Wrangler split ports.
+     *
+     * @returns {string}
+     */
     function getAdminApiBaseUrl() {
         var currentPort = window.location.port;
         return (currentPort !== API_PORT && currentPort !== '') ? ('http://localhost:' + API_PORT) : '';
     }
 
     /**
-     * Returns whether the current tab represents repair bookings.
-     *
-     * @returns {boolean}
-     */
-    function isRepairTab() {
-        return activeTab === 'repair';
-    }
-
-    /**
-     * Maps legacy product-order statuses into the simplified workflow shown in the admin table.
+     * Maps legacy product-order statuses into the simplified workflow.
      *
      * @param {string} status
      * @returns {string}
@@ -148,58 +350,72 @@
     }
 
     /**
-     * Resolves the statuses available for the current admin tab.
+     * Resolves status filter options for one tab.
      *
      * @param {string} tabKey
      * @returns {string[]}
      */
     function getStatusOptionsForTab(tabKey) {
-        return tabKey === 'repair' ? REPAIR_STATUS_OPTIONS.slice() : PHYSICAL_STATUS_OPTIONS.slice();
+        if (tabKey === TYPE_SERVICE) return SERVICE_STATUS_OPTIONS.slice();
+        if (tabKey === TYPE_REPAIR) return REPAIR_STATUS_OPTIONS.slice();
+        if (tabKey === TYPE_ALL) {
+            return Array.from(new Set(
+                PHYSICAL_STATUS_OPTIONS.concat(SERVICE_STATUS_OPTIONS, REPAIR_STATUS_OPTIONS)
+            ));
+        }
+        return PHYSICAL_STATUS_OPTIONS.slice();
     }
 
     /**
      * Resolves the status used for badges, filtering, and action highlighting.
      *
-     * @param {object} order
+     * @param {Record<string, unknown>} order
      * @param {string} tabKey
      * @returns {string}
      */
     function getOrderDisplayStatus(order, tabKey) {
         var currentStatus = String(order?.status || '').trim().toLowerCase();
-        return tabKey === 'repair' ? currentStatus : normalizePhysicalOrderStatus(currentStatus);
+        var orderType = tabKey === TYPE_ALL ? getOrderType(order) : tabKey;
+        return orderType === TYPE_PHYSICAL || orderType === TYPE_ACCESSORY
+            ? normalizePhysicalOrderStatus(currentStatus)
+            : currentStatus;
     }
 
     /**
-     * Resolves the display label for a status in the current admin tab.
+     * Resolves the display label for a status.
      *
      * @param {string} status
      * @param {string} tabKey
      * @returns {string}
      */
     function getStatusLabel(status, tabKey) {
-        if (tabKey === 'repair') return ORDER_STATUSES[status] || status;
-        return PHYSICAL_STATUS_ACTION_LABELS[status] || ORDER_STATUSES[status] || status;
+        if (tabKey === TYPE_PHYSICAL || tabKey === TYPE_ACCESSORY) {
+            return PHYSICAL_STATUS_ACTION_LABELS[status] || ORDER_STATUSES[status] || status;
+        }
+        return ORDER_STATUSES[status] || PHYSICAL_STATUS_ACTION_LABELS[status] || status;
     }
 
     /**
      * Builds the physical-order status buttons shown in the actions column.
      *
-     * @param {{ currentStatus: string, isPending: boolean, orderId: string }} options
+     * @param {{ currentStatus: string, isPending: boolean, orderId: string, orderType?: string }} options
      * @returns {string}
      */
     function buildPhysicalStatusActionsMarkup(options) {
         var orderId = String(options?.orderId || '').trim();
+        var orderType = options?.orderType || TYPE_PHYSICAL;
         var currentStatus = normalizePhysicalOrderStatus(options?.currentStatus);
         var isPending = options?.isPending === true;
 
-        return '<div class="order-status-actions" role="group" aria-label="Order status actions">'
+        return '<div class="order-status-actions" role="group" aria-label="إجراءات حالة الطلب">'
             + PHYSICAL_STATUS_OPTIONS.map(function (status) {
                 var isActive = currentStatus === status;
                 var isDisabled = isPending || isActive;
-                var buttonLabel = getStatusLabel(status, 'physical');
+                var buttonLabel = getStatusLabel(status, orderType);
                 return '<button type="button" class="order-status-action order-status-action--' + status
                     + (isActive ? ' is-active' : '')
                     + '" data-order-id="' + esc(orderId)
+                    + '" data-order-type="' + esc(orderType)
                     + '" data-status="' + status
                     + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"'
                     + (isDisabled ? ' disabled' : '')
@@ -208,10 +424,12 @@
             + '</div>';
     }
 
-    function getOrderTargetType() {
-        return 'physical_order';
-    }
-
+    /**
+     * Shows a normalized admin status error.
+     *
+     * @param {string} message
+     * @returns {void}
+     */
     function showOrderStatusError(message) {
         var normalized = String(message || '').trim();
         if (CODED_ERROR_PATTERN.test(normalized)) {
@@ -222,6 +440,13 @@
         A.showErrorToast('ORM-301', normalized || 'تعذر تحديث حالة الطلب.');
     }
 
+    /**
+     * Updates a product or accessory order status through the secure admin API.
+     *
+     * @param {string} orderId
+     * @param {string} newStatus
+     * @returns {Promise<void>}
+     */
     async function changeServerOrderStatus(orderId, newStatus) {
         var token = await getAdminAuthToken();
         var response = await fetch(getAdminApiBaseUrl() + ADMIN_ORDER_STATUS_API, {
@@ -234,7 +459,7 @@
             body: JSON.stringify({
                 orderId: orderId,
                 status: newStatus,
-                targetType: getOrderTargetType()
+                targetType: 'physical_order'
             })
         });
         var payload = null;
@@ -250,6 +475,13 @@
         }
     }
 
+    /**
+     * Updates a repair booking status directly through Supabase.
+     *
+     * @param {string} orderId
+     * @param {string} newStatus
+     * @returns {Promise<void>}
+     */
     async function changeRepairOrderStatus(orderId, newStatus) {
         var result = await TZ.supabase.from('repair_bookings').update({
             status: newStatus,
@@ -261,15 +493,25 @@
         }
     }
 
-    async function changeOrderStatus(orderId, newStatus) {
+    /**
+     * Changes an order status for the supported editable order types.
+     *
+     * @param {string} orderId
+     * @param {string} newStatus
+     * @param {string} orderType
+     * @returns {Promise<void>}
+     */
+    async function changeOrderStatus(orderId, newStatus, orderType) {
         var normalizedOrderId = String(orderId || '').trim();
+        var normalizedType = String(orderType || TYPE_PHYSICAL).trim();
         if (!normalizedOrderId || pendingStatusOrderIds.has(normalizedOrderId)) return;
+        if (normalizedType === TYPE_SERVICE) return;
 
         pendingStatusOrderIds.add(normalizedOrderId);
         renderOrders();
 
         try {
-            if (isRepairTab()) await changeRepairOrderStatus(normalizedOrderId, newStatus);
+            if (normalizedType === TYPE_REPAIR) await changeRepairOrderStatus(normalizedOrderId, newStatus);
             else await changeServerOrderStatus(normalizedOrderId, newStatus);
 
             A.showToast('تم تحديث حالة الطلب بنجاح');
@@ -282,65 +524,126 @@
         }
     }
 
-    function getStatusOptions() {
-        return getStatusOptionsForTab(activeTab);
-    }
-
+    /**
+     * Builds the repair booking status dropdown.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildRepairStatusDropdown(order) {
-        return '<select class="order-status-select" data-order-id="' + order.id + '" style="min-height:34px;padding:6px 10px;border-radius:8px;font-size:0.8rem;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-primary);cursor:pointer;">'
-            + getStatusOptions().map(function (status) {
-                return '<option value="' + status + '"' + (order.status === status ? ' selected' : '') + '>' + (ORDER_STATUSES[status] || status) + '</option>';
+        return '<select class="order-status-select" data-order-id="' + esc(order.id) + '" data-order-type="' + TYPE_REPAIR + '">'
+            + REPAIR_STATUS_OPTIONS.map(function (status) {
+                return '<option value="' + status + '"' + (order.status === status ? ' selected' : '') + '>' + esc(getStatusLabel(status, TYPE_REPAIR)) + '</option>';
             }).join('')
             + '</select>';
     }
 
+    /**
+     * Builds the editable or read-only status control for one row.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildStatusControl(order) {
-        if (isRepairTab()) return buildRepairStatusDropdown(order);
+        var orderType = getOrderType(order);
+        if (orderType === TYPE_REPAIR) return buildRepairStatusDropdown(order);
+        if (orderType === TYPE_SERVICE) {
+            return '<span class="admin-order-actions-placeholder"><i class="fas fa-sync-alt"></i> تتم مزامنتها من المزود</span>';
+        }
 
         return buildPhysicalStatusActionsMarkup({
             orderId: order.id,
+            orderType: orderType,
             currentStatus: order.status,
             isPending: pendingStatusOrderIds.has(String(order.id || '').trim())
         });
     }
 
+    /**
+     * Builds a labeled metadata line.
+     *
+     * @param {string} label
+     * @param {unknown} value
+     * @returns {string}
+     */
     function buildMetaLine(label, value) {
         var normalizedValue = String(value || '').trim();
         if (!normalizedValue) return '';
 
-        return '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;">'
-            + '<strong style="color:var(--text-primary);">' + esc(label) + ':</strong> '
-            + esc(normalizedValue)
-            + '</div>';
+        return '<div class="order-meta-line"><strong>' + esc(label) + ':</strong> ' + esc(normalizedValue) + '</div>';
     }
 
+    /**
+     * Builds a safe external link line for service order details.
+     *
+     * @param {string} label
+     * @param {unknown} value
+     * @returns {string}
+     */
+    function buildLinkMetaLine(label, value) {
+        var rawValue = String(value || '').trim();
+        if (!rawValue) return '';
+
+        try {
+            var parsedUrl = new URL(rawValue, window.location.origin);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) return buildMetaLine(label, rawValue);
+            return '<div class="order-meta-line"><strong>' + esc(label) + ':</strong> '
+                + '<a href="' + esc(parsedUrl.href) + '" target="_blank" rel="noopener noreferrer">'
+                + esc(truncateText(rawValue, 42)) + '</a></div>';
+        } catch (error) {
+            void error;
+            return buildMetaLine(label, rawValue);
+        }
+    }
+
+    /**
+     * Builds the order number and type badge cell.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildOrderNumberCell(order) {
-        var orderLabel = activeTab === 'repair'
-            ? String(order.id || '-')
-            : (A.formatOrderNumber ? A.formatOrderNumber(order) : String(order.id || '-'));
+        var orderType = getOrderType(order);
+        var orderLabel = A.formatOrderNumber ? A.formatOrderNumber(order) : String(order.id || '-');
         var rawId = String(order.id || '').trim();
-        var rawIdLine = activeTab !== 'repair' && rawId && orderLabel !== rawId
-            ? '<small style="color:var(--text-muted);">ID: ' + esc(rawId) + '</small>'
+        var rawIdLine = rawId && orderLabel !== rawId
+            ? '<small class="admin-order-raw-id">ID: ' + esc(rawId) + '</small>'
             : '';
 
-        return '<td><div style="display:grid;gap:4px;">'
-            + '<strong style="font-size:1rem;color:var(--primary-light);">' + esc(orderLabel) + '</strong>'
+        return '<td><div class="admin-order-number">'
+            + '<strong>' + esc(orderLabel) + '</strong>'
+            + '<span class="admin-order-kind ' + getOrderTypeClass(orderType) + '">'
+            + '<i class="fas ' + getOrderTypeIcon(orderType) + '"></i> ' + esc(getOrderTypeLabel(orderType))
+            + '</span>'
             + rawIdLine
             + '</div></td>';
     }
 
+    /**
+     * Builds the customer cell for every order type.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildCustomerCell(order) {
-        var customerName = order.customer_name || order.customerName || order.name || '-';
-        var phone = order.customer_phone || order.customerPhone || order.phone || '';
-        var email = order.customer_email || order.customerEmail || order.email || '';
+        var customer = getLinkedCustomer(order);
+        var customerName = order.customer_name || order.customerName || order.name || customer?.fullName || customer?.email || '-';
+        var phone = order.customer_phone || order.customerPhone || order.phone || customer?.phone || '';
+        var email = order.customer_email || order.customerEmail || order.email || customer?.email || '';
 
-        return '<td><div style="display:grid;gap:4px;">'
+        return '<td><div class="admin-order-cell-stack">'
             + '<strong>' + esc(customerName) + '</strong>'
             + buildMetaLine('الهاتف', phone)
             + buildMetaLine('البريد', email)
             + '</div></td>';
     }
 
+    /**
+     * Counts product quantities in an order.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {number}
+     */
     function getOrderItemCount(order) {
         if (!Array.isArray(order.items)) return 0;
         return order.items.reduce(function (total, item) {
@@ -348,101 +651,199 @@
         }, 0);
     }
 
+    /**
+     * Builds a compact product item preview.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function getOrderItemsPreview(order) {
         if (!Array.isArray(order.items) || order.items.length === 0) return '';
 
         return order.items.map(function (item) {
-            var productName = String(item.productName || '').trim();
+            var productName = String(item.productName || item.product_name || '').trim();
             var quantity = Number(item.qty || 0) || 0;
             if (!productName) return '';
-            return quantity > 1 ? productName + ' ×' + quantity : productName;
+            return quantity > 1 ? productName + ' x' + quantity : productName;
         }).filter(Boolean).slice(0, 3).join('، ');
     }
 
+    /**
+     * Builds product or accessory order details.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildPhysicalDetailsCell(order) {
         var itemCount = getOrderItemCount(order);
-        var itemsPreview = getOrderItemsPreview(order);
         var deliveryMethodLabel = A.deliveryLabel
             ? A.deliveryLabel(order.delivery_method || order.deliveryMethod)
             : (order.delivery_method || order.deliveryMethod || '-');
         var paymentMethodLabel = A.paymentLabel
             ? A.paymentLabel(order.payment_method || order.paymentMethod)
             : (order.payment_method || order.paymentMethod || '-');
-        var notes = truncateText(order.notes, ORDER_NOTES_PREVIEW_LENGTH);
 
-        return '<td><div style="display:grid;gap:4px;">'
+        return '<td><div class="admin-order-cell-stack">'
             + buildMetaLine('العناصر', itemCount > 0 ? itemCount + ' قطعة' : 'بدون عناصر')
-            + buildMetaLine('المنتجات', itemsPreview)
+            + buildMetaLine('المنتجات', getOrderItemsPreview(order))
             + buildMetaLine('التسليم', deliveryMethodLabel)
             + buildMetaLine('الدفع', paymentMethodLabel)
-            + buildMetaLine('ملاحظات', notes)
+            + buildMetaLine('ملاحظات', truncateText(order.notes, ORDER_NOTES_PREVIEW_LENGTH))
             + '</div></td>';
     }
 
+    /**
+     * Builds digital service order details.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
+    function buildServiceDetailsCell(order) {
+        return '<td><div class="admin-order-cell-stack">'
+            + buildMetaLine('الخدمة', order.service_name || order.serviceName || '-')
+            + buildMetaLine('الكمية', Number(order.quantity || 0) || '')
+            + buildMetaLine('المزود', order.providerName || 'Serva-S')
+            + buildMetaLine('رقم المزود', order.externalOrderId)
+            + buildLinkMetaLine('الرابط', order.link)
+            + buildMetaLine('ملاحظة', truncateText(order.adminNote, ORDER_NOTES_PREVIEW_LENGTH))
+            + '</div></td>';
+    }
+
+    /**
+     * Builds repair booking details.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildRepairDetailsCell(order) {
         var preferredDate = order.preferredDate ? A.formatDate(order.preferredDate) : '';
-        var description = truncateText(order.description, ORDER_NOTES_PREVIEW_LENGTH);
 
-        return '<td><div style="display:grid;gap:4px;">'
+        return '<td><div class="admin-order-cell-stack">'
             + buildMetaLine('الجهاز', order.device || '-')
             + buildMetaLine('الخدمة', order.service_name || order.serviceName || '-')
             + buildMetaLine('الموعد المفضل', preferredDate)
-            + buildMetaLine('الوصف', description)
+            + buildMetaLine('الوصف', truncateText(order.description, ORDER_NOTES_PREVIEW_LENGTH))
             + '</div></td>';
     }
 
+    /**
+     * Builds the amount cell while preserving a unified table shape.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildAmountCell(order) {
+        var orderType = getOrderType(order);
+        if (orderType === TYPE_REPAIR) {
+            return '<td><span class="admin-order-actions-placeholder">غير محدد</span></td>';
+        }
+
         var shippingFee = Number(order.shipping_fee || order.shippingFee || 0);
         var shippingLabel = shippingFee > 0 ? TZ.formatPrice(shippingFee) : 'مجاني';
 
-        return '<td><div style="display:grid;gap:4px;">'
-            + '<strong style="font-weight:600;color:#00b894;">' + TZ.formatPrice(order.total || 0) + '</strong>'
-            + buildMetaLine('الشحن', shippingLabel)
+        return '<td><div class="admin-order-cell-stack">'
+            + '<strong class="admin-order-amount">' + TZ.formatPrice(order.total || 0) + '</strong>'
+            + (orderType === TYPE_SERVICE ? buildMetaLine('سعر الوحدة', TZ.formatPrice(order.price || 0)) : buildMetaLine('الشحن', shippingLabel))
             + '</div></td>';
     }
 
+    /**
+     * Builds the status badge for one row.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function buildStatusBadge(order) {
         var displayStatus = getOrderDisplayStatus(order, activeTab);
-        var badgeLabel = getStatusLabel(displayStatus, activeTab);
+        var badgeLabel = getStatusLabel(displayStatus, getOrderType(order));
 
         return '<span class="status-badge ' + esc(displayStatus) + '">' + esc(badgeLabel) + '</span>';
     }
 
-    function renderRepairOrderRow(order) {
-        var date = A.formatDateTime ? A.formatDateTime(order.createdAt || order.created_at) : A.formatDate(order.createdAt || order.created_at);
-        var badge = buildStatusBadge(order);
-        var actions = buildStatusControl(order);
-
-        return '<tr data-order-id="' + esc(order.id) + '">'
-            + buildOrderNumberCell(order)
-            + buildCustomerCell(order)
-            + buildRepairDetailsCell(order)
-            + '<td>' + badge + '</td>'
-            + '<td><small>' + esc(date) + '</small></td>'
-            + '<td class="actions-cell">' + actions + '</td>'
-            + '</tr>';
+    /**
+     * Builds the details cell according to the order type.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
+    function buildDetailsCell(order) {
+        var orderType = getOrderType(order);
+        if (orderType === TYPE_SERVICE) return buildServiceDetailsCell(order);
+        if (orderType === TYPE_REPAIR) return buildRepairDetailsCell(order);
+        return buildPhysicalDetailsCell(order);
     }
 
-    function renderPhysicalOrderRow(order) {
-        var date = A.formatDateTime ? A.formatDateTime(order.createdAt || order.created_at) : A.formatDate(order.createdAt || order.created_at);
-        var badge = buildStatusBadge(order);
-        var actions = buildStatusControl(order);
-
-        return '<tr data-order-id="' + esc(order.id) + '">'
-            + buildOrderNumberCell(order)
-            + buildCustomerCell(order)
-            + buildPhysicalDetailsCell(order)
-            + buildAmountCell(order)
-            + '<td>' + badge + '</td>'
-            + '<td><small>' + esc(date) + '</small></td>'
-            + '<td class="actions-cell">' + actions + '</td>'
-            + '</tr>';
-    }
-
+    /**
+     * Renders one table row.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {string}
+     */
     function renderOrderRow(order) {
-        return activeTab === 'repair' ? renderRepairOrderRow(order) : renderPhysicalOrderRow(order);
+        var dateValue = getOrderDate(order);
+        var date = A.formatDateTime ? A.formatDateTime(dateValue) : A.formatDate(dateValue);
+        var orderType = getOrderType(order);
+
+        return '<tr class="admin-order-row admin-order-row--' + esc(orderType) + '" data-order-id="' + esc(order.id) + '" data-order-type="' + esc(orderType) + '">'
+            + buildOrderNumberCell(order)
+            + buildCustomerCell(order)
+            + buildDetailsCell(order)
+            + buildAmountCell(order)
+            + '<td>' + buildStatusBadge(order) + '</td>'
+            + '<td><div class="admin-order-date"><strong>' + esc(date) + '</strong><small>' + esc(getOrderTypeLabel(orderType)) + '</small></div></td>'
+            + '<td class="actions-cell">' + buildStatusControl(order) + '</td>'
+            + '</tr>';
     }
 
+    /**
+     * Builds summary stats for the current tab.
+     *
+     * @param {Array<Record<string, unknown>>} allOrders
+     * @param {Array<Record<string, unknown>>} filteredOrders
+     * @returns {string}
+     */
+    function buildSummaryMarkup(allOrders, filteredOrders) {
+        var totalAmount = allOrders.reduce(function (sum, order) {
+            return sum + (getOrderType(order) === TYPE_REPAIR ? 0 : Number(order.total || 0));
+        }, 0);
+        var latestOrder = allOrders.reduce(function (latest, order) {
+            var latestTime = latest ? new Date(getOrderDate(latest)).getTime() : 0;
+            var orderTime = new Date(getOrderDate(order)).getTime();
+            return Number.isFinite(orderTime) && orderTime > latestTime ? order : latest;
+        }, null);
+        var latestOrderLabel = latestOrder
+            ? (A.formatOrderNumber ? A.formatOrderNumber(latestOrder) : String(latestOrder.id || '-'))
+            : '-';
+        var totalAmountLabel = typeof TZ.formatPrice === 'function'
+            ? TZ.formatPrice(totalAmount)
+            : totalAmount.toLocaleString('ar-JO');
+        var pendingCount = allOrders.filter(function (order) {
+            return ['pending', 'awaiting_delivery', 'confirmed'].includes(String(order.status || '').toLowerCase());
+        }).length;
+        var activeCount = allOrders.filter(function (order) {
+            return ['processing', 'in_progress', 'shipped', 'diagnosing', 'waiting_approval'].includes(String(order.status || '').toLowerCase());
+        }).length;
+        var completedCount = allOrders.filter(function (order) {
+            return ['delivered', 'completed', 'ready'].includes(String(order.status || '').toLowerCase());
+        }).length;
+
+        return '<div class="admin-orders-summary">'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-layer-group"></i> الإجمالي</span><strong>' + allOrders.length + '</strong></div>'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-filter"></i> بعد التصفية</span><strong>' + filteredOrders.length + '</strong></div>'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-hourglass-half"></i> بانتظار الإجراء</span><strong>' + pendingCount + '</strong></div>'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-spinner"></i> قيد التنفيذ</span><strong>' + activeCount + '</strong></div>'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-check-circle"></i> منجزة</span><strong>' + completedCount + '</strong></div>'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-sack-dollar"></i> قيمة الطلبات</span><strong>' + esc(totalAmountLabel) + '</strong></div>'
+            + '<div class="admin-orders-stat admin-orders-stat--highlight"><span><i class="fas fa-clock"></i> أحدث طلب</span><strong>' + esc(latestOrderLabel) + '</strong></div>'
+            + '</div>';
+    }
+
+    /**
+     * Builds table pagination controls.
+     *
+     * @param {{ items: Array<Record<string, unknown>>, total: number, totalPages: number }} page
+     * @returns {string}
+     */
     function renderPagination(page) {
         if (page.totalPages <= 1) return '';
 
@@ -455,56 +856,49 @@
             + '<button data-page="' + (currentPage + 1) + '"' + (currentPage >= page.totalPages ? ' disabled' : '') + '><i class="fas fa-chevron-left"></i></button></div></div>';
     }
 
+    /**
+     * Renders the current orders section.
+     *
+     * @returns {void}
+     */
     function renderOrders() {
         var allOrders = getOrders();
-        var sorted = applyFilters(allOrders).sort(function (a, b) {
-            return new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at);
+        var filtered = applyFilters(allOrders);
+        var sorted = filtered.sort(function (first, second) {
+            return new Date(getOrderDate(second)) - new Date(getOrderDate(first));
         });
         var page = paginate(sorted);
-        var columnCount = activeTab === 'repair' ? 6 : 7;
-        var sectionTitle = activeTab === 'repair' ? 'حجوزات الصيانة' : 'إدارة الطلبات';
-        var summaryLabel = activeTab === 'repair' ? 'حجز' : 'طلب';
-        var columns = activeTab === 'repair'
-            ? '<th>#</th><th>العميل</th><th>الجهاز</th><th>الخدمة</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>'
-            : '<th>#</th><th>العميل</th><th>المبلغ</th><th>الدفع</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>';
-        columns = activeTab === 'repair'
-            ? '<th>رقم الحجز</th><th>العميل</th><th>تفاصيل الطلب</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>'
-            : '<th>رقم الطلب</th><th>العميل</th><th>تفاصيل الطلب</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>';
+        var activeTabMeta = TAB_CONFIG.find(function (tab) { return tab.key === activeTab; }) || TAB_CONFIG[0];
         var tabsHtml = TAB_CONFIG.map(function (tab) {
-            var previousTab = activeTab;
-            activeTab = tab.key;
-            var count = getOrders().length;
-            activeTab = previousTab;
+            var count = getOrdersForTab(tab.key).length;
             return '<button class="admin-tab' + (activeTab === tab.key ? ' active' : '') + '" data-tab="' + tab.key + '"><i class="fas ' + tab.icon + '"></i> ' + tab.label + ' <span class="tab-count">' + count + '</span></button>';
         }).join('');
         var rowsHtml = page.items.length
             ? page.items.map(renderOrderRow).join('')
             : '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد طلبات مطابقة</p></div></td></tr>';
-        if (!page.items.length) {
-            rowsHtml = '<tr><td colspan="' + columnCount + '"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد طلبات مطابقة</p></div></td></tr>';
-        }
-        var statusOptionsHtml = getStatusOptions().map(function (status) {
+        var statusOptionsHtml = getStatusOptionsForTab(activeTab).map(function (status) {
             return '<option value="' + status + '"' + (filterStatus === status ? ' selected' : '') + '>' + getStatusLabel(status, activeTab) + '</option>';
         }).join('');
 
-        A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-shopping-cart"></i> ' + sectionTitle + '</h2><p>إجمالي ' + allOrders.length + ' ' + summaryLabel + '</p></div></div>'
+        A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-shopping-cart"></i> ' + esc(activeTabMeta.label) + '</h2><p>قراءة موحدة لكل الطلبات بأرقام سهلة مثل #2000 وبحسب النوع والحالة</p></div></div>'
             + '<div class="admin-tabs">' + tabsHtml + '</div>'
-            + '<div class="filter-bar"><input type="search" id="ordersSearch" placeholder="ابحث برقم الطلب أو اسم العميل أو اسم الخدمة..." value="' + esc(searchQuery) + '"><select id="ordersStatusFilter"><option value="">كل الحالات</option>'
+            + buildSummaryMarkup(allOrders, filtered)
+            + '<div class="filter-bar admin-orders-toolbar"><input type="search" id="ordersSearch" placeholder="ابحث برقم الطلب مثل #2000 أو باسم العميل أو الهاتف..." value="' + esc(searchQuery) + '"><select id="ordersStatusFilter"><option value="">كل الحالات</option>'
             + statusOptionsHtml
-            + '</select></div><div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
-            + columns
+            + '</select></div><div class="admin-panel admin-orders-panel"><div class="panel-body"><div class="table-wrap admin-orders-table-wrap"><table class="data-table admin-orders-table"><thead><tr>'
+            + '<th>رقم الطلب</th><th>العميل</th><th>تفاصيل الطلب</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>'
             + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>'
             + renderPagination(page)
             + '</div>';
 
-        var ordersSearchInput = document.getElementById('ordersSearch');
-        if (ordersSearchInput) {
-            ordersSearchInput.placeholder = 'ابحث برقم الطلب مثل #2000 أو باسم العميل أو الهاتف...';
-        }
-
         bindEvents();
     }
 
+    /**
+     * Binds events after each render.
+     *
+     * @returns {void}
+     */
     function bindEvents() {
         document.querySelectorAll('.admin-tab[data-tab]').forEach(function (button) {
             button.addEventListener('click', function () {
@@ -543,14 +937,15 @@
             select.addEventListener('change', function () {
                 var newStatus = select.value;
                 var orderId = select.dataset.orderId;
+                var orderType = select.dataset.orderType;
 
                 if (newStatus === originalValue) return;
-                if (!window.confirm('هل تريد تغيير حالة الطلب إلى "' + (ORDER_STATUSES[newStatus] || newStatus) + '"؟')) {
+                if (!window.confirm('هل تريد تغيير حالة الطلب إلى "' + getStatusLabel(newStatus, orderType) + '"؟')) {
                     select.value = originalValue;
                     return;
                 }
 
-                void changeOrderStatus(orderId, newStatus);
+                void changeOrderStatus(orderId, newStatus, orderType);
             });
         });
 
@@ -558,23 +953,29 @@
             button.addEventListener('click', function () {
                 var newStatus = button.dataset.status;
                 var orderId = button.dataset.orderId;
+                var orderType = button.dataset.orderType;
 
                 if (button.disabled || !newStatus || !orderId) return;
-                if (!window.confirm('هل تريد تغيير حالة الطلب إلى "' + getStatusLabel(newStatus, activeTab) + '"؟')) return;
+                if (!window.confirm('هل تريد تغيير حالة الطلب إلى "' + getStatusLabel(newStatus, orderType) + '"؟')) return;
 
-                void changeOrderStatus(orderId, newStatus);
+                void changeOrderStatus(orderId, newStatus, orderType);
             });
         });
     }
 
-    A.sections.orders = renderOrders;
-    A.sections['product-orders'] = function () { activeTab = 'physical'; renderOrders(); };
-    A.sections['accessory-orders'] = function () { activeTab = 'accessory'; renderOrders(); };
+    A.sections.orders = function () { activeTab = TYPE_ALL; renderOrders(); };
+    A.sections['product-orders'] = function () { activeTab = TYPE_PHYSICAL; renderOrders(); };
+    A.sections['service-orders'] = function () { activeTab = TYPE_SERVICE; renderOrders(); };
+    A.sections['accessory-orders'] = function () { activeTab = TYPE_ACCESSORY; renderOrders(); };
+    A.sections['repair-orders'] = function () { activeTab = TYPE_REPAIR; renderOrders(); };
 
     if (window.__ENABLE_ORDER_ADMIN_TEST_HOOKS__) {
         window.__orderAdminTestHooks = {
             buildPhysicalStatusActionsMarkup: buildPhysicalStatusActionsMarkup,
             getOrderDisplayStatus: getOrderDisplayStatus,
+            getOrdersForTab: getOrdersForTab,
+            getOrderType: getOrderType,
+            getOrderTypeLabel: getOrderTypeLabel,
             getStatusLabel: getStatusLabel,
             getStatusOptionsForTab: getStatusOptionsForTab,
             normalizePhysicalOrderStatus: normalizePhysicalOrderStatus

@@ -8,12 +8,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '@/app/techfix-pages.css';
 import '@/app/techfix-neon.css';
 import '@/app/techfix-neon-effects.css';
 import '@/app/techfix-services.css';
-import Image from 'next/image';
-import Link from 'next/link';
+
+import { useSearchParams } from 'next/navigation';
 import AppIcon from '@/components/AppIcon';
 import PageSectionBreadcrumbs from '@/components/PageSectionBreadcrumbs';
 import RepairBookingForm from '@/components/RepairBookingForm';
@@ -22,7 +23,7 @@ import RepairOrderLookupCard from '@/components/repair-booking/RepairOrderLookup
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import { formatCurrency } from '@/lib/formatCurrency';
-import { isOptimizableImageSrc } from '@/lib/imageUtils';
+
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { getSiteSettings } from '@/lib/siteSettings';
 
@@ -38,10 +39,13 @@ const REPAIR_BOOKING_STEPS = [
  * @returns {JSX.Element}
  */
 export default function ServicesPage() {
+  const navigate = useNavigate();
+  const searchParams = useSearchParams();
   const [services, setServices] = useState([]);
   const [siteSettings, setSiteSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const selectedServiceId = searchParams.get('service') || '';
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +114,27 @@ export default function ServicesPage() {
 
   const faqs = Array.isArray(siteSettings?.content?.faqs) ? siteSettings.content.faqs : [];
 
+  /**
+   * Selects a repair service and moves the user back to the booking form.
+   *
+   * @param {string} serviceId
+   * @returns {void}
+   */
+  function handleServiceBooking(serviceId) {
+    const normalizedServiceId = String(serviceId || '').trim();
+
+    if (!normalizedServiceId) {
+      return;
+    }
+
+    navigate(`/services?service=${encodeURIComponent(normalizedServiceId)}#repair-booking-form`);
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById('repair-booking-form')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   return (
     <>
       <section className="section">
@@ -118,58 +143,60 @@ export default function ServicesPage() {
             <PageSectionBreadcrumbs />
           </div>
 
-          <div className="repair-layout">
-            <div className="repair-primary-column">
-              <RepairBookingForm services={services} deliveryMethods={siteSettings?.deliveryMethods} />
-
-              <div style={{ marginTop: '2rem' }}>
-                <div className="section-header" style={{ marginBottom: '1rem' }}>
-                  <span className="section-badge">
-                    <AppIcon name="shield-check" size={14} />
-                    لماذا تختار {siteSettings?.company?.name || 'TechZone'}؟
-                  </span>
-                  <p>خبرة عملية، متابعة واضحة، وقطع موثوقة مع شرح قبل التنفيذ.</p>
-                </div>
-
-                <div className="repair-side-note" style={{ marginBottom: '1.5rem' }}>
-                  <h3>احجز الصيانة بخطوات واضحة</h3>
-                  <p>اكتب رقم التواصل، اختر الخدمة، ثم حدّد هل التنفيذ في المحل أو صيانة عن بعد.</p>
-                  <div className="repair-side-note-steps">
-                    {REPAIR_BOOKING_STEPS.map((step, index) => (
-                      <span key={step} className="repair-side-step">
-                        <strong>{index + 1}</strong>
-                        <span>{step}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                  {(siteSettings?.serviceFeatures || []).map((feature) => (
-                    <div key={`${feature.icon}-${feature.title}`} className="repair-service-item">
-                      <div className="repair-srv-icon">
-                        <AppIcon name={feature.icon || 'wrench'} size={20} />
-                      </div>
-                      <div className="repair-srv-body">
-                        <strong>{feature.title}</strong>
-                        <div className="repair-srv-meta">
-                          <span>{feature.subtitle}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="repair-services-list">
-              <RepairBookingFaq items={faqs} />
-              <RepairOrderLookupCard />
-            </div>
+          {/* ── Booking Form — Full Width ── */}
+          <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+            <RepairBookingForm
+              services={services}
+              deliveryMethods={siteSettings?.deliveryMethods}
+              selectedServiceId={selectedServiceId}
+            />
           </div>
         </div>
       </section>
 
+      {/* ── Why Choose Us + Steps ── */}
+      <section className="section">
+        <div className="container">
+          <div className="section-header" style={{ marginBottom: '1rem' }}>
+            <span className="section-badge">
+              <AppIcon name="shield-check" size={14} />
+              لماذا تختار {siteSettings?.company?.name || 'TechZone'}؟
+            </span>
+            <p>خبرة عملية، متابعة واضحة، وقطع موثوقة مع شرح قبل التنفيذ.</p>
+          </div>
+
+          <div className="repair-side-note" style={{ marginBottom: '1.5rem' }}>
+            <h3>احجز الصيانة بخطوات واضحة</h3>
+            <p>اكتب رقم التواصل، اختر الخدمة، ثم حدّد هل التنفيذ في المحل أو صيانة عن بعد.</p>
+            <div className="repair-side-note-steps">
+              {REPAIR_BOOKING_STEPS.map((step, index) => (
+                <span key={step} className="repair-side-step">
+                  <strong>{index + 1}</strong>
+                  <span>{step}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            {(siteSettings?.serviceFeatures || []).map((feature) => (
+              <div key={`${feature.icon}-${feature.title}`} className="repair-service-item">
+                <div className="repair-srv-icon">
+                  <AppIcon name={feature.icon || 'wrench'} size={20} />
+                </div>
+                <div className="repair-srv-body">
+                  <strong>{feature.title}</strong>
+                  <div className="repair-srv-meta">
+                    <span>{feature.subtitle}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Service Packages ── */}
       <section className="section alt">
         <div className="container">
           <div className="section-header">
@@ -178,7 +205,7 @@ export default function ServicesPage() {
               باقات الصيانة
             </span>
             <h2>الخدمات المتاحة حالياً</h2>
-            <p>اختر الخطة المناسبة لكل خدمة، ثم انتقل إلى التفاصيل أو الحجز المباشر بخطوة واحدة.</p>
+            <p>اختر الخدمة المناسبة ثم احجز مباشرة بخطوة واحدة.</p>
           </div>
 
           {services.length === 0 ? (
@@ -189,58 +216,54 @@ export default function ServicesPage() {
               description="حالما يتم تفعيل خدمات جديدة ستظهر تلقائياً داخل هذه الصفحة."
             />
           ) : (
-            <div className="techfix-service-grid techfix-service-grid--pricing">
+            <div className="techfix-service-grid techfix-service-grid--compact">
               {services.map((service) => (
-                <article key={service.id} className="service-card service-card-pricing">
-                  <span className="featured-badge">
-                    {service.category || 'خدمات الصيانة'}
-                  </span>
-                  {service.image ? (
-                    <div className="service-card-media">
-                      <div className="service-card-media-fallback" aria-hidden="true">
-                        <AppIcon name={service.icon || 'wrench'} size={24} />
-                      </div>
-                      <Image
-                        src={service.image}
-                        alt={service.name}
-                        width={960}
-                        height={640}
-                        className="service-card-media-image"
-                        sizes="(max-width: 900px) 100vw, 480px"
-                        loading="lazy"
-                        unoptimized={!isOptimizableImageSrc(service.image)}
-                        onError={(event) => {
-                          event.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="service-icon">
-                      <AppIcon name={service.icon || 'wrench'} size={24} />
-                    </div>
-                  )}
-                  <h3>{service.name}</h3>
-                  <p>
-                    {service.description ||
-                      'خدمة صيانة احترافية متاحة الآن ضمن نظام متابعة واضح وتشخيص قبل التنفيذ.'}
-                  </p>
-                  <div className="techfix-meta" style={{ marginBottom: '1rem' }}>
-                    <span>السعر الأساسي: {formatCurrency(service.price)}</span>
-                    {service.duration ? <span>{service.duration}</span> : null}
+                <article key={service.id} className="service-card-compact">
+                  <div className="service-card-compact-icon">
+                    <AppIcon name={service.icon || 'wrench'} size={24} />
                   </div>
-                  <div style={{ marginTop: 'auto', paddingTop: '0.5rem' }}>
-                    <Link
-                      href={`/services/${service.id}`}
-                      className="btn btn-primary btn-full service-card-details-link"
-                      style={{ justifyContent: 'center' }}
+                  <div className="service-card-compact-body">
+                    <span className="service-card-compact-cat">
+                      {service.category || 'خدمات الصيانة'}
+                    </span>
+                    <strong>{service.name}</strong>
+                    <p>
+                      {service.description ||
+                        'خدمة صيانة احترافية متاحة الآن ضمن نظام متابعة واضح وتشخيص قبل التنفيذ.'}
+                    </p>
+                  </div>
+                  <div className="service-card-compact-footer">
+                    <span className="service-card-compact-price">
+                      {formatCurrency(service.price)}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-primary service-card-compact-btn"
+                      onClick={() => handleServiceBooking(service.id)}
                     >
-                      عرض التفاصيل والحجز
-                    </Link>
+                      احجز الآن
+                    </button>
                   </div>
                 </article>
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── FAQ Section ── */}
+      {faqs.length > 0 ? (
+        <section className="section">
+          <div className="container">
+            <RepairBookingFaq items={faqs} />
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── Order Lookup — Bottom ── */}
+      <section className="section">
+        <div className="container" style={{ maxWidth: '600px' }}>
+          <RepairOrderLookupCard />
         </div>
       </section>
     </>

@@ -9,8 +9,6 @@ import {
 
 export const routeModuleLoaders = Object.freeze({
   home: () => import("@/app/page"),
-  products: () => import("@/app/products/page"),
-  "product-detail": () => import("@/app/products/[id]/page"),
   services: () => import("@/app/services/page"),
   "service-detail": () => import("@/app/services/[slug]/page"),
   category: () => import("@/app/category/[id]/page"),
@@ -33,6 +31,7 @@ export const routeModuleLoaders = Object.freeze({
 });
 
 const pendingRoutePrefetches = new Map();
+const pendingRouteDataPrefetches = new Map();
 
 /**
  * Returns whether the provided href maps to a lazy route module.
@@ -48,13 +47,19 @@ export function shouldPrefetchRoute(href) {
  * Loads the matching route module once and reuses the same promise afterwards.
  *
  * @param {string} href
+ * @param {{ includeData?: boolean }} [options]
  * @returns {Promise<unknown>}
  */
-export function prefetchRouteModule(href) {
-  const routeKey = matchRoutePrefetchKey(normalizeRoutePrefetchPath(href));
+export function prefetchRouteModule(href, options = {}) {
+  const normalizedPath = normalizeRoutePrefetchPath(href);
+  const routeKey = matchRoutePrefetchKey(normalizedPath);
 
   if (!routeKey || !routeModuleLoaders[routeKey]) {
     return Promise.resolve(null);
+  }
+
+  if (options.includeData !== false) {
+    prefetchRouteData({ href: normalizedPath, routeKey });
   }
 
   if (pendingRoutePrefetches.has(routeKey)) {
@@ -68,4 +73,50 @@ export function prefetchRouteModule(href) {
 
   pendingRoutePrefetches.set(routeKey, pendingPromise);
   return pendingPromise;
+}
+
+/**
+ * Starts a route-aware data prefetch for data-heavy storefront pages.
+ *
+ * @param {{ href: string, routeKey: string }} input
+ * @returns {void}
+ */
+function prefetchRouteData(input) {
+  const prefetchKey = `${input.routeKey}:${input.href}`;
+
+  if (pendingRouteDataPrefetches.has(prefetchKey)) {
+    return;
+  }
+
+  const pendingPromise = loadRouteData(input)
+    .catch(() => null)
+    .finally(() => pendingRouteDataPrefetches.delete(prefetchKey));
+
+  pendingRouteDataPrefetches.set(prefetchKey, pendingPromise);
+}
+
+/**
+ * Loads the data snapshot that matches a prefetched route.
+ *
+ * @param {{ href: string, routeKey: string }} input
+ * @returns {Promise<unknown>}
+ */
+async function loadRouteData(input) {
+  if (input.routeKey === "category") {
+    const module = await import("@/services/categoryPageService");
+    return module.prefetchCategoryPageSnapshot(getLastPathSegment(input.href));
+  }
+
+  return null;
+}
+
+/**
+ * Extracts the route parameter at the end of a pathname.
+ *
+ * @param {string} pathname
+ * @returns {string}
+ */
+function getLastPathSegment(pathname) {
+  const segments = String(pathname || "").split("/").filter(Boolean);
+  return segments.at(-1) || "";
 }

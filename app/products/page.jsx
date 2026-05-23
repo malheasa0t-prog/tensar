@@ -17,8 +17,7 @@ import ProductsExplorerClient from '@/components/ProductsExplorerClient';
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import Link from 'next/link';
-import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
-import { mapProductsExplorerProduct } from '@/lib/productsExplorerModel';
+import { loadProductsPageSnapshot } from '@/services/productsPageService';
 
 /**
  * Renders the products explorer page with filtering and search.
@@ -38,34 +37,12 @@ export default function ProductsPage() {
 
     async function loadData() {
       try {
-        const supabase = await loadSupabaseClient();
-        const [productsResult, categoriesResult] = await Promise.all([
-          supabase.from('products').select('*').in('status', ['active', 'out_of_stock']),
-          supabase.from('categories').select('id, name').eq('status', 'active'),
-        ]);
+        const snapshot = await loadProductsPageSnapshot();
 
         if (cancelled) return;
 
-        if (productsResult.error || categoriesResult.error) {
-          setError(true);
-          return;
-        }
-
-        const filteredCategories = categoriesResult.data || [];
-        const categoryById = Object.fromEntries(
-          filteredCategories.map((cat) => [cat.id, cat.name])
-        );
-        const filteredProducts = (productsResult.data || [])
-          .filter(
-            (product) =>
-              ['physical', ''].includes(String(product.product_type || '').trim().toLowerCase())
-          )
-          .map((product) =>
-            mapProductsExplorerProduct(product, categoryById[product.category_id] || 'منتجات عامة')
-          );
-
-        setCategories(filteredCategories);
-        setProducts(filteredProducts);
+        setCategories(snapshot.categories);
+        setProducts(snapshot.products);
       } catch (err) {
         console.error('[PLS-500] ProductsPage: failed to load', err);
         if (!cancelled) setError(true);

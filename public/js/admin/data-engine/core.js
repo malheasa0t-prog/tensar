@@ -1,11 +1,11 @@
-// ===== TechZone Admin Data Engine - Core =====
+﻿// ===== TechZone Admin Data Engine - Core =====
 // Shared state, Supabase bootstrap, utilities, auth/session helpers, and catalog constants.
 
 import {
     installSanitizedInnerHtmlGuard,
     sanitizeAdminHtmlMarkup
 } from './htmlSanitizer.js';
-import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260426-5';
+import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260523-2';
 
 const SUPABASE_URL = window.__TZ_SUPABASE_URL || '';
 const SUPABASE_PUBLISHABLE_KEY = window.__TZ_SUPABASE_PUBLISHABLE_KEY || '';
@@ -58,6 +58,7 @@ export const ROLES = {
     admin: { level: 8, label: 'مدير النظام' },
     technician: { level: 5, label: 'فني صيانة' },
     employee: { level: 3, label: 'موظف مبيعات' },
+    seller: { level: 2, label: 'بائع' },
     customer: { level: 1, label: 'عميل' },
     user: { level: 1, label: 'مستخدم' }
 };
@@ -66,15 +67,22 @@ export const ADMIN_SECTIONS = [
     { id: 'dashboard', minLevel: 3, icon: 'fa-chart-pie', label: 'لوحة المعلومات' },
     { id: 'orders', minLevel: 3, icon: 'fa-shopping-bag', label: 'الطلبات' },
     { id: 'product-orders', minLevel: 3, icon: 'fa-box', label: 'طلبات المنتجات' },
-    { id: 'products', minLevel: 8, icon: 'fa-box-open', label: 'المنتجات' },
+    { id: 'service-orders', minLevel: 3, icon: 'fa-bolt', label: 'طلبات الخدمات' },
+    { id: 'accessory-orders', minLevel: 3, icon: 'fa-headphones', label: 'طلبات الإكسسوارات' },
+    { id: 'repair-orders', minLevel: 3, icon: 'fa-screwdriver-wrench', label: 'حجوزات الصيانة' },
     { id: 'categories', minLevel: 8, icon: 'fa-tags', label: 'الفئات' },
     { id: 'services', minLevel: 8, icon: 'fa-bolt', label: 'الخدمات' },
     { id: 'deposits', minLevel: 8, icon: 'fa-money-check-alt', label: 'طلبات الإيداع' },
     { id: 'customers', minLevel: 3, icon: 'fa-users', label: 'العملاء' },
+    { id: 'sellers', minLevel: 8, icon: 'fa-user-tag', label: 'البائعين' },
     { id: 'coupons', minLevel: 8, icon: 'fa-ticket-alt', label: 'الكوبونات' },
+    { id: 'refunds', minLevel: 8, icon: 'fa-undo-alt', label: 'طلبات الاسترجاع' },
     { id: 'notifications', minLevel: 8, icon: 'fa-bell', label: 'إشعارات المستخدمين' },
     { id: 'chats', minLevel: 3, icon: 'fa-comments', label: 'الدردشات المباشرة' },
     { id: 'messages', minLevel: 3, icon: 'fa-envelope', label: 'رسائل التواصل' },
+    { id: 'platform-updates', minLevel: 10, icon: 'fa-bullhorn', label: 'تحديثات المنصة' },
+    { id: 'provider-alerts', minLevel: 10, icon: 'fa-satellite-dish', label: 'تنبيهات المزود' },
+    { id: 'serva-catalog', minLevel: 8, icon: 'fa-cube', label: 'كتالوج المزود' },
     { id: 'settings', minLevel: 10, icon: 'fa-cog', label: 'الإعدادات' },
     { id: 'logs', minLevel: 10, icon: 'fa-history', label: 'سجل العمليات' }
 ];
@@ -105,6 +113,7 @@ export const db = {
     categories: [],
     products: [],
     orders: [],
+    serviceOrders: [],
     deposits: [],
     coupons: [],
     settings: clone(DEFAULT_SETTINGS),
@@ -120,6 +129,7 @@ const ADMIN_DB_FALLBACK = Object.freeze({
     categories: Object.freeze([]),
     products: Object.freeze([]),
     orders: Object.freeze([]),
+    serviceOrders: Object.freeze([]),
     deposits: Object.freeze([]),
     coupons: Object.freeze([]),
     settings: Object.freeze(clone(DEFAULT_SETTINGS)),
@@ -231,11 +241,11 @@ const DATA_SCOPE_CONFIG = {
     admin: {
         queries: [
             'profiles', 'legacyUsers', 'categories', 'products',
-            'orders', 'orderItems', 'settings', 'coupons', 'repairServices',
+            'orders', 'orderItems', 'serviceOrders', 'settings', 'coupons', 'repairServices',
             'repairBookings', 'messages', 'logs', 'deposits'
         ],
         realtime: [
-            'products', 'categories', 'orders',
+            'products', 'categories', 'orders', 'service_orders',
             'repair_services', 'repair_bookings', 'contact_messages', 'deposits',
             'coupons', 'settings'
         ]

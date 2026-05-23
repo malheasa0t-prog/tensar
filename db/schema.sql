@@ -238,6 +238,7 @@ create table if not exists public.repair_services (
 
 create table if not exists public.repair_bookings (
   id text primary key default public.generate_prefixed_id('bk-'),
+  display_number bigint not null default nextval('public.order_display_number_seq'),
   user_id uuid references auth.users(id) on delete set null,
   service_id text references public.repair_services(id) on delete set null,
   service_name text,
@@ -306,6 +307,7 @@ create table if not exists public.support_chat_messages (
 
 create table if not exists public.service_orders (
   id text primary key default public.generate_prefixed_id('so-'),
+  display_number bigint not null default nextval('public.order_display_number_seq'),
   user_id uuid not null references auth.users(id) on delete cascade,
   service_id text references public.services(id) on delete set null,
   service_name text not null,
@@ -438,6 +440,7 @@ create unique index if not exists idx_repair_services_slug_unique
   on public.repair_services ((lower(slug)))
   where slug is not null;
 create index if not exists idx_repair_bookings_user_id on public.repair_bookings(user_id, created_at desc);
+create unique index if not exists idx_repair_bookings_display_number on public.repair_bookings(display_number);
 create index if not exists idx_repair_bookings_service_id on public.repair_bookings(service_id);
 create index if not exists idx_repair_bookings_status on public.repair_bookings(status, created_at desc);
 create index if not exists idx_repair_bookings_email on public.repair_bookings((lower(email)));
@@ -447,6 +450,7 @@ create index if not exists idx_support_conversations_user_id on public.support_c
 create index if not exists idx_support_conversations_status on public.support_conversations(status, last_message_at desc);
 create index if not exists idx_support_chat_messages_conversation_id on public.support_chat_messages(conversation_id, created_at asc);
 create index if not exists idx_service_orders_user_id on public.service_orders(user_id, created_at desc);
+create unique index if not exists idx_service_orders_display_number on public.service_orders(display_number);
 create index if not exists idx_service_orders_status on public.service_orders(status, created_at desc);
 create index if not exists idx_service_orders_service_id on public.service_orders(service_id);
 create index if not exists idx_reviews_status on public.reviews(status, sort_order, created_at desc);

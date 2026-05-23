@@ -57,7 +57,7 @@ export default function RegisterPage() {
         password,
         options: {
           data: normalizeRegisterProfileData({ fullName, phone, country }),
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback/`,
         },
       });
 

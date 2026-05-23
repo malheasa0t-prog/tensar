@@ -6,6 +6,9 @@
         'dashboard',
         'orders',
         'product-orders',
+        'service-orders',
+        'accessory-orders',
+        'repair-orders',
         'products',
         'categories',
         'main-categories',
@@ -22,14 +25,22 @@
         'coupons',
         'settings',
         'logs',
-        'audit-logs'
+        'audit-logs',
+        'platform-updates',
+        'refunds',
+        'sellers',
+        'provider-alerts',
+        'serva-catalog'
     ]);
 
     const SECTION_TITLES = {
+        'service-orders': 'طلبات الخدمات',
+        'accessory-orders': 'طلبات الإكسسوارات',
+        'repair-orders': 'حجوزات الصيانة',
+        'serva-catalog': 'خدمات Serva-S',
         dashboard: 'لوحة المعلومات',
         orders: 'إدارة الطلبات',
         'product-orders': 'طلبات المنتجات',
-        products: 'إدارة المنتجات',
         categories: 'إدارة الفئات',
         'main-categories': 'الفئات الرئيسية',
         subcategories: 'الفئات الفرعية',
@@ -45,7 +56,11 @@
         coupons: 'الكوبونات',
         settings: 'الإعدادات',
         logs: 'سجل العمليات',
-        'audit-logs': 'سجل العمليات'
+        'audit-logs': 'سجل العمليات',
+        'platform-updates': 'تحديثات المنصة',
+        'refunds': 'طلبات الاسترجاع',
+        'sellers': 'إدارة البائعين',
+        'provider-alerts': 'تنبيهات المزود'
     };
     const DELIVERY_LABELS = {
         delivery: 'توصيل للمنزل',
@@ -163,9 +178,10 @@
 
     function updateOrdersBadge(TZ) {
         const productOrders = TZ.db.orders.filter((order) => ['pending', 'awaiting_delivery', 'confirmed', 'processing', 'shipped'].includes(order.status)).length;
+        const serviceOrders = (TZ.db.serviceOrders || []).filter((order) => ['pending', 'processing', 'in_progress'].includes(order.status)).length;
         const repairOrders = TZ.db.repairBookings.filter((booking) => ['pending', 'awaiting_delivery', 'awaiting_device'].includes(booking.status)).length;
         const badge = document.getElementById('ordersBadge');
-        const total = productOrders + repairOrders;
+        const total = productOrders + serviceOrders + repairOrders;
         if (!badge) return;
         badge.textContent = total;
         badge.style.display = total > 0 ? 'inline' : 'none';

@@ -1,4 +1,4 @@
-// ===== TechZone Admin Data Engine =====
+﻿// ===== TechZone Admin Data Engine =====
 // ES module entry point that wires shared state into the legacy window.TZ API.
 
 import {
@@ -28,14 +28,14 @@ import {
     supabaseSignIn,
     supabaseSignOut,
     clearSession
-} from './data-engine/core.js?v=20260426-5';
-import { loadDataFromSupabaseByScope } from './data-engine/loaders.js?v=20260426-5';
+} from './data-engine/core.js?v=20260523-2';
+import { loadDataFromSupabaseByScope } from './data-engine/loaders.js?v=20260523-2';
 import {
     OFFLINE_QUEUE_EVENT,
     getQueuedCommits,
     registerOfflineSyncListeners
-} from './data-engine/offline.js?v=20260426-5';
-import { getAdminSessionUser } from './data-engine/adminSession.js?v=20260426-5';
+} from './data-engine/offline.js?v=20260523-2';
+import { getAdminSessionUser } from './data-engine/adminSession.js?v=20260523-2';
 import {
     getActiveRepairServices,
     getBrands,
@@ -47,16 +47,16 @@ import {
     getLatestProducts,
     getProductById,
     getVisibleCatalogCategories
-} from './data-engine/products.js?v=20260426-5';
-import { fireDataUpdate, setupScopedRealtime } from './data-engine/realtime.js?v=20260426-5';
-import { commitDb, refreshData, syncOfflineQueue } from './data-engine/sync.js?v=20260426-5';
+} from './data-engine/products.js?v=20260523-2';
+import { fireDataUpdate, setupScopedRealtime } from './data-engine/realtime.js?v=20260523-2';
+import { commitDb, refreshData, syncOfflineQueue } from './data-engine/sync.js?v=20260523-2';
 import {
     canAccessAdmin,
     canAccessSection,
     findUserByAuthUser,
     getUserById,
     isCustomerUser
-} from './data-engine/users.js?v=20260426-5';
+} from './data-engine/users.js?v=20260523-2';
 
 function notifyCartChange() {
     if (typeof window.TZ.onCartChange === 'function') {
@@ -116,9 +116,11 @@ function applyAdminTextOverrides() {
         dashboard: '\u0644\u0648\u062D\u0629 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A',
         orders: '\u0627\u0644\u0637\u0644\u0628\u0627\u062A',
         'product-orders': '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A',
+        'service-orders': '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062E\u062F\u0645\u0627\u062A',
         products: '\u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A',
         categories: '\u0627\u0644\u0641\u0626\u0627\u062A',
         services: '\u0627\u0644\u062E\u062F\u0645\u0627\u062A',
+        'serva-catalog': '\u062E\u062F\u0645\u0627\u062A Serva-S',
         deposits: '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0625\u064A\u062F\u0627\u0639',
         customers: '\u0627\u0644\u0639\u0645\u0644\u0627\u0621',
         coupons: '\u0627\u0644\u0643\u0648\u0628\u0648\u0646\u0627\u062A',

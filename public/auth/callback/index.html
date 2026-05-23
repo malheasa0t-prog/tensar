@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechZone | جاري تسجيل الدخول...</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0a0e1a;
+        color: #e0e0e0;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+      }
+      .loader {
+        text-align: center;
+      }
+      .spinner {
+        font-size: 3rem;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      h2 { font-size: 1.3rem; margin: 0 0 8px; }
+      p { color: #888; margin: 0; font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <div class="loader">
+      <div class="spinner">⚙️</div>
+      <h2>جاري تسجيل الدخول...</h2>
+      <p>يرجى الانتظار قليلاً</p>
+    </div>
+    <script>
+      /**
+       * Auth callback handler.
+       * Preserves the hash fragment (containing the access token)
+       * and redirects to the SPA which processes the token.
+       */
+      (function () {
+        var hash = window.location.hash;
+        if (hash && hash.length > 1) {
+          window.location.replace('/' + hash);
+        } else {
+          window.location.replace('/');
+        }
+      })();
+    </script>
+  </body>
+</html>

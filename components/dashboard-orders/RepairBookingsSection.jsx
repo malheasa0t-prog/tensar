@@ -7,6 +7,7 @@ import {
 } from '@/components/dashboard-orders/dashboardOrdersStyles';
 import {
   formatDashboardDate,
+  formatDashboardOrderNumber,
   getDashboardRepairModeLabel,
   REPAIR_STATUS_MAP,
 } from '@/lib/dashboardOrdersModel';
@@ -57,7 +58,7 @@ export default function RepairBookingsSection({ bookings }) {
               >
                 <div>
                   <h4 style={{ fontSize: '1.05rem', fontWeight: '700', marginBottom: '6px' }}>
-                    {booking.service_name || 'طلب صيانة'}
+                    {(booking.service_name || 'طلب صيانة') + ' ' + formatDashboardOrderNumber(booking)}
                   </h4>
                   <div
                     style={{

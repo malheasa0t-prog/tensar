@@ -82,9 +82,7 @@ async function fetchDataContext(supabaseUrl, supabaseKey) {
   }
 
   const headers = { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` };
-  const [productsRes, servicesRes, categoriesRes] = await Promise.all([
-    fetch(`${supabaseUrl}/rest/v1/products?status=eq.active&select=name,price&limit=50`, { headers })
-      .then((r) => r.json()).catch(() => []),
+  const [servicesRes, categoriesRes] = await Promise.all([
     fetch(`${supabaseUrl}/rest/v1/repair_services?status=eq.active&select=name,price,category&limit=30`, { headers })
       .then((r) => r.json()).catch(() => []),
     fetch(`${supabaseUrl}/rest/v1/categories?status=eq.active&select=name&limit=30`, { headers })
@@ -92,9 +90,7 @@ async function fetchDataContext(supabaseUrl, supabaseKey) {
   ]);
 
   const result = {
-    products: Array.isArray(productsRes) && productsRes.length > 0
-      ? productsRes.map((p) => `• ${p.name} | ${p.price} د.أ`).join('\n')
-      : 'لا توجد منتجات.',
+    products: 'المنتجات غير متاحة حالياً داخل الموقع.',
     services: Array.isArray(servicesRes) && servicesRes.length > 0
       ? servicesRes.map((s) => `• ${s.name} | ${s.price} د.أ | ${s.category || 'عام'}`).join('\n')
       : 'لا توجد خدمات.',

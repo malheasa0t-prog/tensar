@@ -1,9 +1,9 @@
-// ===== TechZone Admin Data Engine - Products =====
+﻿// ===== TechZone Admin Data Engine - Products =====
 // Category and product mapping plus storefront catalog helpers.
 
 import {
     db
-} from './core.js?v=20260426-5';
+} from './core.js?v=20260523-2';
 
 export function mapCategory(row) {
     return {

@@ -3,6 +3,7 @@
  */
 
 const DEFAULT_TIMEOUT_MS = 15000;
+const DEFAULT_SERVA_BASE_URL = "https://serva-s.com/api/v1";
 const PROVIDER_MISSING_CONFIG_STATUS = 500;
 const PROVIDER_INVALID_PAYLOAD_STATUS = 400;
 const PROVIDER_UPSTREAM_FAILURE_STATUS = 502;
@@ -10,12 +11,16 @@ const PROVIDER_UPSTREAM_FAILURE_STATUS = 502;
 const SERVA_ERROR_MESSAGES = Object.freeze({
   INVALID_API_KEY: "مفتاح API غير صالح.",
   API_KEY_REVOKED: "مفتاح API تم إلغاؤه.",
+  API_KEY_INACTIVE: "مفتاح API غير نشط.",
   API_ACCESS_NOT_ALLOWED: "الحساب غير مفعّل لاستخدام API.",
   ACCOUNT_BANNED: "الحساب محظور من استخدام API.",
   SERVICE_NOT_FOUND: "الخدمة غير موجودة عند المزود.",
+  SERVICE_NOT_FOUND_OR_INACTIVE: "الخدمة غير موجودة أو غير مفعّلة عند المزود.",
   INSUFFICIENT_BALANCE: "رصيد المزود غير كافٍ.",
   DUPLICATE_ORDER: "الطلب مكرر وتم رفضه من المزود.",
+  DUPLICATE_ORDER_COOLDOWN: "تم رفض الطلب لأنه مكرر خلال فترة قصيرة.",
   ACTIVE_ORDER_EXISTS: "يوجد طلب نشط لنفس الرابط.",
+  ACTIVE_TARGET_ORDER_EXISTS: "يوجد طلب نشط لنفس الهدف عند المزود.",
 });
 
 /**
@@ -25,9 +30,11 @@ const SERVA_ERROR_MESSAGES = Object.freeze({
  * @returns {{ apiKey: string, baseUrl: string, timeoutMs: number }} Provider config.
  */
 export function readProviderConfig(env) {
+  const configuredBaseUrl = String(env?.PROVIDER_API_BASE_URL ?? "").trim();
+
   return {
     apiKey: String(env?.PROVIDER_API_KEY ?? env?.SERVAS_API_KEY ?? "").trim(),
-    baseUrl: String(env?.PROVIDER_API_BASE_URL ?? "").trim(),
+    baseUrl: configuredBaseUrl || DEFAULT_SERVA_BASE_URL,
     timeoutMs: Number(env?.PROVIDER_API_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS,
   };
 }
@@ -75,7 +82,7 @@ export async function postProviderAction(env, payload, options = {}) {
   if (!config.baseUrl || !config.apiKey) {
     return {
       success: false,
-      error: "Provider API is not configured. Set PROVIDER_API_BASE_URL and PROVIDER_API_KEY.",
+      error: "Provider API is not configured. Set PROVIDER_API_KEY.",
       status: PROVIDER_MISSING_CONFIG_STATUS,
     };
   }

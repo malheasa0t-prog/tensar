@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { filterVisibleNotifications } from '@/lib/dashboardNotificationsModel';
+import { formatDashboardOrderNumber } from '@/lib/dashboardOrdersModel';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 
 /**
@@ -172,7 +173,7 @@ export default function DashboardHome() {
         <div className="dash-quick-actions">
           <h3>إجراءات سريعة</h3>
           <div className="dash-actions-row">
-            <Link href="/products" className="btn btn-secondary btn-lg">
+            <Link href="/services" className="btn btn-secondary btn-lg">
               🛍️ تصفح المنتجات
             </Link>
             <Link href="/services" className="btn btn-warning btn-lg">
@@ -277,7 +278,7 @@ export default function DashboardHome() {
               <tbody>
                 {recentOrders.map((order) => (
                   <tr key={order.id}>
-                    <td>{order.id}</td>
+                    <td>{formatDashboardOrderNumber(order)}</td>
                     <td className="dash-center dash-price">{Number(order.total || 0).toFixed(2)} د.أ</td>
                     <td className="dash-center">
                       <span

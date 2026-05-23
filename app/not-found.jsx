@@ -4,14 +4,19 @@ import AppIcon from "@/components/AppIcon";
 import { usePageSeo } from "@/hooks/usePageSeo";
 
 const SUGGESTED_LINKS = [
-  { href: "/products", label: "المنتجات الأكثر زيارة", icon: "shopping-bag" },
   { href: "/services", label: "خدمات الصيانة", icon: "wrench" },
+  { href: "/contact", label: "تواصل معنا", icon: "phone" },
 ];
 
+/**
+ * Renders the public 404 page.
+ *
+ * @returns {JSX.Element} Not-found page.
+ */
 export default function NotFound() {
   usePageSeo({
     title: "الصفحة غير موجودة",
-    description: "الرابط المطلوب غير متاح حاليًا. عد إلى الرئيسية أو تصفح الكتالوج للوصول إلى ما تريد.",
+    description: "الرابط المطلوب غير متاح حالياً. عد إلى الرئيسية أو تصفح خدمات الصيانة للوصول إلى ما تريد.",
     robots: "noindex, nofollow",
   });
 
@@ -29,22 +34,22 @@ export default function NotFound() {
 
           <div className={styles.copy}>
             <span className={styles.eyebrow}>404 • الصفحة غير موجودة</span>
-            <h1>يبدو أنك ضللت الطريق</h1>
+            <h1>يبدو أن الرابط لم يعد متاحاً</h1>
             <p>
-              الرابط الذي تحاول الوصول إليه لم يعد متاحاً، لكن يمكنك البحث مباشرة أو الرجوع إلى الأقسام
-              الأكثر زيارة داخل المتجر.
+              يمكنك العودة للرئيسية أو فتح خدمات الصيانة مباشرة، وسنساعدك في الوصول إلى الخدمة
+              المناسبة بأسرع طريق.
             </p>
 
-            <form action="/products" method="get" className={styles.searchForm}>
+            <form action="/services" method="get" className={styles.searchForm}>
               <label htmlFor="not-found-search" className={styles.searchLabel}>
-                جرّب البحث عما تريد
+                ابحث عن خدمة صيانة
               </label>
               <div className={styles.searchField}>
                 <input
                   id="not-found-search"
                   name="search"
                   type="search"
-                  placeholder="ابحث عن منتج أو فئة أو خدمة..."
+                  placeholder="ابحث عن خدمة أو فئة صيانة..."
                 />
                 <button type="submit" className={styles.searchButton}>
                   <AppIcon name="search" size={16} />
@@ -57,8 +62,8 @@ export default function NotFound() {
               <Link href="/" className={styles.primaryButton}>
                 العودة للرئيسية
               </Link>
-              <Link href="/products" className={styles.secondaryButton}>
-                تصفح المنتجات
+              <Link href="/services" className={styles.secondaryButton}>
+                تصفح الخدمات
               </Link>
             </div>
 

@@ -4,6 +4,8 @@
     'use strict';
 
     const A = window.AdminApp;
+    if (!A) return;
+
     const PROVIDER_CATALOG_API = '/api/provider/services';
     const LOCAL_SERVICES_TABLE = 'services';
     const CATEGORIES_TABLE = 'categories';
@@ -130,6 +132,65 @@
     }
 
     /**
+     * Escapes dynamic text before placing it in the admin HTML.
+     *
+     * @param {unknown} value
+     * @returns {string}
+     */
+    function esc(value) {
+        if (window.TZ && typeof TZ.escapeHtml === 'function') {
+            return TZ.escapeHtml(value == null ? '' : String(value));
+        }
+
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * Returns the stable API service identifier as a string.
+     *
+     * @param {Record<string, unknown>} service
+     * @returns {string}
+     */
+    function getProviderServiceId(service) {
+        return String(service?.service ?? '').trim();
+    }
+
+    /**
+     * Builds a DOM-safe status cell id for one provider service.
+     *
+     * @param {string} serviceId
+     * @returns {string}
+     */
+    function getServiceStatusCellId(serviceId) {
+        return 'servaStatus_' + String(serviceId || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    /**
+     * Returns the best display name for one provider service.
+     *
+     * @param {Record<string, unknown>} service
+     * @returns {string}
+     */
+    function getProviderServiceName(service) {
+        return String(service?.name_ar || service?.name || 'خدمة بدون اسم').trim();
+    }
+
+    /**
+     * Returns the provider category name for filtering and display.
+     *
+     * @param {Record<string, unknown>} service
+     * @returns {string}
+     */
+    function getProviderCategory(service) {
+        return String(service?.category || '').trim();
+    }
+
+    /**
      * Adds a single digital service to the local database via Admin DB Proxy.
      *
      * @param {object} service - Serva-S service object
@@ -200,7 +261,7 @@
      * @returns {string[]}
      */
     function getCatalogCategories() {
-        return [...new Set(catalogData.map(s => (s.category || '').trim()).filter(Boolean))].sort();
+        return [...new Set(catalogData.map(getProviderCategory).filter(Boolean))].sort();
     }
 
     /**
@@ -210,10 +271,12 @@
      */
     function getFilteredCatalog() {
         return catalogData.filter(service => {
-            const name = (service.name_ar || service.name || '').toLowerCase();
-            const cat = (service.category || '').trim();
+            const name = getProviderServiceName(service).toLowerCase();
+            const cat = getProviderCategory(service);
+            const serviceId = getProviderServiceId(service);
+            const normalizedQuery = searchQuery.toLowerCase();
             const matchesCategory = !filterCategory || cat === filterCategory;
-            const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase()) || String(service.service).includes(searchQuery);
+            const matchesSearch = !searchQuery || name.includes(normalizedQuery) || serviceId.toLowerCase().includes(normalizedQuery);
             return matchesCategory && matchesSearch;
         });
     }
@@ -229,10 +292,10 @@
         let options = '<option value="">-- اختر الفئة --</option>';
 
         for (const parent of parents) {
-            options += `<optgroup label="${parent.name}">`;
+            options += `<optgroup label="${esc(parent.name)}">`;
             const subs = children.filter(c => c.parent_id === parent.id);
             for (const sub of subs) {
-                options += `<option value="${sub.id}">${sub.name}</option>`;
+                options += `<option value="${esc(sub.id)}">${esc(sub.name)}</option>`;
             }
             options += '</optgroup>';
         }
@@ -269,13 +332,13 @@
             <div class="admin-filters" style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
                 <div class="admin-input-wrap" style="flex:1; min-width:200px;">
                     <i class="fas fa-search"></i>
-                    <input type="search" id="servaCatalogSearch" placeholder="ابحث بالاسم أو رقم الخدمة..." value="${searchQuery}">
+                    <input type="search" id="servaCatalogSearch" placeholder="ابحث بالاسم أو رقم الخدمة..." value="${esc(searchQuery)}">
                 </div>
                 <div class="admin-input-wrap" style="min-width:200px;">
                     <i class="fas fa-filter"></i>
                     <select id="servaCatalogFilter">
                         <option value="">كل الفئات (${catalogData.length})</option>
-                        ${categories.map(c => `<option value="${c}" ${filterCategory === c ? 'selected' : ''}>${c} (${catalogData.filter(s => s.category === c).length})</option>`).join('')}
+                        ${categories.map(c => `<option value="${esc(c)}" ${filterCategory === c ? 'selected' : ''}>${esc(c)} (${catalogData.filter(s => getProviderCategory(s) === c).length})</option>`).join('')}
                     </select>
                 </div>
                 <div class="admin-input-wrap" style="min-width:200px;">
@@ -312,17 +375,18 @@
                     <tbody>
                         ${filtered.length === 0 ? '<tr><td colspan="9" style="text-align:center; padding:2rem;">لا توجد خدمات مطابقة</td></tr>' : ''}
                         ${filtered.map(service => {
-                            const isSelected = selectedServices.has(service.service);
-                            return `<tr class="${isSelected ? 'is-selected' : ''}" data-service-id="${service.service}">
-                                <td><input type="checkbox" class="serva-service-check" data-service-id="${service.service}" ${isSelected ? 'checked' : ''}></td>
-                                <td><code>${service.service}</code></td>
-                                <td>${service.name_ar || service.name}</td>
-                                <td><span class="admin-badge">${service.category || '-'}</span></td>
+                            const serviceId = getProviderServiceId(service);
+                            const isSelected = selectedServices.has(serviceId);
+                            return `<tr class="${isSelected ? 'is-selected' : ''}" data-service-id="${esc(serviceId)}">
+                                <td><input type="checkbox" class="serva-service-check" data-service-id="${esc(serviceId)}" ${isSelected ? 'checked' : ''}></td>
+                                <td><code>${esc(serviceId)}</code></td>
+                                <td>${esc(getProviderServiceName(service))}</td>
+                                <td><span class="admin-badge">${esc(getProviderCategory(service) || '-')}</span></td>
                                 <td><strong>$${parseFloat(service.rate || 0).toFixed(2)}</strong></td>
-                                <td>${service.min || 1}</td>
-                                <td>${service.max || '-'}</td>
-                                <td><span class="admin-badge admin-badge--info">${service.type || '-'}</span></td>
-                                <td id="servaStatus_${service.service}">-</td>
+                                <td>${esc(service.min || 1)}</td>
+                                <td>${esc(service.max || '-')}</td>
+                                <td><span class="admin-badge admin-badge--info">${esc(service.type || '-')}</span></td>
+                                <td id="${esc(getServiceStatusCellId(serviceId))}">-</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
@@ -341,7 +405,9 @@
      * @returns {Promise<void>}
      */
     async function checkExistingServices(services) {
-        const ids = services.map(s => String(s.service));
+        const ids = services.map(getProviderServiceId).filter(Boolean);
+        if (ids.length === 0) return;
+
         const { data } = await TZ.supabase
             .from(LOCAL_SERVICES_TABLE)
             .select('provider_service_id')
@@ -349,7 +415,7 @@
 
         const existing = new Set((data || []).map(d => d.provider_service_id));
         for (const id of ids) {
-            const cell = document.getElementById(`servaStatus_${id}`);
+            const cell = document.getElementById(getServiceStatusCellId(id));
             if (!cell) continue;
             if (existing.has(id)) {
                 cell.innerHTML = '<span class="admin-badge admin-badge--success"><i class="fas fa-check"></i> مضافة</span>';
@@ -390,9 +456,12 @@
         document.getElementById('servaSelectAll')?.addEventListener('change', function () {
             const filtered = getFilteredCatalog();
             if (this.checked) {
-                filtered.forEach(s => selectedServices.add(s.service));
+                filtered.forEach(s => {
+                    const serviceId = getProviderServiceId(s);
+                    if (serviceId) selectedServices.add(serviceId);
+                });
             } else {
-                filtered.forEach(s => selectedServices.delete(s.service));
+                filtered.forEach(s => selectedServices.delete(getProviderServiceId(s)));
             }
             renderCatalog();
         });
@@ -440,7 +509,7 @@
             let failed = 0;
 
             for (const serviceId of selectedServices) {
-                const service = catalogData.find(s => s.service === serviceId);
+                const service = catalogData.find(s => getProviderServiceId(s) === serviceId);
                 if (!service) continue;
 
                 try {
@@ -489,7 +558,7 @@
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle" style="color:var(--admin-danger); font-size:2rem;"></i>
                     <p>فشل تحميل كتالوج المزود</p>
-                    <p style="font-size:0.85rem; opacity:0.7;">${error.message}</p>
+                    <p style="font-size:0.85rem; opacity:0.7;">${esc(error.message)}</p>
                     <button class="btn btn-primary btn-sm" id="servaCatalogRetry">
                         <i class="fas fa-redo"></i> إعادة المحاولة
                     </button>
@@ -500,4 +569,17 @@
             });
         }
     };
+
+    if (window.__ENABLE_SERVA_CATALOG_TEST_HOOKS__) {
+        window.__servaCatalogTestHooks = {
+            esc,
+            getProviderCategory,
+            getProviderServiceId,
+            getProviderServiceName,
+            getServiceStatusCellId,
+            safePositiveInt,
+            sanitizeText,
+            slugify
+        };
+    }
 })();

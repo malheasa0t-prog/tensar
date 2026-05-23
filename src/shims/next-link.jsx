@@ -74,7 +74,10 @@ const Link = forwardRef(function Link(
     children,
     onFocus,
     onMouseEnter,
+    onMouseDown,
+    onPointerDown,
     onTouchStart,
+    onClick,
     scroll,
     ...rest
   },
@@ -84,7 +87,10 @@ const Link = forwardRef(function Link(
   const anchorEvents = {
     onFocus,
     onMouseEnter,
+    onMouseDown,
+    onPointerDown,
     onTouchStart,
+    onClick,
   };
 
   if (!resolvedHref) {
@@ -114,7 +120,10 @@ const Link = forwardRef(function Link(
       to={resolvedHref}
       onFocus={(event) => handleInteractivePrefetch(onFocus, event)}
       onMouseEnter={(event) => handleInteractivePrefetch(onMouseEnter, event)}
+      onMouseDown={(event) => handleInteractivePrefetch(onMouseDown, event)}
+      onPointerDown={(event) => handleInteractivePrefetch(onPointerDown, event)}
       onTouchStart={(event) => handleInteractivePrefetch(onTouchStart, event)}
+      onClick={(event) => handleInteractivePrefetch(onClick, event)}
       {...rest}
     >
       {children}

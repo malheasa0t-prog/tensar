@@ -82,7 +82,7 @@ const Image = forwardRef(function Image(
       height={fill ? undefined : height}
       loading={loadingAttr}
       decoding={priority ? 'sync' : 'async'}
-      fetchPriority={priority ? 'high' : undefined}
+      fetchpriority={priority ? 'high' : undefined}
       style={Object.keys(imgStyle).length > 0 ? imgStyle : undefined}
       {...rest}
     />

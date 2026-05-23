@@ -138,21 +138,32 @@
 }
 
 .techfix-service-grid--pricing {
-  grid-template-columns: 1fr;
-  gap: 1.35rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 1.25rem;
 }
 
 .service-card-pricing {
   position: relative;
-  gap: 1rem;
-  align-content: start;
-  padding: 1.4rem;
-  border-color: rgba(131, 56, 236, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 24px;
   background:
-    radial-gradient(circle at top right, rgba(0, 217, 255, 0.08), transparent 28%),
-    radial-gradient(circle at top left, rgba(255, 0, 110, 0.1), transparent 22%),
-    linear-gradient(180deg, rgba(15, 20, 48, 0.98), rgba(8, 11, 28, 0.99));
-  box-shadow: 0 22px 46px rgba(2, 6, 23, 0.32);
+    radial-gradient(circle at top right, rgba(0, 217, 255, 0.04), transparent 30%),
+    radial-gradient(circle at top left, rgba(255, 0, 110, 0.05), transparent 25%),
+    linear-gradient(180deg, rgba(15, 20, 48, 0.95), rgba(8, 11, 28, 0.98));
+  border: 1px solid rgba(131, 56, 236, 0.15);
+  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.2);
+  transition: transform 400ms ease, box-shadow 400ms ease, border-color 400ms ease;
+  overflow: hidden;
+}
+
+.service-card-pricing:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 48px rgba(131, 56, 236, 0.15);
+  border-color: rgba(131, 56, 236, 0.35);
 }
 
 .service-card-pricing::before {
@@ -161,7 +172,7 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(0, 217, 255, 0.45), rgba(131, 56, 236, 0.45), rgba(255, 79, 216, 0.4));
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.4), rgba(131, 56, 236, 0.4), rgba(255, 79, 216, 0.3));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -169,37 +180,55 @@
   pointer-events: none;
 }
 
+.service-card-pricing .service-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  flex-grow: 1;
+}
+
+.service-card-pricing .service-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
 .service-card-pricing .featured-badge {
   color: #ffffff;
   background: linear-gradient(135deg, #ff7a18, #ff4d15);
-}
-
-.service-card-pricing .service-icon {
-  background: linear-gradient(135deg, rgba(0, 217, 255, 0.18), rgba(131, 56, 236, 0.16));
-  color: #f8fbff;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-block;
 }
 
 .service-card-pricing .service-card-media {
   position: relative;
-  min-height: 220px;
+  aspect-ratio: 16 / 9;
+  width: 100%;
   overflow: hidden;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(circle at top, rgba(0, 217, 255, 0.18), transparent 44%),
-    linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(8, 11, 28, 0.98));
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.8), rgba(8, 11, 28, 0.95));
   display: grid;
   place-items: center;
 }
 
+.service-card-pricing .service-card-media.service-icon-only {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.12), rgba(131, 56, 236, 0.1));
+  color: var(--color-cyan);
+}
+
 .service-card-pricing .service-card-media-fallback {
-  width: 76px;
-  height: 76px;
-  border-radius: 22px;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: #f8fbff;
 }
 
@@ -208,25 +237,162 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  transition: transform 500ms ease;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.service-card-pricing:hover .service-card-media-image {
+  transform: scale(1.05);
 }
 
 .service-card-pricing h3 {
   margin: 0;
   color: #f8fbff;
-  font-size: clamp(1.28rem, 2vw, 1.6rem);
+  font-size: clamp(1.1rem, 1.6vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.3;
 }
 
 .service-card-pricing p {
   margin: 0;
-  color: #d4def6;
-  line-height: 1.85;
+  color: #c4d1ef;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.service-card-pricing .techfix-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .service-card-pricing .techfix-meta span {
   color: #f6fbff;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.service-card-booking-action {
+  width: 100%;
+}
+
+/* ── Compact Service Cards ── */
+
+.techfix-service-grid--compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 0.85rem;
+}
+
+.service-card-compact {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background:
+    linear-gradient(165deg, rgba(15, 20, 48, 0.95), rgba(8, 11, 28, 0.98));
+  border: 1px solid rgba(131, 56, 236, 0.12);
+  transition: transform 350ms ease, border-color 350ms ease, box-shadow 350ms ease;
+}
+
+.service-card-compact:hover {
+  transform: translateY(-3px);
+  border-color: rgba(131, 56, 236, 0.3);
+  box-shadow: 0 12px 28px rgba(131, 56, 236, 0.1);
+}
+
+.service-card-compact-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(131, 56, 236, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #00d9ff;
+}
+
+.service-card-compact-body {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.service-card-compact-cat {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ff7a18;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.service-card-compact-body strong {
+  color: #f8fbff;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.service-card-compact-body p {
+  margin: 0;
+  color: #a8b8d8;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.service-card-compact-footer {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: center;
+  text-align: center;
+  min-width: 90px;
+}
+
+.service-card-compact-price {
+  color: #87e4ff;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.service-card-compact-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.78rem;
+  border-radius: 12px;
+  min-height: unset;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .service-card-compact {
+    grid-template-columns: 44px 1fr;
+    gap: 0.75rem;
+  }
+
+  .service-card-compact-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .service-card-compact-footer {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    justify-items: stretch;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
 }
 
 .service-tier-grid {
@@ -365,11 +531,7 @@
   border-color: rgba(255, 79, 216, 0.22);
 }
 
-@media (min-width: 1600px) {
-  .techfix-service-grid--pricing {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
+
 
 @media (max-width: 1024px) {
   .repair-layout {

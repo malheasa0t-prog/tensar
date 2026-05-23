@@ -8,8 +8,8 @@ import styles from "./MobileBottomNav.module.css";
 /**
  * Resolves whether a mobile navigation item should appear active.
  *
- * @param {{ pathname: string, href: string }} params
- * @returns {boolean}
+ * @param {{ pathname: string, href: string }} params - Path comparison input.
+ * @returns {boolean} True when the item is active.
  */
 function isMobileItemActive({ pathname, href }) {
   if (!pathname || !href) {
@@ -20,11 +20,8 @@ function isMobileItemActive({ pathname, href }) {
     return pathname === "/";
   }
 
-  if (href === "/products") {
-    return (
-      pathname.startsWith("/products") ||
-      pathname.startsWith("/category/")
-    );
+  if (href === "/services") {
+    return pathname.startsWith("/services") || pathname.startsWith("/category/");
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -40,8 +37,8 @@ function isMobileItemActive({ pathname, href }) {
  *   isCartOpen: boolean,
  *   onCartOpen: () => void,
  *   pathname: string,
- * }} props
- * @returns {JSX.Element}
+ * }} props - Bottom navigation props.
+ * @returns {JSX.Element} Mobile bottom nav.
  */
 export default function MobileBottomNav({
   cartCount,
@@ -60,8 +57,8 @@ export default function MobileBottomNav({
 
   const items = [
     { href: "/", icon: "home", label: "الرئيسية" },
-    { href: "/products", icon: "shopping-bag", label: "المنتجات" },
     { href: "/services", icon: "wrench", label: "الصيانة" },
+    { href: "/deposit", icon: "wallet", label: "الرصيد" },
     { href: favoritesHref, icon: "heart", label: "المفضلة", badge: favoriteCount },
   ];
 

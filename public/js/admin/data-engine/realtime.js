@@ -1,4 +1,4 @@
-// ===== TechZone Admin Data Engine - Realtime =====
+﻿// ===== TechZone Admin Data Engine - Realtime =====
 // Scoped realtime subscriptions with shared DB mutation helpers.
 
 import {
@@ -10,16 +10,17 @@ import {
     realtimeState,
     supabase,
     updateHealthStatus
-} from './core.js?v=20260426-5';
+} from './core.js?v=20260523-2';
 import {
     mapAuditLog,
     mapContactMessage,
     mapCoupon,
     mapDeposit,
     mapOrder,
-    mapRepairBooking
-} from './orders.js?v=20260426-5';
-import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260426-5';
+    mapRepairBooking,
+    mapServiceOrder
+} from './orders.js?v=20260523-2';
+import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260523-2';
 
 const CATEGORY_SORTER = (first, second) => (first.sortOrder || 0) - (second.sortOrder || 0);
 
@@ -35,6 +36,12 @@ const REALTIME_BINDINGS = {
         collectionKey: 'orders',
         eventName: 'orders',
         mapper: (row, existingRecord) => mapOrder(row, existingRecord?.items || []),
+        prepend: true
+    },
+    service_orders: {
+        collectionKey: 'serviceOrders',
+        eventName: 'service_orders',
+        mapper: (row) => mapServiceOrder(row),
         prepend: true
     },
     repair_services: {

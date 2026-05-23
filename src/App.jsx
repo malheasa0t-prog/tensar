@@ -14,7 +14,6 @@ import RouteSuspenseFallback from '@/components/RouteSuspenseFallback';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { normalizeSiteSettings } from '@/lib/contactChannels';
-import { fetchHeaderSnapshot } from '@/services/headerService';
 
 const AiChatbot = lazy(() => import('@/components/AiChatbot'));
 const SITE_SKIP_LINK_LABEL =
@@ -85,6 +84,7 @@ export default function App() {
      */
     async function loadSiteData() {
       try {
+        const { fetchHeaderSnapshot } = await import('@/services/headerService');
         const snapshot = await fetchHeaderSnapshot();
 
         if (cancelled) {

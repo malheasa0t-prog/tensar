@@ -1,4 +1,4 @@
-// ===== TechZone Admin Data Engine - Sync =====
+﻿// ===== TechZone Admin Data Engine - Sync =====
 // Write operations, audit log sync, and refresh entry points.
 
 import {
@@ -7,11 +7,11 @@ import {
     generateId,
     nowIso,
     supabase
-} from './core.js?v=20260426-5';
-import { loadDataFromSupabaseByScope } from './loaders.js?v=20260426-5';
-import { isRetryableNetworkError, queueOfflineCommit, syncQueuedCommits } from './offline.js?v=20260426-5';
-import { fireDataUpdate } from './realtime.js?v=20260426-5';
-import { fetchExistingProductSnapshot, syncProductRestockAlerts } from './restockAlerts.js?v=20260426-5';
+} from './core.js?v=20260523-2';
+import { loadDataFromSupabaseByScope } from './loaders.js?v=20260523-2';
+import { isRetryableNetworkError, queueOfflineCommit, syncQueuedCommits } from './offline.js?v=20260523-2';
+import { fireDataUpdate } from './realtime.js?v=20260523-2';
+import { fetchExistingProductSnapshot, syncProductRestockAlerts } from './restockAlerts.js?v=20260523-2';
 
 const ERROR_CODE_PATTERN = /\[[A-Z]{2,4}-\d{3}\]/;
 const ERROR_MESSAGES = Object.freeze({

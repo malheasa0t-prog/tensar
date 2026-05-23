@@ -9,8 +9,8 @@ import {
 /**
  * Creates a small chainable Supabase query mock for one table.
  *
- * @param {{ data?: unknown, error?: unknown }} response
- * @returns {Record<string, Function>}
+ * @param {{ data?: unknown, error?: unknown }} response - Query response.
+ * @returns {Record<string, Function>} Chainable query mock.
  */
 function createQueryMock(response) {
   const builder = {
@@ -34,9 +34,9 @@ function createQueryMock(response) {
 /**
  * Creates a mock Supabase client keyed by table name.
  *
- * @param {Record<string, { data?: unknown, error?: unknown }>} responses
- * @param {{ calls: Record<string, number> }} tracker
- * @returns {{ from: (table: string) => Record<string, Function> }}
+ * @param {Record<string, { data?: unknown, error?: unknown }>} responses - Mock responses.
+ * @param {{ calls: Record<string, number> }} tracker - Call counter.
+ * @returns {{ from: (table: string) => Record<string, Function> }} Mock Supabase client.
  */
 function createClientMock(responses, tracker) {
   return {
@@ -47,14 +47,11 @@ function createClientMock(responses, tracker) {
   };
 }
 
-test("loadGlobalSearchSnapshot should build a normalized snapshot from all public sources", async () => {
+test("loadGlobalSearchSnapshot should build a normalized snapshot from service sources", async () => {
   resetGlobalSearchSnapshotCache();
   const tracker = { calls: {} };
   const client = createClientMock(
     {
-      products: {
-        data: [{ id: "prod-1", name: "لابتوب", category_id: "cat-1", price: 1000 }],
-      },
       repair_services: {
         data: [{ id: "svc-1", name: "صيانة لابتوب", category: "الصيانة", price: 15 }],
       },
@@ -67,10 +64,10 @@ test("loadGlobalSearchSnapshot should build a normalized snapshot from all publi
 
   const snapshot = await loadGlobalSearchSnapshot(client);
 
-  assert.equal(snapshot.items.length, 3);
+  assert.equal(snapshot.items.length, 2);
   assert.ok(snapshot.quickFilters.some((filter) => filter.label === "لابتوبات"));
-  assert.ok(snapshot.popularSuggestions.includes("لابتوب"));
-  assert.deepEqual(tracker.calls, { products: 1, repair_services: 1, categories: 1, services: 1 });
+  assert.ok(snapshot.popularSuggestions.includes("صيانة لابتوب"));
+  assert.deepEqual(tracker.calls, { repair_services: 1, categories: 1 });
 });
 
 test("loadGlobalSearchSnapshot should return partial data when one source fails", async () => {
@@ -78,9 +75,6 @@ test("loadGlobalSearchSnapshot should return partial data when one source fails"
   const tracker = { calls: {} };
   const client = createClientMock(
     {
-      products: {
-        data: [{ id: "prod-1", name: "شاشة", category_id: "cat-1", price: 140 }],
-      },
       repair_services: {
         data: null,
         error: { message: "services unavailable" },
@@ -94,7 +88,7 @@ test("loadGlobalSearchSnapshot should return partial data when one source fails"
 
   const snapshot = await loadGlobalSearchSnapshot(client);
 
-  assert.equal(snapshot.items.length, 2);
+  assert.equal(snapshot.items.length, 1);
   assert.deepEqual(snapshot.sourceErrors, ["services unavailable"]);
 });
 
@@ -103,7 +97,6 @@ test("loadGlobalSearchSnapshot should throw when all sources fail and no items a
   const tracker = { calls: {} };
   const client = createClientMock(
     {
-      products: { data: null, error: { message: "products unavailable" } },
       repair_services: { data: null, error: { message: "services unavailable" } },
       categories: { data: null, error: { message: "categories unavailable" } },
     },
@@ -118,12 +111,11 @@ test("fetchGlobalSearchSnapshot should cache the most recent successful snapshot
   const tracker = { calls: {} };
   const client = createClientMock(
     {
-      products: {
-        data: [{ id: "prod-1", name: "بطاقة", category_id: "cat-1", price: 20 }],
+      repair_services: {
+        data: [{ id: "svc-1", name: "تشخيص جهاز", category: "الصيانة", price: 20 }],
       },
-      repair_services: { data: [] },
       categories: {
-        data: [{ id: "cat-1", name: "بطاقات", slug: "cards", parent_id: null }],
+        data: [{ id: "cat-1", name: "الصيانة", slug: "repair", parent_id: null }],
       },
     },
     tracker
@@ -133,5 +125,5 @@ test("fetchGlobalSearchSnapshot should cache the most recent successful snapshot
   const secondSnapshot = await fetchGlobalSearchSnapshot(client);
 
   assert.equal(firstSnapshot, secondSnapshot);
-  assert.deepEqual(tracker.calls, { products: 1, repair_services: 1, categories: 1, services: 1 });
+  assert.deepEqual(tracker.calls, { repair_services: 1, categories: 1 });
 });

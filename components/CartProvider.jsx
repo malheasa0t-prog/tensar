@@ -5,7 +5,6 @@ import { trackAddToCart } from "@/lib/analyticsModel";
 import { validateCartChange } from "@/lib/cartAvailabilityModel";
 import { mergeCartItemsWithServerProducts } from "@/lib/cartSyncModel";
 import { PUBLIC_ANALYTICS_CONFIG } from "@/lib/publicAnalyticsConfig";
-import { fetchCartProductSnapshots } from "@/services/cartService";
 
 const CartContext = createContext(null);
 const CART_STORAGE_KEY = "tz_next_cart";
@@ -74,6 +73,7 @@ export default function CartProvider({ children }) {
     }
 
     try {
+      const { fetchCartProductSnapshots } = await import("@/services/cartService");
       const serverProducts = await fetchCartProductSnapshots({ productIds });
       setItems((prev) => mergeCartItemsWithServerProducts({ cartItems: prev, serverProducts }));
     } catch (error) {

@@ -11,12 +11,6 @@ import {
   getUnreadNotificationsLabel,
   hasUnreadNotificationsChanged,
 } from '@/lib/headerNotificationsModel';
-import {
-  fetchNotificationsSnapshot,
-  markAllNotificationsAsRead,
-  markNotificationAsRead,
-  subscribeToNotifications,
-} from '@/services/dashboardNotificationsService';
 
 /**
  * Header bell that opens a quick notifications modal.
@@ -64,6 +58,7 @@ export default function HeaderNotificationBell({ authLoading, user }) {
       setLoading(true);
     }
 
+    const { fetchNotificationsSnapshot } = await import('@/services/dashboardNotificationsService');
     const snapshot = await fetchNotificationsSnapshot(user.id);
     setNotifications(snapshot.notifications);
     setError(snapshot.error);
@@ -80,10 +75,27 @@ export default function HeaderNotificationBell({ authLoading, user }) {
       return undefined;
     }
 
+    let unsubscribe = () => {};
+
+    /**
+     * Attaches the notifications subscription after the user is authenticated.
+     *
+     * @returns {Promise<void>}
+     */
+    async function subscribeToUserNotifications() {
+      const { subscribeToNotifications } = await import('@/services/dashboardNotificationsService');
+
+      if (!user?.id) {
+        return;
+      }
+
+      unsubscribe = subscribeToNotifications(user.id, () => {
+        void loadNotifications({ silent: true });
+      });
+    }
+
     void loadNotifications();
-    const unsubscribe = subscribeToNotifications(user.id, () => {
-      void loadNotifications({ silent: true });
-    });
+    void subscribeToUserNotifications();
 
     return () => {
       unsubscribe();
@@ -151,6 +163,7 @@ export default function HeaderNotificationBell({ authLoading, user }) {
     }
 
     setBusyIds((previousState) => ({ ...previousState, [notificationId]: true }));
+    const { markNotificationAsRead } = await import('@/services/dashboardNotificationsService');
     const updateError = await markNotificationAsRead({ notificationId, userId: user.id });
 
     setBusyIds((previousState) => {
@@ -182,6 +195,7 @@ export default function HeaderNotificationBell({ authLoading, user }) {
 
     setBulkActionLoading(true);
     const unreadIds = notifications.filter((item) => !item.is_read).map((item) => item.id);
+    const { markAllNotificationsAsRead } = await import('@/services/dashboardNotificationsService');
     const updateError = await markAllNotificationsAsRead({ notificationIds: unreadIds, userId: user.id });
     setBulkActionLoading(false);
 
