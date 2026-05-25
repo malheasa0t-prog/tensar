@@ -32,6 +32,13 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link
       rel="preload"
+      as="font"
+      href="/fonts/cairo-arabic-wght-normal.woff2"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
       as="style"
       href="/fonts/fonts.css"
       integrity="sha384-9OZeJ2MnqWntiV3TguadXC2ROtGkfi2t2G3dGpnjHQ6wZRAkfoDsdApAs7iFZarc"
@@ -49,6 +56,42 @@
         margin: 0;
       }
     </style>
+    <script>
+      (function redirectLocalAuthCallback() {
+        var siteOrigin = 'https://tensr.systems';
+        var localHosts = { localhost: true, '127.0.0.1': true };
+        var authHashKeys = ['access_token', 'refresh_token', 'error', 'error_code', 'error_description'];
+        var authHashTypes = { invite: true, magiclink: true, recovery: true, signup: true };
+
+        /**
+         * Returns whether the URL hash contains Supabase auth callback data.
+         *
+         * @param {string} hash
+         * @returns {boolean}
+         */
+        function hasSupabaseAuthHash(hash) {
+          if (!hash || hash.charAt(0) !== '#' || hash.length <= 1) return false;
+          var params = new URLSearchParams(hash.slice(1));
+          var type = String(params.get('type') || '').toLowerCase();
+          return authHashKeys.some(function hasKey(key) { return params.has(key); }) || authHashTypes[type] === true;
+        }
+
+        try {
+          var url = new URL(window.location.href);
+          var hasEmptyHash = window.location.href.slice(-1) === '#';
+          var hasAuthHash = hasSupabaseAuthHash(url.hash);
+          var isAuthPath = /^\/auth(?:\/|$)/.test(url.pathname);
+
+          if (!localHosts[url.hostname] || (!hasAuthHash && !hasEmptyHash && !isAuthPath)) return;
+
+          var path = hasAuthHash ? '/auth/callback/' : url.pathname + url.search;
+          var target = new URL(path, siteOrigin + '/').toString();
+          window.location.replace(target + (hasEmptyHash ? '#' : url.hash));
+        } catch (error) {
+          // Keep the app bootable if the browser blocks URL parsing.
+        }
+      })();
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

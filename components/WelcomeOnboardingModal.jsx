@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppIcon from "./AppIcon";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import styles from "./WelcomeOnboardingModal.module.css";
 
 const WELCOME_MODAL_STORAGE_KEY = "tz_onboarding_seen";
@@ -11,11 +12,23 @@ const HIDDEN_PATH_PREFIXES = ["/admin", "/auth", "/checkout", "/compare", "/dash
 
 export default function WelcomeOnboardingModal() {
   const pathname = usePathname();
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const shouldRender = useMemo(
     () => Boolean(pathname) && !HIDDEN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix)),
     [pathname]
   );
+  const dismiss = useCallback(() => {
+    window.localStorage.setItem(WELCOME_MODAL_STORAGE_KEY, "1");
+    setIsOpen(false);
+  }, []);
+  const { handleKeyDown } = useModalAccessibility({
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    isOpen,
+    onClose: dismiss,
+  });
 
   useEffect(() => {
     if (!shouldRender) {
@@ -42,11 +55,6 @@ export default function WelcomeOnboardingModal() {
     };
   }, [isOpen]);
 
-  function dismiss() {
-    window.localStorage.setItem(WELCOME_MODAL_STORAGE_KEY, "1");
-    setIsOpen(false);
-  }
-
   if (!isOpen || !shouldRender) {
     return null;
   }
@@ -55,12 +63,21 @@ export default function WelcomeOnboardingModal() {
     <div className={styles.overlay} onClick={dismiss} role="presentation">
       <section
         className={styles.modal}
+        ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
         aria-labelledby="welcome-onboarding-title"
+        tabIndex={-1}
       >
-        <button type="button" className={styles.closeButton} onClick={dismiss} aria-label="إغلاق الترحيب">
+        <button
+          type="button"
+          className={styles.closeButton}
+          onClick={dismiss}
+          aria-label="إغلاق الترحيب"
+          ref={closeButtonRef}
+        >
           <AppIcon name="x" size={16} />
         </button>
 

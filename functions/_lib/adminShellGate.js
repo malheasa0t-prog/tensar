@@ -28,12 +28,16 @@ function parseCommaSeparatedEnvValue(rawValue) {
 /**
  * Normalizes the configured admin shell access mode.
  *
+ * Fails closed: when the env var is unset or invalid, the gate denies access.
+ * Operators must explicitly opt into `public` (development only) or `cf-access`.
+ * See SECURITY-AUDIT-2026-05-24 (CRIT-002).
+ *
  * @param {string | undefined | null} rawValue - Raw access mode value.
  * @returns {"cf-access" | "deny" | "public"} Normalized mode.
  */
 function normalizeAdminShellAccessMode(rawValue) {
   const normalizedValue = String(rawValue || "").trim().toLowerCase();
-  if (!normalizedValue) return MODE_PUBLIC;
+  if (!normalizedValue) return MODE_DENY;
   if ([MODE_CF_ACCESS, MODE_DENY, MODE_PUBLIC].includes(normalizedValue)) {
     return normalizedValue;
   }

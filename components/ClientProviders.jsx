@@ -99,8 +99,8 @@ export default function ClientProviders({
         <SeoProvider>
           <FavoritesProvider>
             <ComparisonProvider>
-              <CartProvider>
-                <ToastProvider>
+              <ToastProvider>
+                <CartProvider>
                   <KeyboardShortcuts />
                   <DynamicFavicon />
                   <ScrollProgress />
@@ -123,8 +123,8 @@ export default function ClientProviders({
                       </Suspense>
                     </>
                   ) : null}
-                </ToastProvider>
-              </CartProvider>
+                </CartProvider>
+              </ToastProvider>
             </ComparisonProvider>
           </FavoritesProvider>
         </SeoProvider>

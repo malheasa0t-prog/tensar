@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
+const CONSTANTS_SOURCE = fs.readFileSync(new URL('./orders.constants.js', import.meta.url), 'utf8');
 const SCRIPT_SOURCE = fs.readFileSync(new URL('./orders.js', import.meta.url), 'utf8');
 
 /**
@@ -76,6 +77,7 @@ function loadOrderHooks(db = {}) {
     },
   });
 
+  vm.runInContext(CONSTANTS_SOURCE, context, { filename: 'public/js/admin/orders.constants.js' });
   vm.runInContext(SCRIPT_SOURCE, context, { filename: 'public/js/admin/orders.js' });
   return window.__orderAdminTestHooks;
 }

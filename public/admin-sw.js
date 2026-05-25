@@ -1,7 +1,6 @@
 ﻿const CACHE_NAME = 'tz-admin-shell-20260523-2';
 const SYNC_TAG = 'tz-admin-sync';
 const PRECACHE_URLS = [
-    '/__tz-panel.html?v=20260523-2',
     '/fonts/fonts.css',
     '/fonts/cairo-arabic-wght-normal.woff2',
     '/fonts/cairo-latin-ext-wght-normal.woff2',
@@ -31,7 +30,6 @@ const PRECACHE_URLS = [
     '/css/admin/orders.css',
     '/css/admin/notifications.css',
     '/css/admin/chats.css',
-    '/admin-config.js?v=20260523-2',
     '/js/admin/bootstrap.js?v=20260523-2',
     '/js/admin/core.js?v=20260523-2',
     '/js/admin/core.ui.js?v=20260523-2',
@@ -84,9 +82,7 @@ const PRECACHE_URLS = [
 function shouldHandleRequest(requestUrl) {
     return requestUrl.origin === self.location.origin
         && (
-            requestUrl.pathname === '/__tz-panel.html'
-            || requestUrl.pathname === '/admin-config.js'
-            || requestUrl.pathname === '/api/admin/runtime'
+            requestUrl.pathname === '/api/admin/runtime'
             || requestUrl.pathname.startsWith('/css/admin/')
             || requestUrl.pathname.startsWith('/css/')
             || requestUrl.pathname.startsWith('/fonts/')

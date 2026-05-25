@@ -19,6 +19,7 @@ const PROMO_SLIDE_ACTIVE_Z_INDEX = 10;
 const PROMO_SLIDE_INACTIVE_Z_INDEX = 2;
 const PROMO_SLIDE_PARALLAX_DISTANCE_PX = 34;
 const PROMO_BANNER_IMAGE_WIDTH = 1200;
+const PROMO_BANNER_IMAGE_HEIGHT = 520;
 const PROMO_BANNER_IMAGE_SIZES = "(max-width: 768px) 94vw, (max-width: 1280px) 92vw, 1280px";
 
 const defaultBanners = [
@@ -90,6 +91,8 @@ function PromoBannerSlide({ banner, currentIndex, index, totalSlides }) {
           alt={banner.title}
           className="promo-banner-image"
           fill
+          width={PROMO_BANNER_IMAGE_WIDTH}
+          height={PROMO_BANNER_IMAGE_HEIGHT}
           quality={80}
           priority={index === 0}
           sizes={PROMO_BANNER_IMAGE_SIZES}

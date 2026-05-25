@@ -11,6 +11,10 @@ import {
 } from "../../_lib/supabase.js";
 import { withSecurityHeaders } from "../../_lib/securityHeaders.js";
 import { getAdminDisplayName } from "../../../lib/adminRoles.js";
+import {
+  buildAdminShellSetCookieHeader,
+  createAdminShellCookieValue,
+} from "../../_lib/adminShellCookie.js";
 
 const ADMIN_SESSION_METHODS = "GET, OPTIONS";
 const ADMIN_PROFILE_FIELDS = "user_id,full_name,role,status";
@@ -31,6 +35,34 @@ function finalizeResponse(response, request) {
     withCors(response, request, ADMIN_SESSION_METHODS),
     ADMIN_SESSION_CACHE_HEADERS
   );
+}
+
+/**
+ * Adds a short-lived admin-shell cookie after a successful admin validation.
+ *
+ * @param {{ env: Record<string, string | undefined>, request: Request, response: Response, userId: string }} input
+ * @returns {Promise<Response>} Response with Set-Cookie when signing is configured.
+ */
+async function withAdminShellCookie(input) {
+  const cookieValue = await createAdminShellCookieValue({
+    env: input.env,
+    userId: input.userId,
+  });
+  const setCookie = buildAdminShellSetCookieHeader({
+    cookieValue,
+    request: input.request,
+  });
+
+  if (!setCookie) {
+    return input.response;
+  }
+
+  const headers = new Headers(input.response.headers);
+  headers.append("Set-Cookie", setCookie);
+  return new Response(input.response.body, {
+    status: input.response.status,
+    headers,
+  });
 }
 
 /**
@@ -61,10 +93,13 @@ async function loadAdminSessionRows(input) {
 /**
  * Builds the public admin session payload returned to the browser.
  *
+ * `user_metadata.role` is NEVER used here — it is user-writable and unsafe
+ * to display as a privileged role (SECURITY-AUDIT-2026-05-23 CRIT-001).
+ *
  * @param {{
  *   legacyUser: Record<string, unknown> | null,
  *   profile: Record<string, unknown> | null,
- *   user: { app_metadata?: { role?: string }, email?: string | null, id?: string | null, user_metadata?: { role?: string } }
+ *   user: { app_metadata?: { role?: string }, email?: string | null, id?: string | null }
  * }} input - Authenticated user context.
  * @returns {{ email: string, fullName: string, id: string, role: string, status: string }} Normalized admin payload.
  */
@@ -81,7 +116,6 @@ function buildAdminSessionPayload(input) {
       input?.profile?.role
       || input?.legacyUser?.role
       || input?.user?.app_metadata?.role
-      || input?.user?.user_metadata?.role
       || "user"
     ).trim().toLowerCase(),
     status: String(input?.profile?.status || input?.legacyUser?.status || "active").trim().toLowerCase(),
@@ -117,7 +151,14 @@ export function createAdminSessionHandlers(dependencies = {}) {
         const sessionRows = await loadAdminSessionRows({ adminClient, user: access.user || {} });
         const payload = buildAdminSessionPayload({ ...sessionRows, user: access.user || {} });
 
-        return finalizeResponse(respondWithSuccess({ user: payload }, 200), context.request);
+        const response = await withAdminShellCookie({
+          env: context.env,
+          request: context.request,
+          response: respondWithSuccess({ user: payload }, 200),
+          userId: payload.id,
+        });
+
+        return finalizeResponse(response, context.request);
       } catch (error) {
         console.error("[ADS-500] Failed to resolve admin session.", error);
         return finalizeResponse(respondWithError(ADMIN_SESSION_ERROR_MESSAGE, 500), context.request);

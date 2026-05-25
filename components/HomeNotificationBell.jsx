@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { loadSupabaseClient } from "@/lib/loadSupabaseClient";
 
+const UNREAD_REFRESH_INTERVAL_MS = 20000;
+
 function getUnreadLabel(count) {
   if (count <= 0) return "لا توجد إشعارات جديدة";
   if (count === 1) return "لديك إشعار جديد";
@@ -21,6 +23,31 @@ export default function HomeNotificationBell() {
     let mounted = true;
     let refreshInterval = null;
     let unsubscribe = () => {};
+
+    /**
+     * Stops the polling interval for the previous authenticated user.
+     *
+     * @returns {void}
+     */
+    function clearRefreshInterval() {
+      if (refreshInterval) {
+        window.clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+    }
+
+    /**
+     * Starts notification polling for the active authenticated user only.
+     *
+     * @param {string} userId
+     * @returns {void}
+     */
+    function scheduleUnreadRefresh(userId) {
+      clearRefreshInterval();
+      refreshInterval = window.setInterval(() => {
+        void loadUnreadCount(userId);
+      }, UNREAD_REFRESH_INTERVAL_MS);
+    }
 
     async function loadUnreadCount(userId) {
       const supabase = await loadSupabaseClient();
@@ -59,10 +86,7 @@ export default function HomeNotificationBell() {
       setIsAuthenticated(true);
       setAuthLoading(false);
       await loadUnreadCount(user.id);
-
-      refreshInterval = window.setInterval(() => {
-        loadUnreadCount(user.id);
-      }, 20000);
+      scheduleUnreadRefresh(user.id);
     }
 
     init();
@@ -85,6 +109,7 @@ export default function HomeNotificationBell() {
         const sessionUser = session?.user || null;
 
         if (!sessionUser) {
+          clearRefreshInterval();
           if (mounted) {
             setIsAuthenticated(false);
             setUnreadCount(0);
@@ -99,6 +124,7 @@ export default function HomeNotificationBell() {
         }
 
         await loadUnreadCount(sessionUser.id);
+        scheduleUnreadRefresh(sessionUser.id);
       });
 
       unsubscribe = () => subscription.unsubscribe();
@@ -120,9 +146,7 @@ export default function HomeNotificationBell() {
     return () => {
       mounted = false;
       unsubscribe();
-      if (refreshInterval) {
-        window.clearInterval(refreshInterval);
-      }
+      clearRefreshInterval();
       window.removeEventListener("tz-notifications-updated", handleNotificationsUpdated);
     };
   }, []);

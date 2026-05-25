@@ -1,49 +1,23 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useToast } from "./ToastProvider";
 import { trackAddToCart } from "@/lib/analyticsModel";
 import { validateCartChange } from "@/lib/cartAvailabilityModel";
-import { mergeCartItemsWithServerProducts } from "@/lib/cartSyncModel";
+import { getCartProductIds, toCartNumber } from "@/lib/cartProviderModel";
+import { buildCartStorageKey, parseStoredCartItems, resolveCartOwnerKey } from "@/lib/cartStorageModel";
+import {
+  buildCartRevalidationNotice,
+  mergeCartItemsWithServerProducts,
+  revalidateCartAgainstServer,
+} from "@/lib/cartSyncModel";
 import { PUBLIC_ANALYTICS_CONFIG } from "@/lib/publicAnalyticsConfig";
 
 const CartContext = createContext(null);
-const CART_STORAGE_KEY = "tz_next_cart";
+const LEGACY_CART_STORAGE_KEY = "tz_next_cart";
 const DEFAULT_ADD_ERROR_MESSAGE = "تعذر إضافة المنتج حاليًا.";
 const MISSING_ITEM_ERROR_MESSAGE = "المنتج غير موجود في السلة.";
-
-/**
- * Returns the valid product ids stored in the cart payload.
- *
- * @param {Array<Record<string, unknown>>} cartItems
- * @returns {string[]}
- */
-function getCartProductIds(cartItems) {
-  if (!Array.isArray(cartItems) || cartItems.length === 0) {
-    return [];
-  }
-
-  return cartItems.map((item) => String(item?.id || "").trim()).filter(Boolean);
-}
-
-/**
- * Converts mixed number-like values into safe finite numbers.
- *
- * @param {unknown} value
- * @returns {number}
- */
-function toNumber(value) {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.replace(/,/g, "").trim();
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
+const GUEST_CART_STORAGE_KEY = buildCartStorageKey("guest");
 
 /**
  * Exposes the cart context to descendant components.
@@ -65,6 +39,8 @@ export default function CartProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hasHydratedCart, setHasHydratedCart] = useState(false);
   const itemsRef = useRef([]);
+  const activeCartStorageKeyRef = useRef(GUEST_CART_STORAGE_KEY);
+  const { showToast } = useToast() || {};
 
   const refreshCartItems = useCallback(async (cartItems) => {
     const productIds = getCartProductIds(cartItems);
@@ -83,35 +59,114 @@ export default function CartProvider({ children }) {
     }
   }, []);
 
+  /**
+   * Reconciles the cart against the live catalog. Deletes items whose product
+   * disappeared / was disabled / went out of stock, and clamps quantities to
+   * the new server stock. Returns the diff so the caller can surface a toast.
+   */
+  const revalidateCartItems = useCallback(async (cartItems) => {
+    const productIds = getCartProductIds(cartItems);
+    if (productIds.length === 0) {
+      return { removedIds: [], clampedItems: [] };
+    }
+
+    try {
+      const { fetchCartProductSnapshots } = await import("@/services/cartService");
+      const serverProducts = await fetchCartProductSnapshots({ productIds });
+      const reconciliation = revalidateCartAgainstServer({
+        cartItems,
+        serverProducts,
+      });
+      if (reconciliation.removedIds.length > 0 || reconciliation.clampedItems.length > 0) {
+        setItems(reconciliation.items);
+        const notice = buildCartRevalidationNotice(reconciliation);
+        if (notice && typeof showToast === "function") {
+          showToast(notice, { type: "info", title: "تحديث السلة" });
+        }
+      }
+      return {
+        removedIds: reconciliation.removedIds,
+        clampedItems: reconciliation.clampedItems,
+      };
+    } catch (error) {
+      console.error("[CRT-303] Failed to revalidate cart:", error);
+      return { removedIds: [], clampedItems: [] };
+    }
+  }, [showToast]);
+
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CART_STORAGE_KEY);
-      if (!raw) {
+    let active = true;
+    let unsubscribe = () => {};
+
+    /**
+     * Loads only the cart owned by the current auth session.
+     *
+     * @param {{ user?: { id?: string | null } | null } | null | undefined} session
+     * @returns {void}
+     */
+    function hydrateCartForSession(session) {
+      const ownerKey = resolveCartOwnerKey(session);
+      const storageKey = buildCartStorageKey(ownerKey);
+      const isGuestCart = storageKey === GUEST_CART_STORAGE_KEY;
+      const raw = localStorage.getItem(storageKey)
+        || (isGuestCart ? localStorage.getItem(LEGACY_CART_STORAGE_KEY) : null);
+      const parsed = parseStoredCartItems(raw);
+
+      activeCartStorageKeyRef.current = storageKey;
+      itemsRef.current = parsed;
+      setItems(parsed);
+      setHasHydratedCart(true);
+      if (isGuestCart) {
+        localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
+      }
+      if (parsed.length > 0) {
+        void revalidateCartItems(parsed);
+      }
+    }
+
+    /**
+     * Watches Supabase auth changes so shared devices do not leak carts.
+     *
+     * @returns {Promise<void>}
+     */
+    async function attachCartAuthBoundary() {
+      const { loadSupabaseClient } = await import("@/lib/loadSupabaseClient");
+      const supabase = await loadSupabaseClient();
+      const sessionResult = await supabase.auth.getSession();
+
+      if (!active) {
         return;
       }
 
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setItems(parsed);
-        void refreshCartItems(parsed);
-      }
-    } catch (error) {
-      console.error("[CRT-302] Failed to hydrate cart storage:", error);
-    } finally {
-      setHasHydratedCart(true);
+      hydrateCartForSession(sessionResult?.data?.session);
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        void event;
+        hydrateCartForSession(session);
+      });
+
+      unsubscribe = () => subscription.unsubscribe();
     }
-  }, [refreshCartItems]);
+
+    void attachCartAuthBoundary().catch(() => null);
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasHydratedCart) {
       return;
     }
 
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    localStorage.setItem(activeCartStorageKeyRef.current, JSON.stringify(items));
   }, [hasHydratedCart, items]);
 
   useEffect(() => {
@@ -135,14 +190,14 @@ export default function CartProvider({ children }) {
         return prev;
       }
 
-      trackedProduct = { ...product, price: toNumber(product?.price), qty: 1 };
+      trackedProduct = { ...product, price: toCartNumber(product?.price), qty: 1 };
       if (existing) {
         return prev.map((item) =>
           item.id === product.id
             ? {
                 ...item,
-                originalPrice: toNumber(product.originalPrice) || item.originalPrice || item.price,
-                price: toNumber(product.price) || item.price,
+                originalPrice: toCartNumber(product.originalPrice) || item.originalPrice || item.price,
+                price: toCartNumber(product.price) || item.price,
                 qty: nextQty,
               }
             : item
@@ -153,7 +208,7 @@ export default function CartProvider({ children }) {
         ...prev,
         {
           ...product,
-          originalPrice: toNumber(product.originalPrice) || toNumber(product.price),
+          originalPrice: toCartNumber(product.originalPrice) || toCartNumber(product.price),
           qty: 1,
         },
       ];
@@ -201,10 +256,10 @@ export default function CartProvider({ children }) {
   }, []);
 
   const cartCount = items.reduce((sum, item) => sum + item.qty, 0);
-  const cartTotal = items.reduce((sum, item) => sum + toNumber(item.price) * item.qty, 0);
+  const cartTotal = items.reduce((sum, item) => sum + toCartNumber(item.price) * item.qty, 0);
   const cartSavings = items.reduce((sum, item) => {
-    const originalPrice = toNumber(item.originalPrice);
-    const livePrice = toNumber(item.price);
+    const originalPrice = toCartNumber(item.originalPrice);
+    const livePrice = toCartNumber(item.price);
     return sum + Math.max(0, originalPrice - livePrice) * item.qty;
   }, 0);
 
@@ -225,6 +280,7 @@ export default function CartProvider({ children }) {
         sidebarOpen,
         openSidebar,
         closeSidebar,
+        revalidateCart: () => revalidateCartItems(itemsRef.current),
       }}
     >
       {children}

@@ -86,6 +86,7 @@ function LookupResult({ result }) {
 export default function RepairOrderLookupCard() {
   const [lookupType, setLookupType] = useState("all");
   const [orderNumber, setOrderNumber] = useState("");
+  const [contactSuffix, setContactSuffix] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -94,12 +95,13 @@ export default function RepairOrderLookupCard() {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setResult(null);
 
     try {
       const response = await fetch("/api/orders/lookup", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ lookupType, orderNumber }),
+        body: JSON.stringify({ contactSuffix, lookupType, orderNumber }),
       });
       const payload = await response.json();
 
@@ -127,7 +129,7 @@ export default function RepairOrderLookupCard() {
           استعلام الطلبات
         </span>
         <h2>تحقق من حالة طلب الصيانة أو التوصيل</h2>
-        <p>اكتب رقم الطلب كما وصلك بعد الحجز، ثم اختر النوع المناسب لعرض آخر حالة بشكل مباشر.</p>
+        <p>اكتب رقم الطلب وآخر 4 أرقام من رقم الهاتف المرتبط به لعرض آخر حالة بشكل آمن.</p>
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -149,6 +151,20 @@ export default function RepairOrderLookupCard() {
               value={orderNumber}
               onChange={(event) => setOrderNumber(event.target.value)}
               placeholder="مثال: bk-123456 أو ord-123456"
+              className={styles.input}
+            />
+          </label>
+
+          <label className={styles.field}>
+            <span>آخر 4 أرقام من الهاتف</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              pattern="\d{4}"
+              value={contactSuffix}
+              onChange={(event) => setContactSuffix(event.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="مثال: 1234"
               className={styles.input}
             />
           </label>

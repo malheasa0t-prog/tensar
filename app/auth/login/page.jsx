@@ -9,6 +9,7 @@ import { useToast } from '@/components/ToastProvider';
 import AuthProviderButton from '@/components/auth/AuthProviderButton';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
+import { buildAuthCallbackRedirectUrl } from '@/lib/authRedirectUrl';
 import { getPostAuthDestination, syncProfileFromAuthUser } from '@/lib/authProfileSync';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
@@ -99,7 +100,7 @@ export default function LoginPage() {
     const supabase = await loadSupabaseClient();
     const { error: providerError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback/` },
+      options: { redirectTo: buildAuthCallbackRedirectUrl() },
     });
 
     if (providerError) {

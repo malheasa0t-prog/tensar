@@ -1,0 +1,892 @@
+/*
+ * Tensar Admin — Modern Theme Layer
+ *
+ * Single stylesheet that sits on top of every other admin CSS file and
+ * refreshes the visual language without rewriting 26 legacy files. It tunes:
+ *
+ *   1. Design tokens (colors, spacing, radius, shadows, motion) that older
+ *      files already read through `--primary`, `--bg-card`, etc.
+ *   2. The shell layout (sidebar density, top bar, content padding).
+ *   3. The core primitives the admin shell paints over and over: buttons,
+ *      cards, tables, forms, badges, modals, toasts, empty states.
+ *
+ * Goals: modern, calm, high-contrast Arabic RTL UI; soft elevation; quiet
+ * neutral background so colored data pops; consistent focus rings; large
+ * comfortable tap targets; reduced motion respected.
+ *
+ * Load order matters — keep this file LAST in `tz-panel.html`.
+ */
+
+/* =====================================================================
+ * 1. Design tokens — refreshed palette + spacing + motion
+ * ===================================================================== */
+
+:root {
+  /* Neutralized indigo + teal accent for a calmer professional look. */
+  --primary: #6366f1;
+  --primary-rgb: 99, 102, 241;
+  --primary-dark: #4f46e5;
+  --primary-light: #818cf8;
+  --primary-soft: rgba(99, 102, 241, 0.12);
+  --primary-soft-strong: rgba(99, 102, 241, 0.22);
+  --secondary: #14b8a6;
+  --secondary-rgb: 20, 184, 166;
+  --accent: #f472b6;
+  --accent-rgb: 244, 114, 182;
+
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.14);
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.14);
+  --info: #38bdf8;
+  --info-soft: rgba(56, 189, 248, 0.16);
+
+  /* Calmer dark surfaces — slate-tinted rather than purple-tinted. */
+  --bg-primary: #0b1020;
+  --bg-secondary: #111733;
+  --bg-card: #16204a;
+  --bg-card-hover: #1a2654;
+  --bg-input: #131b3c;
+  --bg-elevated: #1d2960;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #c7d0e6;
+  --text-muted: #8893b8;
+  --text-on-primary: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --shadow-xs: 0 1px 2px rgba(2, 6, 23, 0.32);
+  --shadow-sm: 0 4px 14px rgba(2, 6, 23, 0.36);
+  --shadow-md: 0 12px 32px rgba(2, 6, 23, 0.44);
+  --shadow-lg: 0 24px 56px rgba(2, 6, 23, 0.54);
+  --shadow-focus: 0 0 0 4px rgba(99, 102, 241, 0.35);
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 360ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2);
+  --transition: color var(--duration-base) var(--ease-standard),
+                background-color var(--duration-base) var(--ease-standard),
+                border-color var(--duration-base) var(--ease-standard),
+                box-shadow var(--duration-base) var(--ease-standard),
+                transform var(--duration-base) var(--ease-standard),
+                opacity var(--duration-base) var(--ease-standard);
+
+  --content-max-width: 1480px;
+  --sidebar-width: 256px;
+  --sidebar-width-collapsed: 80px;
+  --topbar-height: 64px;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f1f5fb;
+  --bg-secondary: #e9edf6;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3f4fb;
+  --bg-input: #f8fafc;
+  --bg-elevated: #ffffff;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  --border-color: rgba(15, 23, 42, 0.10);
+  --border-light: rgba(15, 23, 42, 0.06);
+  --border-strong: rgba(15, 23, 42, 0.18);
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 24px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 24px 48px rgba(15, 23, 42, 0.16);
+  --shadow-focus: 0 0 0 4px rgba(99, 102, 241, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =====================================================================
+ * 2. Global typography + a11y baseline
+ * ===================================================================== */
+
+body[data-theme] {
+  font-family: 'Cairo', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.admin-layout :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.admin-layout p,
+.admin-layout li,
+.admin-layout span:not([class]),
+.admin-layout td,
+.admin-layout th {
+  line-height: 1.55;
+}
+
+.admin-layout :focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+.admin-layout ::selection {
+  background: var(--primary-soft-strong);
+  color: var(--text-primary);
+}
+
+/* =====================================================================
+ * 3. Shell layout (sidebar + top bar + content)
+ * ===================================================================== */
+
+.admin-layout {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-inline-end: 1px solid var(--border-color);
+  width: var(--sidebar-width);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-sidebar .sidebar-header {
+  padding: var(--space-6) var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.admin-sidebar .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 1.18rem;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.admin-sidebar .logo i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: var(--text-on-primary);
+  font-size: 1.05rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-sidebar .logo .accent {
+  background: linear-gradient(135deg, var(--primary-light), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.admin-sidebar .sidebar-group + .sidebar-group {
+  margin-top: var(--space-2);
+}
+
+.admin-sidebar .sidebar-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.admin-sidebar .sidebar-group-toggle:hover,
+.admin-sidebar .sidebar-group-toggle:focus-visible {
+  color: var(--text-secondary);
+}
+
+.admin-sidebar .sidebar-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.admin-sidebar .sidebar-group-chevron {
+  transition: transform var(--duration-base) var(--ease-standard);
+  font-size: 0.7rem;
+}
+
+.admin-sidebar .sidebar-group.is-open .sidebar-group-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-sidebar .sidebar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  margin: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.admin-sidebar .sidebar-link i {
+  width: 22px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  transition: color var(--duration-base) var(--ease-standard);
+}
+
+.admin-sidebar .sidebar-link:hover,
+.admin-sidebar .sidebar-link:focus-visible {
+  background: var(--primary-soft);
+  color: var(--text-primary);
+}
+
+.admin-sidebar .sidebar-link:hover i,
+.admin-sidebar .sidebar-link:focus-visible i {
+  color: var(--primary-light);
+}
+
+.admin-sidebar .sidebar-link.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--text-on-primary);
+  box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.35);
+}
+
+.admin-sidebar .sidebar-link.active i {
+  color: var(--text-on-primary);
+}
+
+.admin-sidebar .sidebar-link--nested {
+  padding-inline-start: calc(var(--space-5) + var(--space-5));
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.admin-sidebar .sidebar-badge {
+  margin-inline-start: auto;
+  min-width: 26px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.admin-sidebar .sidebar-link.active .sidebar-badge {
+  background: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+.admin-topbar,
+.admin-shell .admin-topbar,
+.admin-layout .admin-topbar,
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-height);
+  padding: 0 var(--space-6);
+  background: rgba(11, 16, 32, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="light"] .admin-topbar,
+[data-theme="light"] .admin-shell .admin-topbar,
+[data-theme="light"] .admin-layout .admin-topbar,
+[data-theme="light"] .admin-header {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.admin-content,
+.admin-main {
+  padding: var(--space-8);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .admin-content,
+  .admin-main {
+    padding: var(--space-6) var(--space-5);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-content,
+  .admin-main {
+    padding: var(--space-5) var(--space-4);
+  }
+}
+
+/* =====================================================================
+ * 4. Buttons — modern, large hit targets, consistent focus
+ * ===================================================================== */
+
+.admin-layout .btn,
+.admin-layout button.btn,
+.admin-layout a.btn,
+.tz-btn {
+  --btn-bg: var(--bg-card-hover);
+  --btn-fg: var(--text-primary);
+  --btn-border: var(--border-color);
+  --btn-shadow: var(--shadow-xs);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 42px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: var(--btn-shadow);
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.admin-layout .btn:hover,
+.tz-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: var(--bg-elevated);
+}
+
+.admin-layout .btn:active,
+.tz-btn:active {
+  transform: translateY(0);
+  box-shadow: var(--btn-shadow);
+}
+
+.admin-layout .btn:disabled,
+.admin-layout .btn[disabled],
+.tz-btn:disabled,
+.tz-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.admin-layout .btn-primary,
+.tz-btn.tz-btn--primary {
+  --btn-bg: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  --btn-fg: var(--text-on-primary);
+  --btn-border: transparent;
+  --btn-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.32);
+}
+
+.admin-layout .btn-primary:hover,
+.tz-btn.tz-btn--primary:hover {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+}
+
+.admin-layout .btn-success,
+.tz-btn.tz-btn--success {
+  --btn-bg: linear-gradient(135deg, var(--success), #16a34a);
+  --btn-fg: #ffffff;
+  --btn-border: transparent;
+  --btn-shadow: 0 10px 24px rgba(34, 197, 94, 0.32);
+}
+
+.admin-layout .btn-danger,
+.tz-btn.tz-btn--danger {
+  --btn-bg: linear-gradient(135deg, var(--danger), #b91c1c);
+  --btn-fg: #ffffff;
+  --btn-border: transparent;
+  --btn-shadow: 0 10px 24px rgba(239, 68, 68, 0.30);
+}
+
+.admin-layout .btn-warning,
+.tz-btn.tz-btn--warning {
+  --btn-bg: linear-gradient(135deg, var(--warning), #d97706);
+  --btn-fg: #1f2937;
+  --btn-border: transparent;
+  --btn-shadow: 0 10px 24px rgba(245, 158, 11, 0.30);
+}
+
+.admin-layout .btn-ghost,
+.tz-btn.tz-btn--ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--text-secondary);
+  --btn-border: transparent;
+  --btn-shadow: none;
+}
+
+.admin-layout .btn-ghost:hover,
+.tz-btn.tz-btn--ghost:hover {
+  --btn-bg: var(--primary-soft);
+  --btn-fg: var(--text-primary);
+}
+
+.admin-layout .btn-outline,
+.tz-btn.tz-btn--outline {
+  --btn-bg: transparent;
+  --btn-fg: var(--text-primary);
+  --btn-border: var(--border-strong);
+  --btn-shadow: none;
+}
+
+.admin-layout .btn-outline:hover,
+.tz-btn.tz-btn--outline:hover {
+  --btn-bg: var(--primary-soft);
+  --btn-border: var(--primary);
+}
+
+.admin-layout .btn-sm,
+.tz-btn.tz-btn--sm {
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  font-size: 0.84rem;
+  border-radius: var(--radius-sm);
+}
+
+.admin-layout .btn-lg,
+.tz-btn.tz-btn--lg {
+  min-height: 52px;
+  padding: 0 var(--space-6);
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.admin-layout .btn-icon,
+.tz-btn.tz-btn--icon {
+  width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+/* Loading state on async buttons */
+.admin-layout .btn[aria-busy="true"]::before,
+.tz-btn[aria-busy="true"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: tz-spin 0.7s linear infinite;
+}
+
+@keyframes tz-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =====================================================================
+ * 5. Cards & surfaces
+ * ===================================================================== */
+
+.admin-layout .card,
+.admin-layout .surface,
+.admin-layout .panel,
+.tz-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+  transition: var(--transition);
+}
+
+.admin-layout .card:hover,
+.tz-card.tz-card--interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.admin-layout .card-header,
+.tz-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.admin-layout .card-title,
+.tz-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* =====================================================================
+ * 6. Tables
+ * ===================================================================== */
+
+.admin-layout table,
+.admin-layout .data-table,
+.tz-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.admin-layout table thead th,
+.admin-layout .data-table thead th,
+.tz-table thead th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: start;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-layout table tbody td,
+.admin-layout .data-table tbody td,
+.tz-table tbody td {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  vertical-align: middle;
+}
+
+.admin-layout table tbody tr:last-child td,
+.admin-layout .data-table tbody tr:last-child td,
+.tz-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-layout table tbody tr,
+.tz-table tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.admin-layout table tbody tr:hover,
+.tz-table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+
+/* =====================================================================
+ * 7. Forms, inputs, selects
+ * ===================================================================== */
+
+.admin-layout input[type="text"],
+.admin-layout input[type="search"],
+.admin-layout input[type="email"],
+.admin-layout input[type="tel"],
+.admin-layout input[type="password"],
+.admin-layout input[type="number"],
+.admin-layout input[type="url"],
+.admin-layout input[type="date"],
+.admin-layout input[type="time"],
+.admin-layout input[type="datetime-local"],
+.admin-layout select,
+.admin-layout textarea,
+.tz-input {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: var(--transition);
+}
+
+.admin-layout textarea,
+.tz-input--textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.admin-layout input:hover,
+.admin-layout select:hover,
+.admin-layout textarea:hover,
+.tz-input:hover {
+  border-color: var(--border-strong);
+}
+
+.admin-layout input:focus,
+.admin-layout select:focus,
+.admin-layout textarea:focus,
+.tz-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.admin-layout input::placeholder,
+.admin-layout textarea::placeholder,
+.tz-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.admin-layout label,
+.tz-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.admin-layout .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
+}
+
+/* =====================================================================
+ * 8. Badges, chips, status pills
+ * ===================================================================== */
+
+.admin-layout .badge,
+.admin-layout .status-badge,
+.admin-layout .chip,
+.tz-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  background: var(--primary-soft);
+  color: var(--primary-light);
+  border: 1px solid transparent;
+}
+
+.tz-badge--success,
+.admin-layout .badge--success,
+.admin-layout .status-badge.success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.tz-badge--warning,
+.admin-layout .badge--warning,
+.admin-layout .status-badge.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.tz-badge--danger,
+.admin-layout .badge--danger,
+.admin-layout .status-badge.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.tz-badge--info,
+.admin-layout .badge--info,
+.admin-layout .status-badge.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+/* =====================================================================
+ * 9. Modals & toasts
+ * ===================================================================== */
+
+.admin-layout .modal,
+.tz-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: rgba(2, 6, 23, 0.66);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: tz-fade-in var(--duration-base) var(--ease-standard);
+}
+
+.admin-layout .modal-content,
+.tz-modal__panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  max-width: min(560px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+  padding: var(--space-8);
+  animation: tz-slide-up var(--duration-slow) var(--ease-emphasized);
+}
+
+@keyframes tz-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tz-slide-up {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* =====================================================================
+ * 10. Empty states + skeletons
+ * ===================================================================== */
+
+.admin-layout .empty-state,
+.tz-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.admin-layout .empty-state i,
+.tz-empty__icon {
+  font-size: 2.6rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.tz-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-card-hover);
+  border-radius: var(--radius-sm);
+}
+
+.tz-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: tz-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes tz-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* =====================================================================
+ * 11. Scrollbars — slim & polite
+ * ===================================================================== */
+
+.admin-layout *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.admin-layout *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-layout *::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.admin-layout *::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+  background-clip: padding-box;
+}

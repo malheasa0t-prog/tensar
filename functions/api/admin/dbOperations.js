@@ -61,6 +61,7 @@ const ALLOWED_ADMIN_MUTATION_TABLES = new Set([
 const ALLOWED_RPC_FUNCTIONS = new Set([
   "admin_adjust_wallet_balance",
   "admin_approve_deposit",
+  "admin_set_order_status",
   "admin_toggle_customer_status",
 ]);
 /**
@@ -218,6 +219,36 @@ function validateAllowedMutationTable(table) {
   }
 }
 
+const ORDERS_TABLE = "orders";
+const ORDER_STATUS_GUARDED_COLUMNS = Object.freeze(["status"]);
+
+/**
+ * Asserts that an admin mutation does not bypass the state-machine RPC.
+ *
+ * Updates and upserts on the `orders` table must NOT touch the `status`
+ * column directly — those go through `admin_set_order_status` so legal
+ * transitions and audit logging are enforced consistently. Insert paths
+ * are still allowed so legacy seeders keep working.
+ *
+ * @param {{ action: string, table: string, values: unknown }} input - Mutation input.
+ * @returns {void}
+ * @throws {Error}
+ */
+function assertOrderStatusGuard({ action, table, values }) {
+  if (table !== ORDERS_TABLE) return;
+  if (action !== "update" && action !== "upsert") return;
+
+  const candidate = Array.isArray(values) ? values[0] : values;
+  if (!candidate || typeof candidate !== "object") return;
+  const violating = ORDER_STATUS_GUARDED_COLUMNS.some((column) => column in candidate);
+  if (violating) {
+    throw createRouteError(
+      "[ADB-114] لا يمكن تحديث حالة الطلب مباشرة. استخدم /api/admin/orders/status.",
+      400
+    );
+  }
+}
+
 /**
  * Validates one mutation payload before it reaches the database.
  *
@@ -234,6 +265,7 @@ function validateMutation(operation) {
   }
 
   validateAllowedMutationTable(table);
+  assertOrderStatusGuard({ action, table, values: operation?.values });
 }
 
 /**
@@ -253,13 +285,16 @@ async function executeReadOperation(client, operation) {
   query = applyReadModifiers(query, operation);
 
   const result = await query;
+  if (result?.error) {
+    console.error("[ADB-112] Admin read failed.", { table, error: result.error });
+  }
   return {
     count: Number.isFinite(result?.count) ? result.count : null,
     data: table === "deposits"
       ? await hydrateDepositProofUrls(client, result?.data ?? null)
       : result?.data ?? null,
     error: result?.error
-      ? { message: String(result.error.message || "[ADB-112] فشلت عملية القراءة الآمنة.") }
+      ? { message: "[ADB-112] فشلت عملية القراءة الآمنة." }
       : null,
   };
 }
@@ -302,11 +337,14 @@ async function executeMutationOperation(client, operation) {
   }
 
   const result = await query;
+  if (result?.error) {
+    console.error("[ADB-105] Admin mutation failed.", { action, table, error: result.error });
+  }
   return {
     count: Number.isFinite(result?.count) ? result.count : null,
     data: result?.data ?? null,
     error: result?.error
-      ? { message: String(result.error.message || "[ADB-105] فشلت عملية الكتابة الآمنة.") }
+      ? { message: "[ADB-105] فشلت عملية الكتابة الآمنة." }
       : null,
   };
 }
@@ -327,11 +365,14 @@ async function executeRpcOperation(client, operation) {
 
   const args = operation?.args && typeof operation.args === "object" ? operation.args : {};
   const result = await client.rpc(functionName, args);
+  if (result?.error) {
+    console.error("[ADB-107] Admin RPC failed.", { functionName, error: result.error });
+  }
   return {
     count: null,
     data: result?.data ?? null,
     error: result?.error
-      ? { message: String(result.error.message || "[ADB-107] فشل تنفيذ إجراء الإدارة الحالي.") }
+      ? { message: "[ADB-107] فشل تنفيذ إجراء الإدارة الحالي." }
       : null,
   };
 }

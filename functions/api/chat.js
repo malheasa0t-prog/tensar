@@ -9,6 +9,11 @@
 
 import { createSupabaseClient, extractBearerToken, errorResponse } from '../_lib/supabase.js';
 import { handlePreflight, withCors } from '../_lib/cors.js';
+import {
+  applyApiRateLimit,
+  buildRateLimitConfigurationErrorResponse,
+  buildRateLimitExceededResponse,
+} from '../_lib/rateLimit.js';
 
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -68,6 +73,18 @@ let cachedDataContext = null;
 let cachedDataContextTimestamp = 0;
 
 /**
+ * Adds rate-limit metadata and CORS headers to one chat response.
+ *
+ * @param {{ headers?: Record<string, string>, request: Request, response: Response }} input
+ * @returns {Response}
+ */
+function finalizeChatResponse(input) {
+  const headers = new Headers(input.response.headers);
+  Object.entries(input.headers || {}).forEach(([name, value]) => headers.set(name, value));
+  return withCors(new Response(input.response.body, { status: input.response.status, headers }), input.request);
+}
+
+/**
  * Fetches product/service/category summaries for the AI prompt.
  * Results are cached in-memory for 5 minutes to reduce DB load and API costs.
  *
@@ -108,15 +125,31 @@ export async function onRequestPost(context) {
   const { env, request } = context;
 
   try {
+    const limit = await applyApiRateLimit({ env, request });
+    if (limit.configurationError) {
+      return finalizeChatResponse({
+        headers: limit.headers,
+        request,
+        response: buildRateLimitConfigurationErrorResponse(limit.headers),
+      });
+    }
+    if (!limit.allowed) {
+      return finalizeChatResponse({
+        headers: limit.headers,
+        request,
+        response: buildRateLimitExceededResponse(limit.headers),
+      });
+    }
+
     const token = extractBearerToken(request);
     if (!token) {
-      return withCors(errorResponse('[BOT-201] يجب تسجيل الدخول لاستخدام المحادثة.', 401), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-201] يجب تسجيل الدخول لاستخدام المحادثة.', 401) });
     }
 
     const supabase = createSupabaseClient(env);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return withCors(errorResponse('[BOT-202] جلسة غير صالحة. أعد تسجيل الدخول.', 401), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-202] جلسة غير صالحة. أعد تسجيل الدخول.', 401) });
     }
 
     const body = await request.json();
@@ -124,16 +157,16 @@ export async function onRequestPost(context) {
     const rawHistory = Array.isArray(body?.history) ? body.history.slice(-MAX_HISTORY_MESSAGES) : [];
 
     if (!message) {
-      return withCors(errorResponse('[BOT-101] الرجاء إدخال رسالة.', 400), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-101] الرجاء إدخال رسالة.', 400) });
     }
 
     if (message.length > 500) {
-      return withCors(errorResponse('[BOT-102] الرسالة طويلة جداً. الحد الأقصى 500 حرف.', 400), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-102] الرسالة طويلة جداً. الحد الأقصى 500 حرف.', 400) });
     }
 
     const apiKey = env.GROQ_API_KEY;
     if (!apiKey) {
-      return withCors(errorResponse('[BOT-500] AI service not configured.', 500), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-500] AI service not configured.', 500) });
     }
 
     const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
@@ -171,16 +204,16 @@ export async function onRequestPost(context) {
     });
 
     if (!groqResponse.ok) {
-      return withCors(errorResponse('[BOT-401] AI service error.', 502), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-401] AI service error.', 502) });
     }
 
     const data = await groqResponse.json();
     const reply = data?.choices?.[0]?.message?.content?.trim();
     if (!reply) {
-      return withCors(errorResponse('[BOT-402] Empty AI response.', 502), request);
+      return finalizeChatResponse({ headers: limit.headers, request, response: errorResponse('[BOT-402] Empty AI response.', 502) });
     }
 
-    return withCors(Response.json({ reply }), request);
+    return finalizeChatResponse({ headers: limit.headers, request, response: Response.json({ reply }) });
   } catch (error) {
     console.error('[BOT-500] Chat API error:', error);
     return withCors(errorResponse('[BOT-500] عذراً، حدث خطأ في المعالجة.', 500), request);

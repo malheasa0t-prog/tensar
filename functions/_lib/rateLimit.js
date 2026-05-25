@@ -50,6 +50,12 @@ function isLocalRateLimitRequest(request) {
 /**
  * Determines whether the unsafe in-memory fallback is allowed for this runtime.
  *
+ * NOTE: the in-memory store does NOT enforce a global limit — each edge
+ * location keeps its own counter and the bucket is wiped between worker
+ * invocations. Production deployments MUST bind a Cloudflare Rate Limit
+ * binding under `TECHZONE_API_RATE_LIMITER` and set
+ * `REQUIRE_EDGE_RATE_LIMIT=true` to fail-closed when the binding is missing.
+ *
  * @param {{ env?: Record<string, unknown>, request: Request }} input - Request context.
  * @returns {boolean} True when the local fallback is acceptable.
  */
@@ -66,23 +72,64 @@ function canUseLocalRateLimitFallback(input) {
   );
 }
 /**
+ * Decodes the base64url-encoded payload of a JWT without verifying the signature.
+ *
+ * The signature is unverified on purpose: the rate limiter only needs a stable
+ * identifier across a user's sessions, not a security assertion (that happens
+ * separately at the API layer via `supabase.auth.getUser`). A forged JWT with
+ * an attacker-controlled `sub` simply collapses into the attacker's own bucket.
+ *
+ * @param {string} token - Bearer token value, without the "Bearer " prefix.
+ * @returns {Record<string, unknown> | null} Decoded payload or null on failure.
+ */
+function decodeJwtPayloadUnverified(token) {
+  const parts = String(token || "").split(".");
+  if (parts.length < 2 || !parts[1]) return null;
+  try {
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+    const decoded = atob(padded);
+    return JSON.parse(decoded);
+  } catch (decodeError) {
+    void decodeError;
+    return null;
+  }
+}
+
+/**
  * Selects the most stable request identifier available.
+ *
+ * Order of preference:
+ *  1. Authenticated user id from JWT `sub` — survives token refresh and
+ *     multiple devices, so a single user shares one bucket.
+ *  2. Hashed bearer token — for opaque tokens we cannot decode.
+ *  3. `cf-connecting-ip` — Cloudflare-trusted client IP (X-Forwarded-For is
+ *     ignored on purpose, since it is attacker-controllable).
+ *  4. User agent or "anonymous" — coarse last-resort buckets.
  *
  * @param {Request} request - The incoming request.
  * @returns {string} The identifier source to hash.
  */
 function resolveActorSource(request) {
-  const authorization = request.headers.get("Authorization")?.trim();
-  if (authorization) {
-    return `auth:${authorization}`;
+  const authorization = String(request.headers.get("Authorization") || "").trim();
+  if (authorization.startsWith("Bearer ")) {
+    const token = authorization.slice(7).trim();
+    const payload = decodeJwtPayloadUnverified(token);
+    const subject = typeof payload?.sub === "string" ? payload.sub.trim() : "";
+    if (subject) {
+      return `user:${subject}`;
+    }
+    if (token) {
+      return `token:${token}`;
+    }
   }
 
-  const forwardedIp = request.headers.get("cf-connecting-ip")?.trim();
+  const forwardedIp = String(request.headers.get("cf-connecting-ip") || "").trim();
   if (forwardedIp) {
     return `ip:${forwardedIp}`;
   }
 
-  const userAgent = request.headers.get("User-Agent")?.trim();
+  const userAgent = String(request.headers.get("User-Agent") || "").trim();
   if (userAgent) {
     return `ua:${userAgent}`;
   }

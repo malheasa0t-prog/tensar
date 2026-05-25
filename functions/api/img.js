@@ -10,6 +10,7 @@ import { buildErrorPayload } from '../_lib/errorCodes.js';
  * @param {EventContext} context
  */
 const DEFAULT_ALLOWED_IMAGE_HOSTS = Object.freeze([
+  'rxiukzmqoiknlehxctbs.supabase.co',
   'bayubxlmrgkquwoutwmn.supabase.co',
   'placehold.co',
   'serva-s.com',

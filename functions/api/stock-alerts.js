@@ -20,6 +20,9 @@ import {
 } from "../../lib/stockAlertModel.js";
 
 const STOCK_ALERT_SAVE_ERROR_MESSAGE = "[SAL-301] تعذر تفعيل تنبيه التوفر حالياً.";
+const STOCK_ALERT_USER_CAP = 100;
+const STOCK_ALERT_CAP_MESSAGE =
+  "[SAL-104] وصلت الحد الأقصى لتنبيهات التوفر (100). احذف بعض التنبيهات القديمة قبل إضافة جديد.";
 
 /**
  * Authenticates the request and returns the active user when available.
@@ -78,6 +81,32 @@ async function hasExistingSubscription({ admin, productId, userId }) {
 }
 
 /**
+ * Returns the count of active restock subscriptions for the user.
+ *
+ * Used to prevent a single user from flooding the notifications table with
+ * tens of thousands of subscriptions — the spam vector flagged in the
+ * audit. We do this with a `head: true, count: "exact"` query so we don't
+ * pay for the row payload.
+ *
+ * @param {{ admin: Record<string, unknown>, userId: string }} input - Lookup input.
+ * @returns {Promise<number>} Active subscription count.
+ * @throws {Error}
+ */
+async function countActiveSubscriptions({ admin, userId }) {
+  const response = await admin
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("reference_type", RESTOCK_SUBSCRIPTION_REFERENCE_TYPE);
+
+  if (response.error) {
+    throw new Error(STOCK_ALERT_SAVE_ERROR_MESSAGE);
+  }
+
+  return Number.isFinite(Number(response.count)) ? Number(response.count) : 0;
+}
+
+/**
  * Handles stock alert subscription requests.
  *
  * @param {Request} request
@@ -123,6 +152,11 @@ async function handlePost(request, env) {
       productName: productResponse.data.name,
       subscribed: true,
     });
+  }
+
+  const activeCount = await countActiveSubscriptions({ admin, userId: auth.user.id });
+  if (activeCount >= STOCK_ALERT_USER_CAP) {
+    return errorResponse(STOCK_ALERT_CAP_MESSAGE, 429);
   }
 
   const payload = buildRestockSubscriptionPayload({

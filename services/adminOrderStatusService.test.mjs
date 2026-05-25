@@ -6,53 +6,21 @@ import {
   updateAdminOrderStatus,
 } from './adminOrderStatusService.js';
 
-function createAdminClient({ selectResponses = {}, updateResponses = {}, insertErrors = {} } = {}) {
-  const updates = [];
-  const inserts = [];
+function createAdminClient({ rpcResponses = {} } = {}) {
+  const rpcCalls = [];
 
   return {
-    updates,
-    inserts,
+    rpcCalls,
     client: {
-      from(tableName) {
-        return {
-          select() {
-            return {
-              eq() {
-                return {
-                  async maybeSingle() {
-                    const queue = selectResponses[tableName] || [];
-                    return queue.length ? queue.shift() : { data: null, error: null };
-                  },
-                };
-              },
+      async rpc(functionName, args) {
+        rpcCalls.push({ functionName, args });
+        const queue = rpcResponses[functionName] || [];
+        return queue.length
+          ? queue.shift()
+          : {
+              data: [{ applied: true, current_status: args.p_new_status, previous_status: 'processing' }],
+              error: null,
             };
-          },
-          update(values) {
-            updates.push({ tableName, values });
-            return {
-              eq(columnName, columnValue) {
-                return {
-                  select() {
-                    return {
-                      async maybeSingle() {
-                        const queue = updateResponses[tableName] || [];
-                        return queue.length
-                          ? queue.shift()
-                          : { data: { id: columnValue, status: values.status }, error: null };
-                      },
-                    };
-                  },
-                };
-              },
-            };
-          },
-          async insert(rows) {
-            inserts.push({ tableName, rows });
-            const queue = insertErrors[tableName] || [];
-            return { error: queue.length ? queue.shift() : null };
-          },
-        };
       },
     },
   };
@@ -82,15 +50,8 @@ test('updateAdminOrderStatus should reject legacy physical-order statuses', asyn
   );
 });
 
-test('updateAdminOrderStatus should update physical orders through the server client', async () => {
-  const { client, updates, inserts } = createAdminClient({
-    selectResponses: {
-      orders: [{ data: { id: 'ord-1', status: 'processing' }, error: null }],
-    },
-    updateResponses: {
-      orders: [{ data: { id: 'ord-1', status: 'delivered' }, error: null }],
-    },
-  });
+test('updateAdminOrderStatus should update physical orders through the state-machine RPC', async () => {
+  const { client, rpcCalls } = createAdminClient();
 
   const result = await updateAdminOrderStatus({
     client,
@@ -99,15 +60,26 @@ test('updateAdminOrderStatus should update physical orders through the server cl
   });
 
   assert.equal(result.status, 'delivered');
-  assert.deepEqual(updates, [{ tableName: 'orders', values: { status: 'delivered' } }]);
-  assert.equal(inserts[0].tableName, 'audit_logs');
-  assert.equal(inserts[0].rows[0].target_table, 'orders');
+  assert.deepEqual(rpcCalls, [
+    {
+      functionName: 'admin_set_order_status',
+      args: {
+        p_actor_email: 'admin@example.com',
+        p_actor_id: 'admin-1',
+        p_new_status: 'delivered',
+        p_order_id: 'ord-1',
+        p_reason: 'admin_panel',
+      },
+    },
+  ]);
 });
 
-test('updateAdminOrderStatus should return early when the order is already in the same status', async () => {
-  const { client, updates, inserts } = createAdminClient({
-    selectResponses: {
-      orders: [{ data: { id: 'ord-1', status: 'delivered' }, error: null }],
+test('updateAdminOrderStatus should surface no-op state-machine responses', async () => {
+  const { client } = createAdminClient({
+    rpcResponses: {
+      admin_set_order_status: [
+        { data: [{ applied: false, previous_status: 'delivered', current_status: 'delivered' }], error: null },
+      ],
     },
   });
 
@@ -118,14 +90,16 @@ test('updateAdminOrderStatus should return early when the order is already in th
   });
 
   assert.equal(result.status, 'delivered');
-  assert.equal(updates.length, 0);
-  assert.equal(inserts.length, 0);
+  assert.equal(result.applied, false);
+  assert.equal(result.previousStatus, 'delivered');
 });
 
 test('updateAdminOrderStatus should reject missing physical orders', async () => {
   const { client } = createAdminClient({
-    selectResponses: {
-      orders: [{ data: null, error: null }],
+    rpcResponses: {
+      admin_set_order_status: [
+        { data: null, error: { message: 'ORDER_NOT_FOUND' } },
+      ],
     },
   });
 

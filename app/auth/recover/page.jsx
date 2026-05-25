@@ -8,6 +8,7 @@ import Button from '@/components/Button';
 import { useToast } from '@/components/ToastProvider';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import shellStyles from '@/components/auth/AuthAccessShell.module.css';
+import { buildPasswordRecoveryRedirectUrl } from '@/lib/authRedirectUrl';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
   RECOVERY_EXPERIENCE_PANEL,
@@ -97,7 +98,7 @@ export default function RecoverPasswordPage() {
 
     const supabase = await loadSupabaseClient();
     const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/recover`,
+      redirectTo: buildPasswordRecoveryRedirectUrl(),
     });
 
     if (recoveryError) {

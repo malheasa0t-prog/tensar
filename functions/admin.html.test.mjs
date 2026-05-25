@@ -47,23 +47,38 @@ function findMojibakeSourceFiles() {
     .sort();
 }
 
-test("buildAdminGateHtml should validate access through the secured admin session route", () => {
+test("buildAdminGateHtml should embed config as JSON and load gate script externally", () => {
   const html = buildAdminGateHtml({
+    nonce: "test-nonce-12345",
     supabaseUrl: "https://example.supabase.co",
     supabaseAnonKey: "anon-key",
   });
 
-  assert.match(html, /\/api\/admin\/session/);
   assert.match(html, /\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642/);
-  assert.match(html, /supabase-js@2" defer/);
-  assert.match(html, /__tzAdminSupabaseLoadFailed/);
-  assert.match(html, /waitForSupabaseLibrary/);
-  assert.match(html, /if\(!token\)\{showDenied\(/);
-  assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>/);
-  assert.doesNotMatch(html, /if\(!token\)\{loadShell\(\);return;\}/);
+  // Supabase library loads from the CDN with the nonce.
+  assert.match(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2" defer nonce="test-nonce-12345"><\/script>/);
+  // External gate bootstrap is loaded \u2014 no inline business logic.
+  assert.match(html, /<script src="\/js\/admin-gate\.js\?v=[^"]+" defer nonce="test-nonce-12345"><\/script>/);
+  // Config blob is embedded as application/json.
+  assert.match(html, /<script id="tzAdminGateConfig" type="application\/json" nonce="test-nonce-12345">/);
+  assert.match(html, /\\u003cscript|panelPath|sessionRoute|supabaseAnonKey/);
+  assert.match(html, /"panelPath":"\/tz-panel\.html\?v=20260525-1"/);
   assert.doesNotMatch(html, MOJIBAKE_TRIGGER_PATTERN);
   assert.doesNotMatch(html, /user_profiles/);
   assert.doesNotMatch(html, /app_users/);
+});
+
+test("buildAdminGateHtml should escape closing script tags inside the JSON config", () => {
+  const html = buildAdminGateHtml({
+    nonce: "abc",
+    supabaseUrl: "https://example.supabase.co/</script><script>alert(1)</script>",
+    supabaseAnonKey: "anon-key",
+  });
+
+  // The raw `</script>` must never appear inside the JSON blob \u2014 that would
+  // break the parser and execute attacker-controlled HTML.
+  assert.doesNotMatch(html, /<\/script><script>alert\(1\)<\/script>/);
+  assert.match(html, /\\u003c\/script\\u003e\\u003cscript\\u003e/);
 });
 
 test("onRequestGet should return the hardened admin gate page", async () => {
@@ -78,7 +93,10 @@ test("onRequestGet should return the hardened admin gate page", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Cache-Control"), "private, no-store, max-age=0");
   assert.equal(response.headers.get("X-Robots-Tag"), "noindex, nofollow, noarchive");
-  assert.match(html, /\/api\/admin\/session/);
+  const csp = response.headers.get("Content-Security-Policy") || "";
+  assert.ok(csp.includes("script-src 'self' 'nonce-"), `CSP missing nonce script-src: ${csp}`);
+  assert.ok(!csp.includes("'unsafe-inline'") || !csp.match(/script-src[^;]*'unsafe-inline'/), "script-src must not include unsafe-inline");
+  assert.match(html, /supabase-js@2/);
 });
 
 test("source files should not contain mojibake trigger sequences", () => {

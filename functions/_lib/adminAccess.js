@@ -93,15 +93,17 @@ async function recordAdminBypassUsage(adminClient, user, request) {
 }
 
 /**
- * Returns whether the user metadata already grants admin access.
+ * Returns whether the user's server-controlled metadata grants admin access.
  *
- * @param {{ app_metadata?: { role?: string }, user_metadata?: { role?: string } } | null | undefined} user - Authenticated user.
- * @returns {boolean} True when user metadata contains an admin-capable role.
+ * Only `app_metadata.role` is honored. `user_metadata` is user-writable via
+ * `supabase.auth.updateUser({ data: { role: "..." } })` and MUST NOT be used
+ * for authorization decisions. See SECURITY-AUDIT-2026-05-23 (CRIT-001).
+ *
+ * @param {{ app_metadata?: { role?: string } } | null | undefined} user - Authenticated user.
+ * @returns {boolean} True when app metadata contains an admin-capable role.
  */
 export function hasAdminMetadataAccess(user) {
-  return [user?.app_metadata?.role, user?.user_metadata?.role].some((role) =>
-    canAccessAdminRole(role)
-  );
+  return canAccessAdminRole(user?.app_metadata?.role);
 }
 
 /**

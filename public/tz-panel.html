@@ -39,6 +39,8 @@
         rel="stylesheet"
         integrity="sha384-9OZeJ2MnqWntiV3TguadXC2ROtGkfi2t2G3dGpnjHQ6wZRAkfoDsdApAs7iFZarc">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Modern theme layer MUST load last so it can refresh tokens + primitives. -->
+    <link rel="stylesheet" href="css/admin/modern-theme.css?v=20260524-1">
 </head>
 
 <body data-theme="dark">
@@ -255,7 +257,6 @@
         </div>
     </div>
 
-    <script src="/admin-config.js?v=20260523-2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="/js/admin/bootstrap.js?v=20260523-2" defer></script>
 </body>

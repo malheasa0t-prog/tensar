@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  ArrowUp,
   BadgeCheck,
   Bell,
   Boxes,
@@ -58,6 +59,7 @@ import { getSocialBrandIcon } from "@/lib/socialBrandIcons";
 
 const ICONS = {
   "arrow-left": ArrowLeft,
+  "arrow-up": ArrowUp,
   "badge-check": BadgeCheck,
   bell: Bell,
   boxes: Boxes,

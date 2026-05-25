@@ -68,7 +68,7 @@ export default function BackToTop() {
       </svg>
 
       <span className={styles.icon}>
-        <AppIcon name="arrow-left" size={18} />
+        <AppIcon name="arrow-up" size={18} />
       </span>
     </button>
   );

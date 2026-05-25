@@ -8,6 +8,7 @@ import { fetchCartProductSnapshots } from "./cartService.js";
  * @param {{
  *   productsData?: Array<Record<string, unknown>>,
  *   productsError?: Record<string, unknown> | null,
+ *   productsResponses?: Array<{ data: Array<Record<string, unknown>> | null, error: Record<string, unknown> | null }>,
  *   onProductsIds?: (productIds: Array<string>) => void,
  * }} [options]
  * @returns {{ from: (table: string) => { select: (fields: string) => { in: (column: string, productIds: Array<string>) => Promise<{ data: Array<Record<string, unknown>>, error: Record<string, unknown> | null }> } } }}
@@ -15,6 +16,7 @@ import { fetchCartProductSnapshots } from "./cartService.js";
 function createCartClient({
   productsData = [],
   productsError = null,
+  productsResponses = null,
   onProductsIds = () => {},
 } = {}) {
   return {
@@ -27,6 +29,9 @@ function createCartClient({
               in(column, productIds) {
                 assert.equal(column, "id");
                 onProductsIds(productIds);
+                if (Array.isArray(productsResponses) && productsResponses.length > 0) {
+                  return Promise.resolve(productsResponses.shift());
+                }
                 return Promise.resolve({ data: productsData, error: productsError });
               },
             };
@@ -43,6 +48,27 @@ test("fetchCartProductSnapshots should return an empty list when there are no pr
   const result = await fetchCartProductSnapshots({ productIds: [], client: createCartClient() });
 
   assert.deepEqual(result, []);
+});
+
+test("fetchCartProductSnapshots should retry transient cart refresh failures", async () => {
+  let attempts = 0;
+  const client = createCartClient({
+    productsResponses: [
+      { data: null, error: { message: "network" } },
+      { data: [{ id: "p-1", price: 25 }], error: null },
+    ],
+    onProductsIds() {
+      attempts += 1;
+    },
+  });
+  const result = await fetchCartProductSnapshots({
+    productIds: ["p-1"],
+    client,
+    retryDelaysMs: [0],
+  });
+
+  assert.equal(attempts, 2);
+  assert.deepEqual(result, [{ id: "p-1", price: 25 }]);
 });
 
 test("fetchCartProductSnapshots should query products using unique ids", async () => {

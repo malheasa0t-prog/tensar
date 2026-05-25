@@ -3,11 +3,12 @@
  */
 
 import {
+  createCachedRouteModuleLoader,
   matchRoutePrefetchKey,
   normalizeRoutePrefetchPath,
 } from "@/lib/routePrefetchModel";
 
-export const routeModuleLoaders = Object.freeze({
+const uncachedRouteModuleLoaders = Object.freeze({
   home: () => import("@/app/page"),
   services: () => import("@/app/services/page"),
   "service-detail": () => import("@/app/services/[slug]/page"),
@@ -29,6 +30,15 @@ export const routeModuleLoaders = Object.freeze({
   "dashboard-deposit": () => import("@/app/dashboard/deposit/page"),
   "dashboard-wallet": () => import("@/app/dashboard/wallet/page"),
 });
+
+export const routeModuleLoaders = Object.freeze(
+  Object.fromEntries(
+    Object.entries(uncachedRouteModuleLoaders).map(([routeKey, loadModule]) => [
+      routeKey,
+      createCachedRouteModuleLoader(loadModule),
+    ])
+  )
+);
 
 const pendingRoutePrefetches = new Map();
 const pendingRouteDataPrefetches = new Map();

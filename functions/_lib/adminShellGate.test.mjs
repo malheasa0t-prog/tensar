@@ -28,13 +28,17 @@ function buildRequest(input = {}) {
   return new Request(`https://tensr.systems${input.path || "/admin"}`, { headers });
 }
 
-test("normalizeAdminShellAccessMode should default to public when mode is missing", () => {
-  assert.equal(normalizeAdminShellAccessMode(""), "public");
-  assert.equal(getAdminShellAccessMode({}), "public");
+test("normalizeAdminShellAccessMode should fail closed when mode is missing", () => {
+  assert.equal(normalizeAdminShellAccessMode(""), "deny");
+  assert.equal(getAdminShellAccessMode({}), "deny");
 });
 
 test("normalizeAdminShellAccessMode should fail closed when mode is invalid", () => {
   assert.equal(normalizeAdminShellAccessMode("unexpected"), "deny");
+});
+
+test("normalizeAdminShellAccessMode should honor explicit public opt-in for development", () => {
+  assert.equal(normalizeAdminShellAccessMode("public"), "public");
 });
 
 test("getAllowedAdminShellEmails should parse the configured allowlist", () => {
@@ -55,8 +59,17 @@ test("getAllowedAdminShellDomains should parse the configured domain allowlist",
   );
 });
 
-test("evaluateAdminShellAccess should allow public mode by default", () => {
+test("evaluateAdminShellAccess should deny by default when no mode is configured", () => {
   const result = evaluateAdminShellAccess({ request: buildRequest() });
+  assert.equal(result.allowed, false);
+  assert.equal(result.reason, "deny_mode");
+});
+
+test("evaluateAdminShellAccess should allow when public mode is explicitly opted in", () => {
+  const result = evaluateAdminShellAccess({
+    env: { ADMIN_SHELL_ACCESS_MODE: "public" },
+    request: buildRequest(),
+  });
   assert.equal(result.allowed, true);
   assert.equal(result.reason, "public_mode");
 });

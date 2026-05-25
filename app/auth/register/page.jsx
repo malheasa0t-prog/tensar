@@ -5,8 +5,12 @@ import Link from 'next/link';
 import AppIcon from '@/components/AppIcon';
 import Button from '@/components/Button';
 import { useToast } from '@/components/ToastProvider';
+import { buildAuthCallbackRedirectUrl } from '@/lib/authRedirectUrl';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
+  PASSWORD_MIN_LENGTH,
+  REGISTER_SUBMISSION_ACCEPTED_MESSAGE,
+  isRegisterAccountEnumerationError,
   mapRegisterAuthError,
   normalizeRegisterProfileData,
   validateRegisterForm,
@@ -24,6 +28,21 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const withAuthCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
+
+  /**
+   * Finishes a registration attempt with non-enumerating customer feedback.
+   *
+   * @param {"success" | "info"} toastType
+   * @returns {void}
+   */
+  function finishAcceptedRegistration(toastType = 'success') {
+    setSuccess(true);
+    showToast(REGISTER_SUBMISSION_ACCEPTED_MESSAGE, {
+      type: toastType,
+      title: 'راجع بريدك',
+    });
+    setLoading(false);
+  }
 
   /**
    * Creates a new auth account after validating the registration form.
@@ -57,11 +76,16 @@ export default function RegisterPage() {
         password,
         options: {
           data: normalizeRegisterProfileData({ fullName, phone, country }),
-          emailRedirectTo: `${window.location.origin}/auth/callback/`,
+          emailRedirectTo: buildAuthCallbackRedirectUrl(),
         },
       });
 
       if (authError) {
+        if (isRegisterAccountEnumerationError(authError)) {
+          finishAcceptedRegistration('info');
+          return;
+        }
+
         const nextError = mapRegisterAuthError(authError);
         setError(nextError);
         showToast(withAuthCode('AUS-306', nextError), { type: 'error', title: 'تعذر إنشاء الحساب' });
@@ -76,12 +100,7 @@ export default function RegisterPage() {
       return;
     }
 
-    setSuccess(true);
-    showToast('أرسلنا رسالة التفعيل إلى بريدك الإلكتروني.', {
-      type: 'success',
-      title: 'تم إنشاء الحساب',
-    });
-    setLoading(false);
+    finishAcceptedRegistration('success');
   }
 
   if (success) {
@@ -93,7 +112,9 @@ export default function RegisterPage() {
           </div>
           <h2 style={{ marginBottom: '0.75rem' }}>تحقق من بريدك الإلكتروني</h2>
           <p className="auth-subcopy" style={{ marginBottom: '1.25rem' }}>
-            تم إرسال رابط التفعيل إلى <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>.
+            {REGISTER_SUBMISSION_ACCEPTED_MESSAGE}
+            <br />
+            <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>
           </p>
           <Link href="/auth/login" className="btn btn-secondary">
             العودة لتسجيل الدخول
@@ -189,10 +210,10 @@ export default function RegisterPage() {
                 id="register_password"
                 type="password"
                 required
-                minLength={6}
+                minLength={PASSWORD_MIN_LENGTH}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="6 أحرف على الأقل"
+                placeholder={`${PASSWORD_MIN_LENGTH} أحرف على الأقل`}
                 className="form-input"
                 dir="ltr"
                 autoComplete="new-password"
@@ -205,7 +226,7 @@ export default function RegisterPage() {
                 id="confirm_password"
                 type="password"
                 required
-                minLength={6}
+                minLength={PASSWORD_MIN_LENGTH}
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="أعد كتابة كلمة المرور"

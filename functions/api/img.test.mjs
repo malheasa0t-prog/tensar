@@ -25,6 +25,7 @@ test('readAllowedImageHosts should merge defaults with environment hosts', () =>
     IMAGE_PROXY_ALLOWED_HOSTS: 'cdn.example.com, https://images.example.com/path/to/file.png ',
   });
 
+  assert.equal(hosts.has('rxiukzmqoiknlehxctbs.supabase.co'), true);
   assert.equal(hosts.has('bayubxlmrgkquwoutwmn.supabase.co'), true);
   assert.equal(hosts.has('placehold.co'), true);
   assert.equal(hosts.has('serva-s.com'), true);

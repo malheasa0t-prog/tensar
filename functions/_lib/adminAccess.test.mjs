@@ -78,9 +78,48 @@ test("isAdminBypassEnabled should allow bypass for localhost only", () => {
   );
 });
 
-test("hasAdminMetadataAccess should accept admin roles from user metadata", () => {
-  assert.equal(hasAdminMetadataAccess({ user_metadata: { role: "admin" } }), true);
+test("hasAdminMetadataAccess should only honor server-controlled app_metadata", () => {
+  // app_metadata is set by service-role on the server — safe to trust
+  assert.equal(hasAdminMetadataAccess({ app_metadata: { role: "admin" } }), true);
+  assert.equal(hasAdminMetadataAccess({ app_metadata: { role: "super_admin" } }), true);
   assert.equal(hasAdminMetadataAccess({ app_metadata: { role: "customer" } }), false);
+  // user_metadata is user-writable via auth.updateUser — MUST be ignored (CRIT-001)
+  assert.equal(hasAdminMetadataAccess({ user_metadata: { role: "admin" } }), false);
+  assert.equal(hasAdminMetadataAccess({ user_metadata: { role: "super_admin" } }), false);
+  // missing metadata
+  assert.equal(hasAdminMetadataAccess({}), false);
+  assert.equal(hasAdminMetadataAccess(null), false);
+});
+
+test("requireAdminAccess should reject user_metadata.role escalation attempts", async () => {
+  const publicClient = {
+    auth: {
+      getUser() {
+        return Promise.resolve({
+          data: {
+            user: {
+              id: "user-evil",
+              email: "evil@example.com",
+              app_metadata: { role: "customer" },
+              user_metadata: { role: "admin" }, // attacker-controlled
+            },
+          },
+          error: null,
+        });
+      },
+    },
+  };
+  const adminClient = createAdminClientStub({ profileRecord: { role: "customer", status: "active" } });
+
+  const result = await requireAdminAccess(
+    new Request("https://tensr.systems/api/admin/db", {
+      headers: { Authorization: "Bearer token" },
+    }),
+    {},
+    { adminClient, publicClient }
+  );
+
+  assert.equal(result.errorResponse.status, 403);
 });
 
 test("hasStoredAdminAccess should accept active admin profile records", async () => {

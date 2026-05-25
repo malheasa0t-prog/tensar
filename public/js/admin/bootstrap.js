@@ -36,11 +36,11 @@
     ];
     const SECTION_SCRIPT_GROUPS = Object.freeze({
         dashboard: ['js/admin/dashboard.js'],
-        orders: ['js/admin/orders.js'],
-        'product-orders': ['js/admin/orders.js'],
-        'service-orders': ['js/admin/orders.js'],
-        'accessory-orders': ['js/admin/orders.js'],
-        'repair-orders': ['js/admin/orders.js'],
+        orders: ['js/admin/orders.constants.js', 'js/admin/orders.js'],
+        'product-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
+        'service-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
+        'accessory-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
+        'repair-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
         categories: ['js/admin/categories.js'],
         'main-categories': ['js/admin/categories.js'],
         subcategories: ['js/admin/categories.js'],

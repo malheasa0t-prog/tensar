@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import AppIcon from "@/components/AppIcon";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import styles from "./CheckoutWalletTransferModal.module.css";
 
 /**
@@ -12,6 +14,13 @@ import styles from "./CheckoutWalletTransferModal.module.css";
  * @returns {JSX.Element | null}
  */
 export default function CheckoutWalletTransferModal({ instructions, isOpen, onClose }) {
+  const modalRef = useRef(null);
+  const { handleKeyDown } = useModalAccessibility({
+    containerRef: modalRef,
+    isOpen,
+    onClose,
+  });
+
   if (!isOpen || !instructions) {
     return null;
   }
@@ -20,7 +29,9 @@ export default function CheckoutWalletTransferModal({ instructions, isOpen, onCl
     <div className={styles.overlay} onClick={onClose}>
       <div
         className={styles.modal}
+        ref={modalRef}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
         aria-labelledby="wallet-transfer-title"
@@ -52,12 +63,13 @@ export default function CheckoutWalletTransferModal({ instructions, isOpen, onCl
         </div>
 
         <p className={styles.hint}>
-          بعد التحويل يمكنك متابعة الطلب، ويفضّل الاحتفاظ بإثبات التحويل عند الحاجة.
+          الرجاء إرسال الحوالة عبر <strong>Orange Money</strong> حصراً.
+          بمجرد وصول الحوالة، سيقوم نظامنا بتأكيد طلبك وتحديث حالته <strong>تلقائياً خلال ثوانٍ</strong>.
         </p>
 
         <div className={styles.actions}>
           <button type="button" className="btn btn-primary" onClick={onClose}>
-            تم الاطلاع
+            فهمت، سأقوم بالتحويل الآن
           </button>
         </div>
       </div>

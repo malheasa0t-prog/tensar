@@ -7,8 +7,10 @@ const ORDER_TARGET_TYPES = Object.freeze({
 export const PHYSICAL_ORDER_TARGET_STATUSES = Object.freeze([
   'pending',
   'processing',
+  'shipped',
   'delivered',
   'cancelled',
+  'refunded',
 ]);
 
 const PHYSICAL_ORDER_STATUS_SET = new Set(PHYSICAL_ORDER_TARGET_STATUSES);
@@ -86,55 +88,29 @@ export function normalizeAdminOrderStatusPayload(payload) {
 }
 
 /**
- * Loads a single row by id from the requested table.
+ * Maps the database state-machine errors to stable admin API errors.
  *
- * @param {{ client: { from: Function }, orderId: string }} input
- * @returns {Promise<Record<string, unknown>>}
- * @throws {AdminOrderStatusError}
+ * @param {unknown} error
+ * @returns {AdminOrderStatusError}
  */
-async function loadOrderRecord({ client, orderId }) {
-  const { data, error } = await client.from('orders').select('id, status').eq('id', orderId).maybeSingle();
+function mapOrderStatusRpcError(error) {
+  const message = String(error?.message || '').trim();
 
-  if (error) {
-    throw createAdminOrderStatusError('ORM-304', 'تعذر تحميل بيانات الطلب.', 500);
-  }
-  if (!data) {
-    throw new AdminOrderStatusError(formatErrorMessage('ORM-302', 'الطلب الفيزيائي غير موجود.'), 404);
+  if (message.includes('ORDER_NOT_FOUND')) {
+    return createAdminOrderStatusError('ORM-302', 'الطلب الفيزيائي غير موجود.', 404);
   }
 
-  return data;
-}
+  if (message.includes('INVALID_STATUS') || message.includes('ILLEGAL_TRANSITION')) {
+    return createAdminOrderStatusError('ORM-104', 'انتقال حالة الطلب الفيزيائي غير صالح.', 400);
+  }
 
-/**
- * Writes an audit log entry without blocking the main mutation on failure.
- *
- * @param {{
- *   client: { from: Function },
- *   actor: { id?: string, email?: string },
- *   targetId: string,
- *   details: Record<string, unknown>,
- * }} input
- * @returns {Promise<string | null>}
- */
-async function insertAuditLog({ client, actor, targetId, details }) {
-  const { error } = await client.from('audit_logs').insert([
-    {
-      action: 'admin_order_status_update',
-      actor_id: actor?.id || null,
-      actor_email: actor?.email || null,
-      target_table: 'orders',
-      target_id: targetId,
-      details,
-    },
-  ]);
-
-  return error?.message || null;
+  return createAdminOrderStatusError('ORM-301', 'تعذر تحديث حالة الطلب الفيزيائي.', 500);
 }
 
 /**
  * Updates a physical-order status through the server.
  *
- * @param {{ client: { from: Function }, actor: { id?: string, email?: string }, orderId: string, status: string }} input
+ * @param {{ client: { rpc: Function }, actor: { id?: string, email?: string }, orderId: string, status: string }} input
  * @returns {Promise<{ targetType: string, orderId: string, status: string, auditError: string | null }>}
  * @throws {AdminOrderStatusError}
  */
@@ -143,25 +119,31 @@ async function updatePhysicalOrderStatus({ client, actor, orderId, status }) {
     throw createAdminOrderStatusError('ORM-104', 'حالة الطلب الفيزيائي غير صالحة.', 400);
   }
 
-  const order = await loadOrderRecord({ client, orderId });
-
-  if (order.status === status) {
-    return { targetType: ORDER_TARGET_TYPES.physical, orderId, status, auditError: null };
-  }
-
-  const { data, error } = await client.from('orders').update({ status }).eq('id', orderId).select('id, status').maybeSingle();
-  if (error || !data) {
+  if (typeof client?.rpc !== 'function') {
     throw createAdminOrderStatusError('ORM-301', 'تعذر تحديث حالة الطلب الفيزيائي.', 500);
   }
 
-  const auditError = await insertAuditLog({
-    client,
-    actor,
-    targetId: orderId,
-    details: { from_status: order.status, to_status: data.status },
+  const { data, error } = await client.rpc('admin_set_order_status', {
+    p_actor_email: actor?.email || null,
+    p_actor_id: actor?.id || null,
+    p_new_status: status,
+    p_order_id: orderId,
+    p_reason: 'admin_panel',
   });
 
-  return { targetType: ORDER_TARGET_TYPES.physical, orderId: data.id, status: data.status, auditError };
+  if (error) {
+    throw mapOrderStatusRpcError(error);
+  }
+
+  const result = Array.isArray(data) ? data[0] : data;
+  return {
+    targetType: ORDER_TARGET_TYPES.physical,
+    orderId,
+    status: result?.current_status || status,
+    auditError: null,
+    applied: result?.applied === true,
+    previousStatus: result?.previous_status || null,
+  };
 }
 
 /**

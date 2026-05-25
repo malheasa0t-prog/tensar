@@ -46,6 +46,9 @@ export default function Script({ src, strategy, id, onLoad, dangerouslySetInnerH
     document.head.appendChild(script);
 
     return () => {
+      if (onLoad) {
+        script.removeEventListener('load', onLoad);
+      }
       try { document.head.removeChild(script); } catch { /* already removed */ }
     };
   }, [src, id]);

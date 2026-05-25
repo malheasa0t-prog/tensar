@@ -1,6 +1,9 @@
-const SHELL_CACHE = 'techzone-shell-v1';
-const ASSET_CACHE = 'techzone-assets-v1';
+const CACHE_VERSION = '2026-05-25-auth-redirect-v2';
+const CACHE_PREFIX = 'techzone-';
+const SHELL_CACHE = `${CACHE_PREFIX}shell-${CACHE_VERSION}`;
+const ASSET_CACHE = `${CACHE_PREFIX}assets-${CACHE_VERSION}`;
 const SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/opengraph-image.svg'];
+const AUTH_PATH_PATTERN = /^\/auth(?:\/|$)/;
 
 /**
  * Stores the application shell required for offline navigation.
@@ -19,7 +22,7 @@ async function warmShellCache() {
  */
 async function clearLegacyCaches() {
   const cacheKeys = await caches.keys();
-  const staleKeys = cacheKeys.filter((key) => ![SHELL_CACHE, ASSET_CACHE].includes(key));
+  const staleKeys = cacheKeys.filter((key) => key.startsWith(CACHE_PREFIX) && ![SHELL_CACHE, ASSET_CACHE].includes(key));
   await Promise.all(staleKeys.map((key) => caches.delete(key)));
 }
 
@@ -42,8 +45,13 @@ async function getOfflineNavigationResponse() {
 async function handleNavigationRequest(request) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(SHELL_CACHE);
-    cache.put(request, response.clone());
+    const requestUrl = new URL(request.url);
+
+    if (!AUTH_PATH_PATTERN.test(requestUrl.pathname)) {
+      const cache = await caches.open(SHELL_CACHE);
+      cache.put(request, response.clone());
+    }
+
     return response;
   } catch {
     return getOfflineNavigationResponse();
@@ -58,18 +66,18 @@ async function handleNavigationRequest(request) {
  */
 async function handleStaticAssetRequest(request) {
   const cache = await caches.open(ASSET_CACHE);
-  const cachedResponse = await cache.match(request);
-  const networkResponsePromise = fetch(request)
-    .then((response) => {
-      if (response.ok) {
-        cache.put(request, response.clone());
-      }
 
-      return response;
-    })
-    .catch(() => null);
+  try {
+    const response = await fetch(request);
 
-  return cachedResponse || (await networkResponsePromise) || Response.error();
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch {
+    return (await cache.match(request)) || Response.error();
+  }
 }
 
 self.addEventListener('install', (event) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2, X } from "lucide-react";
@@ -8,6 +8,7 @@ import AppIcon from "./AppIcon";
 import { useCart } from "./CartProvider";
 import { useToast } from "./ToastProvider";
 import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { isOptimizableImageSrc } from "@/lib/imageUtils";
 import styles from "./CartSidebar.module.css";
@@ -26,25 +27,25 @@ export default function CartSidebar() {
   const { showToast } = useToast();
   const animatedTotal = useAnimatedNumber(cartTotal, 360);
   const animatedSavings = useAnimatedNumber(cartSavings, 340);
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const { handleKeyDown } = useModalAccessibility({
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    isOpen: sidebarOpen,
+    onClose: closeSidebar,
+  });
 
   useEffect(() => {
     if (!sidebarOpen) {
       return undefined;
     }
 
-    function handleEscape(event) {
-      if (event.key === "Escape") {
-        closeSidebar();
-      }
-    }
-
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleEscape);
     return () => {
       document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleEscape);
     };
-  }, [closeSidebar, sidebarOpen]);
+  }, [sidebarOpen]);
 
   function handleQtyChange(productId, qty) {
     const result = updateQty(productId, qty);
@@ -61,16 +62,25 @@ export default function CartSidebar() {
       <div
         className={styles.sidebar}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
         aria-label="سلة التسوق"
+        ref={dialogRef}
+        tabIndex={-1}
       >
         <div className={styles.header}>
           <h3 className={styles.title}>
             <AppIcon name="shopping-cart" size={18} />
             سلة التسوق ({cartCount})
           </h3>
-          <button className={styles.closeButton} onClick={closeSidebar} aria-label="إغلاق السلة">
+          <button
+            className={styles.closeButton}
+            onClick={closeSidebar}
+            aria-label="إغلاق السلة"
+            ref={closeButtonRef}
+            type="button"
+          >
             <X size={18} />
           </button>
         </div>

@@ -5,6 +5,7 @@ import {
   buildRepairLookupResult,
   inferLookupType,
   lookupPublicOrderByNumber,
+  normalizeLookupContactSuffix,
   normalizeLookupType,
   normalizeOrderNumber,
   resolveLookupStatus,
@@ -114,7 +115,18 @@ test("buildDeliveryLookupResult should produce delivery details", () => {
   assert.equal(result.details[1].value, "توصيل");
 });
 
-test("lookupPublicOrderByNumber should resolve repair bookings", async () => {
+test("normalizeLookupContactSuffix should keep the last four digits", () => {
+  assert.equal(normalizeLookupContactSuffix("1234"), "1234");
+  assert.equal(normalizeLookupContactSuffix(" 1234 "), "1234");
+});
+
+test("normalizeLookupContactSuffix should reject malformed suffixes", () => {
+  assert.throws(() => normalizeLookupContactSuffix("12"), /آخر 4 أرقام/);
+  assert.throws(() => normalizeLookupContactSuffix(""), /آخر 4 أرقام/);
+  assert.throws(() => normalizeLookupContactSuffix("abcd"), /آخر 4 أرقام/);
+});
+
+test("lookupPublicOrderByNumber should resolve repair bookings when the phone suffix matches", async () => {
   const adminClient = createAdminClientStub({
     repairBookings: [
       {
@@ -123,6 +135,7 @@ test("lookupPublicOrderByNumber should resolve repair bookings", async () => {
         service_name: "فحص جهاز",
         mode: "pickup",
         status: "pending",
+        customer_phone: "+962 79 555 1234",
         created_at: "2026-04-08T01:00:00.000Z",
         updated_at: "2026-04-08T02:00:00.000Z",
       },
@@ -131,6 +144,7 @@ test("lookupPublicOrderByNumber should resolve repair bookings", async () => {
 
   const result = await lookupPublicOrderByNumber({
     adminClient,
+    contactSuffix: "1234",
     lookupType: "all",
     orderNumber: "bk-200",
   });
@@ -139,7 +153,32 @@ test("lookupPublicOrderByNumber should resolve repair bookings", async () => {
   assert.equal(result?.orderNumber, "#2002");
 });
 
-test("lookupPublicOrderByNumber should resolve display numbers", async () => {
+test("lookupPublicOrderByNumber should return null when the phone suffix is wrong", async () => {
+  const adminClient = createAdminClientStub({
+    repairBookings: [
+      {
+        id: "bk-200",
+        display_number: 2002,
+        service_name: "فحص جهاز",
+        mode: "pickup",
+        status: "pending",
+        customer_phone: "+962795551234",
+        created_at: "2026-04-08T01:00:00.000Z",
+      },
+    ],
+  });
+
+  const result = await lookupPublicOrderByNumber({
+    adminClient,
+    contactSuffix: "9999",
+    lookupType: "all",
+    orderNumber: "bk-200",
+  });
+
+  assert.equal(result, null);
+});
+
+test("lookupPublicOrderByNumber should resolve display numbers when the suffix matches", async () => {
   const adminClient = createAdminClientStub({
     repairBookings: [
       {
@@ -148,6 +187,7 @@ test("lookupPublicOrderByNumber should resolve display numbers", async () => {
         service_name: "فحص جهاز",
         mode: "pickup",
         status: "pending",
+        customer_phone: "0790000077",
         created_at: "2026-04-08T01:00:00.000Z",
       },
     ],
@@ -155,6 +195,7 @@ test("lookupPublicOrderByNumber should resolve display numbers", async () => {
 
   const result = await lookupPublicOrderByNumber({
     adminClient,
+    contactSuffix: "0077",
     lookupType: "repair",
     orderNumber: "#2003",
   });
@@ -170,6 +211,7 @@ test("lookupPublicOrderByNumber should resolve delivery orders", async () => {
         id: "ord-200",
         delivery_method: "delivery",
         status: "delivered",
+        customer_phone: "+9627912345678",
         created_at: "2026-04-08T01:00:00.000Z",
         updated_at: "2026-04-08T02:00:00.000Z",
       },
@@ -178,6 +220,7 @@ test("lookupPublicOrderByNumber should resolve delivery orders", async () => {
 
   const result = await lookupPublicOrderByNumber({
     adminClient,
+    contactSuffix: "5678",
     lookupType: "delivery",
     orderNumber: "ord-200",
   });
@@ -190,9 +233,22 @@ test("lookupPublicOrderByNumber should return null when nothing matches", async 
   const adminClient = createAdminClientStub();
   const result = await lookupPublicOrderByNumber({
     adminClient,
+    contactSuffix: "1234",
     lookupType: "all",
     orderNumber: "ord-999",
   });
 
   assert.equal(result, null);
+});
+
+test("lookupPublicOrderByNumber should reject lookups without a contact suffix", async () => {
+  const adminClient = createAdminClientStub();
+  await assert.rejects(
+    () => lookupPublicOrderByNumber({
+      adminClient,
+      lookupType: "all",
+      orderNumber: "ord-999",
+    }),
+    /آخر 4 أرقام/
+  );
 });

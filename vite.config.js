@@ -45,14 +45,42 @@ function createLegacyAdminRuntimeAssetPlugin(assetSource) {
   };
 }
 
+/**
+ * Builds production minifier options that remove browser diagnostics.
+ *
+ * @param {string} command
+ * @returns {import('rolldown').OutputOptions['minify'] | undefined}
+ */
+function resolveOutputMinifyOptions(command) {
+  if (command !== 'build') {
+    return undefined;
+  }
+
+  return {
+    compress: {
+      dropConsole: true,
+      dropDebugger: true,
+    },
+    mangle: true,
+    codegen: {
+      removeWhitespace: true,
+    },
+  };
+}
+
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const { supabaseUrl, supabaseAnonKey } = resolvePublicBuildEnv(env, command);
+  const { siteUrl, supabaseUrl, supabaseAnonKey } = resolvePublicBuildEnv(env, command);
   const adminRuntimeAssetSource = buildAdminRuntimeAssetSource(
     resolveAdminRuntimeAssetConfig(env, command)
   );
 
   return {
+    envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+    server: {
+      port: 3000,
+      strictPort: true,
+    },
     plugins: [
       react({
         include: /\.(js|jsx|ts|tsx)$/,
@@ -81,6 +109,7 @@ export default defineConfig(({ command, mode }) => {
     define: {
       'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
+      'process.env.NEXT_PUBLIC_SITE_URL': JSON.stringify(siteUrl),
       'process.env.NEXT_PUBLIC_AUTH_SOCIAL_PROVIDERS': JSON.stringify(
         env.NEXT_PUBLIC_AUTH_SOCIAL_PROVIDERS || ''
       ),
@@ -92,6 +121,7 @@ export default defineConfig(({ command, mode }) => {
       sourcemap: false,
       rollupOptions: {
         output: {
+          minify: resolveOutputMinifyOptions(command),
           manualChunks(id) {
             return resolveClientSecurityManualChunk(id);
           },

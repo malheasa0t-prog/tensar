@@ -1,4 +1,19 @@
 # https://developers.cloudflare.com/pages/configuration/headers/
+#
+# SECURITY NOTE: the admin gate (/admin.html) ships its own tighter CSP with a
+# per-request nonce — see `functions/admin.html.js#buildAdminGateCsp`. That
+# header overrides this one for the high-value admin surface.
+#
+# The SPA shell below still allows `'unsafe-inline'` because third-party
+# analytics (GTM / Facebook pixel / Hotjar) inject inline initializers at
+# runtime. Removing it without a Vite-side nonce/hash strategy would break
+# those widgets silently. Tracked in the audit report as a follow-up.
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/auth/*
+  Cache-Control: no-cache, no-store, must-revalidate
 
 /*
   Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://static.cloudflareinsights.com https://www.googletagmanager.com https://connect.facebook.net https://static.hotjar.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cloudflareinsights.com https://www.google-analytics.com https://region1.google-analytics.com https://www.facebook.com https://*.hotjar.com wss://*.hotjar.com; frame-src 'self' https://www.googletagmanager.com https://www.facebook.com https://vars.hotjar.com; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests; block-all-mixed-content
@@ -13,9 +28,6 @@
   Cache-Control: public, max-age=31536000, immutable
 
 /admin-sw.js
-  Cache-Control: public, max-age=0, must-revalidate
-
-/sw.js
   Cache-Control: public, max-age=0, must-revalidate
 
 /manifest.webmanifest
@@ -37,6 +49,10 @@
   X-Robots-Tag: noindex, nofollow, noarchive
   Cache-Control: private, no-store, max-age=0
 
+/tz-panel.html
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: private, no-store, max-age=0
+
 /admin-config.js
   X-Robots-Tag: noindex, nofollow, noarchive
   Cache-Control: private, no-store, max-age=0
@@ -46,4 +62,3 @@
 
 /css/admin/*
   X-Robots-Tag: noindex, nofollow, noarchive
-

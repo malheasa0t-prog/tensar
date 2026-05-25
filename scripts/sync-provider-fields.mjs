@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://bayubxlmrgkquwoutwmn.supabase.co';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rxiukzmqoiknlehxctbs.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PROVIDER_API_URL = process.env.PROVIDER_API_BASE_URL;
 const PROVIDER_API_KEY = process.env.PROVIDER_API_KEY;

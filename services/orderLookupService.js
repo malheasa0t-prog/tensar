@@ -10,6 +10,9 @@ import {
 const LOOKUP_TYPE_VALUES = new Set(["all", "repair", "delivery"]);
 const DISPLAY_ORDER_NUMBER_PATTERN = /^#?\d+$/;
 const LEGACY_ORDER_NUMBER_PATTERN = /^(ord|bk)-[a-z0-9-]+$/i;
+const LOOKUP_CONTACT_PATTERN = /^\d{4}$/;
+const LOOKUP_CONTACT_ERROR =
+  "[OLK-103] الرجاء إدخال آخر 4 أرقام من رقم الهاتف المرتبط بالطلب.";
 
 /**
  * Normalizes the public lookup type into a supported value.
@@ -151,50 +154,121 @@ export function buildRepairLookupResult(booking) {
 }
 
 /**
- * Loads a delivery order by its public order number.
+ * Validates and normalizes the contact verification suffix.
  *
- * @param {{ adminClient: { from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => unknown } } }, orderNumber: string }} input
+ * The public order lookup must NEVER return order metadata to anyone who
+ * cannot prove they own the order. We require the last 4 digits of the
+ * customer's phone number as a secondary key — an attacker enumerating
+ * sequential display_numbers would need to brute-force 10,000 phone
+ * combinations per order, which the rate limiter blocks.
+ *
+ * @param {string | null | undefined} value - Raw contact suffix from the request.
+ * @returns {string} 4-digit string.
+ * @throws {Error} When the suffix is missing or malformed.
+ */
+export function normalizeLookupContactSuffix(value) {
+  const normalized = String(value || "").replace(/\D/g, "").trim();
+  if (!LOOKUP_CONTACT_PATTERN.test(normalized)) {
+    throw new Error(LOOKUP_CONTACT_ERROR);
+  }
+  return normalized;
+}
+
+/**
+ * Returns whether a stored phone number ends with the supplied 4-digit suffix.
+ *
+ * Strips non-digits before comparing so users can enter "1234" while the
+ * stored value is "+962 79 123 1234".
+ *
+ * @param {string | null | undefined} storedPhone - Phone value stored on the order.
+ * @param {string} suffix - Validated 4-digit suffix.
+ * @returns {boolean} True when the last 4 digits match.
+ */
+function phoneSuffixMatches(storedPhone, suffix) {
+  const digits = String(storedPhone || "").replace(/\D/g, "");
+  if (digits.length < 4) return false;
+  return digits.slice(-4) === suffix;
+}
+
+/**
+ * Loads a delivery order by its public order number and verifies the phone suffix.
+ *
+ * @param {{
+ *   adminClient: { from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => unknown } } },
+ *   contactSuffix: string,
+ *   orderNumber: string,
+ * }} input - Lookup parameters.
  * @returns {Promise<{ created_at?: string, delivery_method?: string, id: string, status?: string, updated_at?: string } | null>}
  */
-async function loadDeliveryOrder({ adminClient, orderNumber }) {
+async function loadDeliveryOrder({ adminClient, contactSuffix, orderNumber }) {
   const displayNumber = getDisplayNumberValue(orderNumber);
   const query = adminClient
     .from("orders")
-    .select("id, display_number, delivery_method, status, created_at, updated_at");
+    .select("id, display_number, delivery_method, status, customer_phone, created_at, updated_at");
   const response = displayNumber
     ? await query.eq("display_number", displayNumber).eq("delivery_method", "delivery").maybeSingle()
     : await query.eq("id", orderNumber).eq("delivery_method", "delivery").maybeSingle();
 
-  return response.data || null;
+  const row = response.data || null;
+  if (!row) return null;
+  if (!phoneSuffixMatches(row.customer_phone, contactSuffix)) {
+    return null;
+  }
+  // Strip phone before returning to caller — public payload must not echo it.
+  const { customer_phone, ...publicRow } = row;
+  void customer_phone;
+  return publicRow;
 }
 
 /**
- * Loads a repair booking by its public booking number.
+ * Loads a repair booking by its public booking number and verifies the phone suffix.
  *
- * @param {{ adminClient: { from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> } } } }, orderNumber: string }} input
+ * @param {{
+ *   adminClient: { from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> } } } },
+ *   contactSuffix: string,
+ *   orderNumber: string,
+ * }} input - Lookup parameters.
  * @returns {Promise<{ created_at?: string, id: string, mode?: string, service_name?: string, status?: string, updated_at?: string } | null>}
  */
-async function loadRepairBooking({ adminClient, orderNumber }) {
+async function loadRepairBooking({ adminClient, contactSuffix, orderNumber }) {
   const displayNumber = getDisplayNumberValue(orderNumber);
   const query = adminClient
     .from("repair_bookings")
-    .select("id, display_number, service_name, mode, status, created_at, updated_at");
+    .select("id, display_number, service_name, mode, status, customer_phone, created_at, updated_at");
   const response = displayNumber
     ? await query.eq("display_number", displayNumber).maybeSingle()
     : await query.eq("id", orderNumber).maybeSingle();
 
-  return response.data || null;
+  const row = response.data || null;
+  if (!row) return null;
+  if (!phoneSuffixMatches(row.customer_phone, contactSuffix)) {
+    return null;
+  }
+  const { customer_phone, ...publicRow } = row;
+  void customer_phone;
+  return publicRow;
 }
 
 /**
  * Resolves a public lookup request to either a repair booking or a delivery order.
  *
- * @param {{ adminClient: { from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => unknown } } }, lookupType?: string, orderNumber?: string }} input
+ * The caller MUST supply the last 4 digits of the customer's phone number
+ * (`contactSuffix`). Lookups that match the order number but fail the phone
+ * suffix return `null` — same response as a non-existent order — so an
+ * attacker cannot use timing or response differences to enumerate orders.
+ *
+ * @param {{
+ *   adminClient: { from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => unknown } } },
+ *   contactSuffix?: string,
+ *   lookupType?: string,
+ *   orderNumber?: string,
+ * }} input - Lookup request.
  * @returns {Promise<ReturnType<typeof buildDeliveryLookupResult> | ReturnType<typeof buildRepairLookupResult> | null>}
  * @throws {Error}
  */
-export async function lookupPublicOrderByNumber({ adminClient, lookupType, orderNumber }) {
+export async function lookupPublicOrderByNumber({ adminClient, contactSuffix, lookupType, orderNumber }) {
   const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
+  const normalizedContactSuffix = normalizeLookupContactSuffix(contactSuffix);
   const normalizedType = inferLookupType({
     lookupType: normalizeLookupType(lookupType),
     orderNumber: normalizedOrderNumber,
@@ -202,11 +276,19 @@ export async function lookupPublicOrderByNumber({ adminClient, lookupType, order
 
   const loaders = {
     repair: async () => {
-      const booking = await loadRepairBooking({ adminClient, orderNumber: normalizedOrderNumber });
+      const booking = await loadRepairBooking({
+        adminClient,
+        contactSuffix: normalizedContactSuffix,
+        orderNumber: normalizedOrderNumber,
+      });
       return booking ? buildRepairLookupResult(booking) : null;
     },
     delivery: async () => {
-      const deliveryOrder = await loadDeliveryOrder({ adminClient, orderNumber: normalizedOrderNumber });
+      const deliveryOrder = await loadDeliveryOrder({
+        adminClient,
+        contactSuffix: normalizedContactSuffix,
+        orderNumber: normalizedOrderNumber,
+      });
       return deliveryOrder ? buildDeliveryLookupResult(deliveryOrder) : null;
     },
   };

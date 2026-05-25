@@ -7,65 +7,38 @@
     var A = window.AdminApp;
     if (!A) return;
 
+    // All status maps, tab definitions, and type tokens now live in
+    // `orders.constants.js` so other admin modules (exports, dashboard cards,
+    // bulk actions) can read the same labels without keeping a private copy.
+    // Falling back to local literals keeps this file standalone-safe for the
+    // unit tests that load it without the constants script.
+    var ORDER_CONSTANTS = window.AdminOrdersConstants || null;
+    if (!ORDER_CONSTANTS) {
+        console.warn('[orders.js] AdminOrdersConstants is missing — admin shell loaded out of order.');
+    }
+
     var ADMIN_ORDER_STATUS_API = '/api/admin/orders/status';
     var API_PORT = window.__TZ_API_PORT || '3000';
     var CODED_ERROR_PATTERN = /^\[[A-Z]{2,4}-\d{3}\]/;
     var PAGE_SIZE = 15;
     var ORDER_NOTES_PREVIEW_LENGTH = 96;
-    var TYPE_ALL = 'all';
-    var TYPE_PHYSICAL = 'physical';
-    var TYPE_ACCESSORY = 'accessory';
-    var TYPE_SERVICE = 'service';
-    var TYPE_REPAIR = 'repair';
-    var TAB_CONFIG = [
-        { key: TYPE_ALL, label: 'كل الطلبات', icon: 'fa-layer-group' },
-        { key: TYPE_PHYSICAL, label: 'طلبات المنتجات', icon: 'fa-box' },
-        { key: TYPE_SERVICE, label: 'طلبات الخدمات', icon: 'fa-bolt' },
-        { key: TYPE_ACCESSORY, label: 'طلبات الإكسسوارات', icon: 'fa-headphones' },
-        { key: TYPE_REPAIR, label: 'حجوزات الصيانة', icon: 'fa-screwdriver-wrench' }
-    ];
-    var ORDER_STATUSES = {
-        pending: 'قيد الانتظار',
-        processing: 'قيد المعالجة',
-        confirmed: 'تم التأكيد',
-        awaiting_delivery: 'بانتظار التنفيذ',
-        shipped: 'تم الشحن',
-        delivered: 'تم التسليم',
-        completed: 'مكتمل',
-        cancelled: 'ملغي',
-        failed: 'فشل',
-        refunded: 'مسترجع',
-        in_progress: 'قيد التنفيذ',
-        partial: 'جزئي',
-        received: 'تم الاستلام',
-        diagnosing: 'تشخيص',
-        waiting_approval: 'بانتظار الموافقة',
-        ready: 'جاهز',
-        rejected: 'مرفوض'
+
+    var ORDER_TYPES = ORDER_CONSTANTS ? ORDER_CONSTANTS.ORDER_TYPES : {
+        ALL: 'all', PHYSICAL: 'physical', ACCESSORY: 'accessory', SERVICE: 'service', REPAIR: 'repair'
     };
-    var TYPE_LABELS = {
-        physical: 'منتج',
-        accessory: 'إكسسوار',
-        service: 'خدمة',
-        repair: 'صيانة'
-    };
-    var PHYSICAL_STATUS_OPTIONS = Object.freeze(['pending', 'processing', 'delivered', 'cancelled']);
-    var SERVICE_STATUS_OPTIONS = Object.freeze(['pending', 'processing', 'in_progress', 'completed', 'partial', 'failed', 'cancelled', 'refunded']);
-    var REPAIR_STATUS_OPTIONS = Object.freeze(['pending', 'in_progress', 'ready', 'completed', 'cancelled']);
-    var PHYSICAL_STATUS_ACTION_LABELS = Object.freeze({
-        pending: 'في الانتظار',
-        processing: 'قيد التنفيذ',
-        delivered: 'تم التسليم',
-        cancelled: 'ملغي'
-    });
-    var LEGACY_PHYSICAL_STATUS_MAP = Object.freeze({
-        awaiting_delivery: 'processing',
-        confirmed: 'processing',
-        shipped: 'processing',
-        completed: 'delivered',
-        failed: 'cancelled',
-        refunded: 'cancelled'
-    });
+    var TYPE_ALL = ORDER_TYPES.ALL;
+    var TYPE_PHYSICAL = ORDER_TYPES.PHYSICAL;
+    var TYPE_ACCESSORY = ORDER_TYPES.ACCESSORY;
+    var TYPE_SERVICE = ORDER_TYPES.SERVICE;
+    var TYPE_REPAIR = ORDER_TYPES.REPAIR;
+    var TAB_CONFIG = ORDER_CONSTANTS ? ORDER_CONSTANTS.TAB_CONFIG : [];
+    var ORDER_STATUSES = ORDER_CONSTANTS ? ORDER_CONSTANTS.ORDER_STATUSES : {};
+    var TYPE_LABELS = ORDER_CONSTANTS ? ORDER_CONSTANTS.TYPE_LABELS : {};
+    var PHYSICAL_STATUS_OPTIONS = ORDER_CONSTANTS ? ORDER_CONSTANTS.PHYSICAL_STATUS_OPTIONS : [];
+    var SERVICE_STATUS_OPTIONS = ORDER_CONSTANTS ? ORDER_CONSTANTS.SERVICE_STATUS_OPTIONS : [];
+    var REPAIR_STATUS_OPTIONS = ORDER_CONSTANTS ? ORDER_CONSTANTS.REPAIR_STATUS_OPTIONS : [];
+    var PHYSICAL_STATUS_ACTION_LABELS = ORDER_CONSTANTS ? ORDER_CONSTANTS.PHYSICAL_STATUS_ACTION_LABELS : {};
+    var LEGACY_PHYSICAL_STATUS_MAP = ORDER_CONSTANTS ? ORDER_CONSTANTS.LEGACY_PHYSICAL_STATUS_MAP : {};
     var activeTab = TYPE_ALL;
     var filterStatus = '';
     var searchQuery = '';

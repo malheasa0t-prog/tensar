@@ -154,11 +154,11 @@ export default function CheckoutFormCard({
             {form.payment_method === "wallet" ? (
               <div
                 className={isWalletTransferUnavailable ? "form-alert error" : "form-alert success"}
-                style={{ marginTop: "0.75rem" }}
+                role="alert"
               >
                 {isWalletTransferUnavailable
-                  ? "لم يتم ضبط رقم المحفظة في لوحة التحكم بعد، لذلك لا يمكن استخدام هذا الخيار حاليًا."
-                  : `سيظهر لك رقم المحفظة والمبلغ المطلوب (${walletTransferInstructions?.amountText || formatCurrency(checkoutTotal)}) في نافذة منبثقة.`}
+                  ? "تحويل المحفظة غير متاح لهذا الطلب."
+                  : `سيظهر لك رقم محفظة Orange Money والمبلغ المطلوب (${walletTransferInstructions?.amountText || formatCurrency(checkoutTotal)}) في نافذة منبثقة. سيتم تأكيد الدفع تلقائياً فور وصول الحوالة!`}
               </div>
             ) : null}
           </div>

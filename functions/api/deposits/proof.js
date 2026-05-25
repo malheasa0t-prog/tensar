@@ -147,7 +147,7 @@ export async function onRequest(context) {
     await ensureBucket(admin);
   } catch (error) {
     console.error("[DEP-301] Failed to ensure deposit bucket.", error);
-    return errorResponse(error.message || "[DEP-301] تعذر تجهيز مساحة الرفع.", 500);
+    return errorResponse("[DEP-301] تعذر تجهيز مساحة الرفع.", 500);
   }
 
   const objectPath = buildObjectPath(user.id, proofFile.name || "");
@@ -158,7 +158,8 @@ export async function onRequest(context) {
   });
 
   if (uploadError) {
-    return errorResponse(`[DEP-302] فشل رفع صورة الإثبات: ${uploadError.message || "خطأ غير معروف."}`, 500);
+    console.error("[DEP-302] Failed to upload deposit proof.", uploadError);
+    return errorResponse("[DEP-302] تعذر رفع صورة الإثبات. حاول مرة أخرى.", 500);
   }
 
   const signedUrl = await createSignedProofUrl(admin, objectPath);

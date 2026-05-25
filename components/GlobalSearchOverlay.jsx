@@ -6,6 +6,7 @@ import AppIcon from "./AppIcon";
 import Button from "./Button";
 import FriendlyEmptyState from "./FriendlyEmptyState";
 import styles from "./GlobalSearchOverlay.module.css";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import {
   GLOBAL_SEARCH_DEFAULT_CATEGORY,
   filterGlobalSearchItems,
@@ -49,6 +50,13 @@ export default function GlobalSearchOverlay({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const inputRef = useRef(null);
+  const dialogRef = useRef(null);
+  const { handleKeyDown: handleModalKeyDown } = useModalAccessibility({
+    containerRef: dialogRef,
+    initialFocusRef: inputRef,
+    isOpen,
+    onClose,
+  });
   const deferredQuery = useDeferredValue(searchQuery.trim());
 
   const results = useMemo(
@@ -94,39 +102,32 @@ export default function GlobalSearchOverlay({ isOpen, onClose }) {
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.requestAnimationFrame(() => inputRef.current?.focus());
 
     if (!snapshot.items.length && !loading) {
       void loadSnapshot();
     }
 
-    /**
-     * Closes the overlay when the escape key is pressed.
-     *
-     * @param {KeyboardEvent} event
-     * @returns {void}
-     */
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, loading, onClose, snapshot.items.length]);
+  }, [isOpen, loading, snapshot.items.length]);
 
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="global-search-title" onClick={onClose}>
-      <div className={styles.panel} onClick={(event) => event.stopPropagation()}>
+    <div className={styles.overlay} onClick={onClose}>
+      <div
+        className={styles.panel}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleModalKeyDown}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-search-title"
+        ref={dialogRef}
+        tabIndex={-1}
+      >
         <div className={styles.header}>
           <div>
             <span className={styles.eyebrow}>بحث عام</span>

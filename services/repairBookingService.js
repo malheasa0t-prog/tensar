@@ -1,8 +1,10 @@
+import { createIdempotencyKey } from "../lib/idempotencyKey.js";
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 import { isMissingAuthSessionError } from "../lib/supabaseAuthError.js";
 
 const REPAIR_BOOKING_SAVE_ERROR = "[RBK-301] تعذر إرسال طلب الصيانة حالياً. حاول مرة أخرى.";
 const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات الحساب لحجز الصيانة.";
+const REPAIR_BOOKING_ENDPOINT = "/api/repair-booking";
 const ERROR_CODE_PATTERN = /\[[A-Z]{2,4}-\d{3}\]/;
 
 /**
@@ -35,16 +37,6 @@ export function createRepairBookingId() {
   }
 
   return `bk-${Math.random().toString(36).slice(2, 11)}`;
-}
-
-/**
- * Detects whether the database rejected the optional user reference column.
- *
- * @param {{ message?: string } | null} error
- * @returns {boolean}
- */
-function shouldRetryWithoutUserId(error) {
-  return /user_id/i.test(error?.message || "");
 }
 
 /**
@@ -92,26 +84,62 @@ export async function getRepairBookingAccountSnapshot(client) {
 }
 
 /**
- * Persists a repair booking and gracefully retries when the schema does not accept `user_id`.
+ * Persists a repair booking via the server-side gate.
  *
- * @param {Record<string, unknown>} payload
- * @param {string} [userId]
- * @returns {Promise<{ error: { message?: string } | null }>}
+ * The previous implementation inserted directly into `repair_bookings` from
+ * the browser, which meant the model-layer validation could be bypassed by
+ * any client that crafted its own payload. The new flow POSTs to
+ * `/api/repair-booking`, which re-runs validation, sanitizes input, and
+ * uses the service-role client so we don't have to loosen RLS.
+ *
+ * @param {{
+ *   name?: string,
+ *   phone?: string,
+ *   serviceId?: string,
+ *   description?: string,
+ *   mode?: string,
+ *   address?: string,
+ *   preferredDate?: string,
+ *   service_id?: string,
+ *   preferred_date?: string,
+ * }} form - Form payload as built by the UI.
+ * @returns {Promise<{ data?: Record<string, unknown> | null, error?: { message: string } | null }>} Result envelope.
  */
-export async function createRepairBooking(payload, userId = "") {
-  const supabase = await loadSupabaseClient();
+export async function createRepairBooking(form) {
+  try {
+    const supabase = await loadSupabaseClient();
+    const session = await supabase.auth.getSession().catch(() => null);
+    const token = session?.data?.session?.access_token || "";
 
-  if (userId) {
-    const response = await supabase.from("repair_bookings").insert([{ ...payload, user_id: userId }]);
-
-    if (response.error && shouldRetryWithoutUserId(response.error)) {
-      const retryResponse = await supabase.from("repair_bookings").insert([payload]);
-      return retryResponse.error ? createRepairBookingErrorResult(retryResponse.error) : retryResponse;
+    const headers = {
+      "Content-Type": "application/json",
+      "Idempotency-Key": createIdempotencyKey(),
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
     }
 
-    return response.error ? createRepairBookingErrorResult(response.error) : response;
-  }
+    const response = await fetch(REPAIR_BOOKING_ENDPOINT, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        name: form?.name || "",
+        phone: form?.phone || "",
+        serviceId: form?.serviceId || form?.service_id || "",
+        description: form?.description || "",
+        mode: form?.mode || "",
+        address: form?.address || "",
+        preferredDate: form?.preferredDate || form?.preferred_date || "",
+      }),
+    });
 
-  const response = await supabase.from("repair_bookings").insert([payload]);
-  return response.error ? createRepairBookingErrorResult(response.error) : response;
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.success) {
+      return createRepairBookingErrorResult({ message: payload?.error || REPAIR_BOOKING_SAVE_ERROR });
+    }
+
+    return { data: payload?.data || null, error: null };
+  } catch (error) {
+    return createRepairBookingErrorResult(error);
+  }
 }

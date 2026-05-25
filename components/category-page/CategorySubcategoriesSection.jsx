@@ -7,6 +7,9 @@ import { getStaggeredRevealDelay } from "@/lib/scrollRevealModel";
 import { getCategoryHref } from "@/lib/categoryPageModel";
 import styles from "./CategorySubcategoriesSection.module.css";
 
+const SUBCATEGORY_IMAGE_WIDTH = 280;
+const SUBCATEGORY_IMAGE_HEIGHT = 158;
+
 /**
  * Returns a trusted image source for a category card.
  *
@@ -71,6 +74,8 @@ export default function CategorySubcategoriesSection({
                         src={image}
                         alt={subCategory.name}
                         fill
+                        width={SUBCATEGORY_IMAGE_WIDTH}
+                        height={SUBCATEGORY_IMAGE_HEIGHT}
                         loading="lazy"
                         quality={80}
                         sizes="(max-width: 700px) min(100vw - 3rem, 320px), 280px"

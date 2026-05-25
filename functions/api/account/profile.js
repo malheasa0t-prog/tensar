@@ -30,48 +30,103 @@ async function getUserFromRequest(request, env) {
   return { user, error: null };
 }
 
+const ALLOWED_PROFILE_FIELDS = Object.freeze(['avatar_url', 'bio', 'preferred_language']);
+const ALLOWED_LANGUAGE_CODES = Object.freeze(['ar', 'en']);
+const AVATAR_URL_PATTERN = /^https:\/\/[a-zA-Z0-9.-]+(:\d+)?(\/.*)?$/;
+const AVATAR_URL_MAX_LENGTH = 2048;
+const BIO_MAX_LENGTH = 500;
+
 /**
- * Validates profile update input and returns sanitized payload.
+ * Returns the trimmed string when input is a string, otherwise an empty string.
  *
- * @param {Record<string, unknown>} body
- * @returns {{ errors: string[], payload: Record<string, unknown> }}
+ * @param {unknown} value - Untrusted candidate value.
+ * @returns {string} Normalized text or empty string.
+ */
+function normalizeProfileText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * Validates the avatar URL against a strict HTTPS allowlist.
+ *
+ * Rejects non-HTTPS schemes (e.g., `javascript:`, `data:`) that could lead to
+ * stored XSS when the URL is later rendered as an `<img src>` or `<a href>`.
+ *
+ * @param {string} avatarUrl - Trimmed candidate URL.
+ * @returns {string} Empty string when valid, error code otherwise.
+ */
+function validateAvatarUrl(avatarUrl) {
+  if (!avatarUrl) return '';
+  if (avatarUrl.length > AVATAR_URL_MAX_LENGTH) {
+    return '[PRF-103] رابط الصورة طويل جداً';
+  }
+  if (!AVATAR_URL_PATTERN.test(avatarUrl)) {
+    return '[PRF-104] رابط الصورة يجب أن يبدأ بـ https://';
+  }
+  try {
+    const parsed = new URL(avatarUrl);
+    if (parsed.protocol !== 'https:') {
+      return '[PRF-104] رابط الصورة يجب أن يبدأ بـ https://';
+    }
+  } catch (parseError) {
+    void parseError;
+    return '[PRF-104] رابط الصورة يجب أن يبدأ بـ https://';
+  }
+
+  return '';
+}
+
+/**
+ * Validates profile update input and returns a strictly-whitelisted payload.
+ *
+ * Only the fields in `ALLOWED_PROFILE_FIELDS` are passed through. Any other
+ * key (including `role`, `status`, `email`, `full_name`, `phone`, etc.) is
+ * silently dropped — users may never escalate via this endpoint.
+ *
+ * @param {Record<string, unknown>} body - Parsed JSON request body.
+ * @returns {{ errors: string[], payload: Record<string, unknown> }} Validation result.
  */
 function validateProfileInput(body) {
   const errors = [];
   const payload = {};
-  const raw = body || {};
-
-  // Locked fields — users cannot change these; only admins can.
-  const LOCKED_FIELDS = ['full_name', 'phone', 'country', 'preferred_currency'];
-  for (const field of LOCKED_FIELDS) {
-    delete raw[field];
-  }
+  const raw = body && typeof body === 'object' ? body : {};
 
   if ('avatar_url' in raw) {
-    const avatarUrl = typeof raw.avatar_url === 'string' ? raw.avatar_url.trim() : '';
-    if (avatarUrl && avatarUrl.length > 2048) {
-      errors.push('[PRF-103] رابط الصورة طويل جداً');
+    const avatarUrl = normalizeProfileText(raw.avatar_url);
+    const avatarError = validateAvatarUrl(avatarUrl);
+    if (avatarError) {
+      errors.push(avatarError);
+    } else {
+      payload.avatar_url = avatarUrl || null;
     }
-    payload.avatar_url = avatarUrl || null;
   }
 
   if ('bio' in raw) {
-    const bio = typeof raw.bio === 'string' ? raw.bio.trim() : '';
-    if (bio && bio.length > 500) {
+    const bio = normalizeProfileText(raw.bio);
+    if (bio.length > BIO_MAX_LENGTH) {
       errors.push('[PRF-105] النبذة يجب ألا تتجاوز 500 حرف');
+    } else {
+      payload.bio = bio || null;
     }
-    payload.bio = bio || null;
   }
 
   if ('preferred_language' in raw) {
-    const lang = typeof raw.preferred_language === 'string' ? raw.preferred_language.trim() : '';
-    if (lang && lang.length > 12) {
+    const lang = normalizeProfileText(raw.preferred_language).toLowerCase();
+    if (lang && !ALLOWED_LANGUAGE_CODES.includes(lang)) {
       errors.push('[PRF-106] قيمة اللغة غير صالحة');
+    } else {
+      payload.preferred_language = lang || 'ar';
     }
-    payload.preferred_language = lang || 'ar';
   }
 
-  // Always set updated_at if there's anything to update
+  // Final guard: refuse any field that bypassed the allowlist above. The
+  // validator builds `payload` from explicit keys only, so this is defensive.
+  for (const key of Object.keys(payload)) {
+    if (!ALLOWED_PROFILE_FIELDS.includes(key)) {
+      delete payload[key];
+    }
+  }
+
   if (Object.keys(payload).length > 0) {
     payload.updated_at = new Date().toISOString();
   }

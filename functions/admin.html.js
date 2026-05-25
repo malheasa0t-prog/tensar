@@ -14,8 +14,52 @@ const NO_CACHE_HEADERS = Object.freeze({
   "X-Robots-Tag": "noindex, nofollow, noarchive",
 });
 const ADMIN_SESSION_ROUTE = "/api/admin/session";
-const ADMIN_SHELL_VERSION = "20260523-2";
-const PANEL_FETCH_PATH = `/__tz-panel.html?v=${ADMIN_SHELL_VERSION}`;
+const ADMIN_SHELL_VERSION = "20260525-1";
+const PANEL_FETCH_PATH = `/tz-panel.html?v=${ADMIN_SHELL_VERSION}`;
+const ADMIN_GATE_SCRIPT_PATH = `/js/admin-gate.js?v=${ADMIN_SHELL_VERSION}`;
+const SUPABASE_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+
+/**
+ * Generates a cryptographically-random nonce suitable for `script-src` CSP.
+ *
+ * @returns {string} 128-bit base64-url nonce string.
+ */
+function generateAdminGateNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Builds the nonce-scoped CSP for the admin gate page.
+ *
+ * Removes `'unsafe-inline'` from script-src — the page contains no inline
+ * scripts; the config blob is injected as JSON via a type=application/json
+ * tag and consumed by /js/admin-gate.js.
+ *
+ * @param {string} nonce - Random per-request nonce.
+ * @returns {string} Content-Security-Policy header value.
+ */
+function buildAdminGateCsp(nonce) {
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "img-src 'self' data:",
+    `script-src 'self' 'nonce-${nonce}' https://cdn.jsdelivr.net`,
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "manifest-src 'self'",
+    "worker-src 'self' blob:",
+  ].join("; ");
+}
 
 /**
  * Reads the public Supabase URL from environment bindings.
@@ -43,34 +87,40 @@ function getSupabaseAnonKey(env) {
 }
 
 /**
- * Escapes one string for safe inline JavaScript embedding.
+ * Escapes a string for safe inclusion inside a `<script type="application/json">`
+ * block. The two characters we need to neutralize are `<` (so the parser can't
+ * see `</script>` early) and `&` (so the decoder doesn't interpret entities).
  *
- * @param {string} value - Raw string value.
- * @returns {string} Escaped string literal content.
+ * @param {string} value - Raw text to embed.
+ * @returns {string} Encoded text safe for JSON-in-HTML embedding.
  */
-function escapeJsString(value) {
+function escapeJsonInHtml(value) {
   return String(value || "")
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'")
-    .replace(/"/g, '\\"')
-    .replace(/</g, "\\x3c")
-    .replace(/>/g, "\\x3e");
+    .replace(/&/g, "\\u0026")
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 /**
- * Builds the temporary admin gate page.
+ * Builds the admin gate page.
  *
  * The page checks whether a session exists, then validates it through the
- * secured admin endpoint before loading the protected shell.
+ * secured admin endpoint before loading the protected shell. The bootstrap
+ * runs from /js/admin-gate.js so the page CSP can drop `'unsafe-inline'`.
  *
- * @param {{ supabaseUrl: string, supabaseAnonKey: string }} config - Runtime config.
+ * @param {{ nonce: string, supabaseAnonKey: string, supabaseUrl: string }} config - Runtime config.
  * @returns {string} Complete HTML gate document.
  */
-export function buildAdminGateHtml({ supabaseUrl, supabaseAnonKey }) {
-  const safeUrl = escapeJsString(supabaseUrl);
-  const safeKey = escapeJsString(supabaseAnonKey);
-  const safePanelPath = escapeJsString(PANEL_FETCH_PATH);
-  const safeSessionRoute = escapeJsString(ADMIN_SESSION_ROUTE);
+export function buildAdminGateHtml({ nonce, supabaseAnonKey, supabaseUrl }) {
+  const safeNonce = String(nonce || "").replace(/[^A-Za-z0-9_-]/g, "");
+  const configJson = escapeJsonInHtml(JSON.stringify({
+    panelPath: PANEL_FETCH_PATH,
+    sessionRoute: ADMIN_SESSION_ROUTE,
+    supabaseAnonKey,
+    supabaseUrl,
+  }));
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -97,124 +147,21 @@ body{margin:0;padding:0;font-family:system-ui,sans-serif;background:#0f172a;colo
 <div id="gateLoading"><div class="g-s"></div><div class="g-t" id="gateStatus">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642...</div></div>
 <div id="gateDenied" class="g-d"><div class="g-i">\u26D4</div><div class="g-t g-e" id="gateDeniedMsg"></div><a href="/" class="g-b">\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0631\u0626\u064A\u0633\u064A\u0629</a></div>
 </div>
-<script>window.__tzAdminSupabaseLoaded=false;window.__tzAdminSupabaseLoadFailed=false;</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer onload="window.__tzAdminSupabaseLoaded=true" onerror="window.__tzAdminSupabaseLoadFailed=true"></script>
-<script>
-(function(){
-var U="${safeUrl}",K="${safeKey}",P="${safePanelPath}",S="${safeSessionRoute}";
-var ADMIN_LIBRARY_TIMEOUT_MS=5000,ADMIN_LIBRARY_POLL_MS=100;
-var statusNode=document.getElementById("gateStatus");
-var loadingNode=document.getElementById("gateLoading");
-var deniedNode=document.getElementById("gateDenied");
-var deniedMsg=document.getElementById("gateDeniedMsg");
-function setMessage(msg){if(statusNode){statusNode.textContent=msg;}}
-function showDenied(msg){
-  if(loadingNode){loadingNode.style.display="none";}
-  if(deniedNode){deniedNode.style.display="block";}
-  if(deniedMsg){deniedMsg.textContent=msg;}
-}
-function clearAdminShellCaches(){
-  if(!("caches" in window)){return Promise.resolve();}
-  return window.caches.keys()
-    .then(function(keys){
-      var cacheKeys=keys.filter(function(key){return String(key||"").indexOf("tz-admin-shell-")===0;});
-      return Promise.all(cacheKeys.map(function(key){return window.caches.delete(key);}));
-    })
-    .catch(function(){return null;});
-}
-function unregisterAdminServiceWorkers(){
-  if(!("serviceWorker" in navigator) || typeof navigator.serviceWorker.getRegistrations!=="function"){
-    return Promise.resolve();
-  }
-  return navigator.serviceWorker.getRegistrations()
-    .then(function(registrations){
-      var adminRegistrations=registrations.filter(function(registration){
-        var url = String(registration?.active?.scriptURL || registration?.waiting?.scriptURL || registration?.installing?.scriptURL || "");
-        return url.indexOf("admin-sw.js") !== -1;
-      });
-      return Promise.all(adminRegistrations.map(function(registration){return registration.unregister();}));
-    })
-    .catch(function(){return null;});
-}
-function resetLegacyAdminShellState(){
-  return Promise.all([clearAdminShellCaches(), unregisterAdminServiceWorkers()]).then(function(){return null;});
-}
-function loadShell(){
-  resetLegacyAdminShellState()
-    .then(function(){
-      return fetch(P+window.location.search,{credentials:"same-origin"});
-    })
-    .then(function(response){if(!response.ok)throw new Error("panel");return response.text();})
-    .then(function(html){document.open();document.write(html);document.close();})
-    .catch(function(){
-      setMessage("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.");
-    });
-}
-function validateAdminSession(token){
-  if(!token){showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");return;}
-  fetch(S,{
-    method:"GET",
-    credentials:"same-origin",
-    headers:{
-      "Accept":"application/json",
-      "Authorization":"Bearer "+token
+<script id="tzAdminGateConfig" type="application/json" nonce="${safeNonce}">${configJson}</script>
+<script nonce="${safeNonce}">
+  (function () {
+    var node = document.getElementById("tzAdminGateConfig");
+    try {
+      window.__tzAdminGate = node ? JSON.parse(node.textContent || "{}") : {};
+    } catch (parseError) {
+      window.__tzAdminGate = {};
     }
-  })
-  .then(function(response){
-    if(response.status===401){
-      showDenied("\u062C\u0644\u0633\u062A\u0643 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629. \u0633\u062C\u0644 \u062F\u062E\u0648\u0644\u0643 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");
-      return null;
-    }
-    if(response.status===403){
-      showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
-      return null;
-    }
-    if(!response.ok)throw new Error("session");
-    return response.json();
-  })
-  .then(function(payload){
-    if(payload===null){return;}
-    if(!payload||payload.success!==true||!payload.user){
-      showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
-      return;
-    }
-    loadShell();
-  })
-  .catch(function(){
-    setMessage("\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062C\u0644\u0633\u0629. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.");
-  });
-}
-if(!U||!K){
-  setMessage("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
-  return;
-}
-function startAdminGate(){
-  var client=window.supabase.createClient(U,K);
-  client.auth.getSession()
-    .then(function(result){
-      var session=result&&result.data&&result.data.session;
-      if(!session||!session.access_token){
-        showDenied("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629.");
-        return;
-      }
-      validateAdminSession(session.access_token);
-    })
-    .catch(function(){showDenied("\u062A\u0639\u0630\u0631 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062C\u0644\u0633\u0629.");});
-}
-function waitForSupabaseLibrary(startedAt){
-  if(window.supabase&&typeof window.supabase.createClient==="function"){
-    startAdminGate();
-    return;
-  }
-  if(window.__tzAdminSupabaseLoadFailed||Date.now()-startedAt>=ADMIN_LIBRARY_TIMEOUT_MS){
-    showDenied("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629.");
-    return;
-  }
-  window.setTimeout(function(){waitForSupabaseLibrary(startedAt);},ADMIN_LIBRARY_POLL_MS);
-}
-waitForSupabaseLibrary(Date.now());
-})();
+    window.__tzAdminSupabaseLoaded = false;
+    window.__tzAdminSupabaseLoadFailed = false;
+  })();
 </script>
+<script src="${SUPABASE_CDN_URL}" defer nonce="${safeNonce}"></script>
+<script src="${ADMIN_GATE_SCRIPT_PATH}" defer nonce="${safeNonce}"></script>
 </body>
 </html>`;
 }
@@ -222,25 +169,36 @@ waitForSupabaseLibrary(Date.now());
 /**
  * Handles GET /admin.html by returning the hardened gate page.
  *
+ * The response carries a per-request CSP nonce and a strict `script-src` so
+ * the gate page cannot execute unexpected inline scripts even if an upstream
+ * proxy injects them.
+ *
  * @param {EventContext} context - Cloudflare Pages function context.
  * @returns {Response} HTML response for the admin gate page.
  */
 export function onRequestGet(context) {
   const env = context?.env ?? {};
+  const nonce = generateAdminGateNonce();
   const html = buildAdminGateHtml({
+    nonce,
     supabaseAnonKey: getSupabaseAnonKey(env),
     supabaseUrl: getSupabaseUrl(env),
   });
+
+  const responseHeaders = {
+    ...NO_CACHE_HEADERS,
+    "Content-Security-Policy": buildAdminGateCsp(nonce),
+  };
 
   return withSecurityHeaders(
     new Response(html, {
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        ...NO_CACHE_HEADERS,
+        ...responseHeaders,
       },
     }),
-    NO_CACHE_HEADERS
+    responseHeaders
   );
 }
 

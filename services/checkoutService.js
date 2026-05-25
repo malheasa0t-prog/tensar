@@ -1,5 +1,6 @@
 import { normalizeSiteSettings } from '@/lib/contactChannels';
 import { buildCheckoutRequestPayload } from '@/lib/checkoutRequestPayload';
+import { createIdempotencyKey } from '@/lib/idempotencyKey';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { loadSiteSettingsClient } from '@/lib/siteSettingsClient';
 
@@ -57,6 +58,7 @@ export async function submitCheckoutOrder({ items, form }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Idempotency-Key': createIdempotencyKey(),
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(buildCheckoutRequestPayload({ items, form })),

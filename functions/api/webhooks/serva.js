@@ -38,17 +38,52 @@ const STATUS_LABELS = Object.freeze({
 
 /* ─── Auth ─── */
 
+const WEBHOOK_REPLAY_WINDOW_MS = 5 * 60 * 1000;
+const WEBHOOK_GENERIC_AUTH_ERROR = "Unauthorized.";
+
 /**
- * Validates the webhook secret from the request header.
+ * Compares two byte sequences in constant time.
+ *
+ * Falls back to a manual XOR scan when SubtleCrypto's timingSafeEqual is not
+ * available in the Workers runtime. Length-mismatched inputs still iterate
+ * to avoid leaking length differences via early-return timing.
+ *
+ * @param {string} candidate - Untrusted value supplied by the caller.
+ * @param {string} expected - Trusted secret stored on the server.
+ * @returns {boolean} True when both inputs are byte-for-byte identical.
+ */
+function timingSafeEqualStrings(candidate, expected) {
+  const candidateBytes = new TextEncoder().encode(String(candidate || ""));
+  const expectedBytes = new TextEncoder().encode(String(expected || ""));
+  const length = Math.max(candidateBytes.length, expectedBytes.length);
+  let diff = candidateBytes.length ^ expectedBytes.length;
+  for (let index = 0; index < length; index += 1) {
+    const left = index < candidateBytes.length ? candidateBytes[index] : 0;
+    const right = index < expectedBytes.length ? expectedBytes[index] : 0;
+    diff |= left ^ right;
+  }
+
+  return diff === 0;
+}
+
+/**
+ * Validates the webhook secret and optional timestamp from request headers.
+ *
+ * - Uses constant-time comparison to defeat timing attacks.
+ * - Returns a single generic error message regardless of the failure reason
+ *   to avoid leaking which check failed.
+ * - When `x-webhook-timestamp` is present, rejects requests older than the
+ *   replay window (5 minutes) to bound replay attacks.
  *
  * @param {Request} request - Incoming request.
  * @param {Record<string, string>} env - Environment bindings.
- * @returns {{ valid: boolean, error?: string }}
+ * @returns {{ valid: boolean, error?: string }} Auth decision.
  */
 function validateWebhookAuth(request, env) {
   const expectedSecret = String(env.SERVA_WEBHOOK_SECRET || "").trim();
   if (!expectedSecret) {
-    return { valid: false, error: "Webhook secret not configured." };
+    console.error("[WEBHOOK] SERVA_WEBHOOK_SECRET not configured in environment.");
+    return { valid: false, error: WEBHOOK_GENERIC_AUTH_ERROR };
   }
 
   const provided = String(
@@ -57,8 +92,16 @@ function validateWebhookAuth(request, env) {
     ""
   ).trim();
 
-  if (provided !== expectedSecret) {
-    return { valid: false, error: "Invalid webhook secret." };
+  if (!timingSafeEqualStrings(provided, expectedSecret)) {
+    return { valid: false, error: WEBHOOK_GENERIC_AUTH_ERROR };
+  }
+
+  const timestampHeader = String(request.headers.get("x-webhook-timestamp") || "").trim();
+  if (timestampHeader) {
+    const timestampMs = Number(timestampHeader);
+    if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > WEBHOOK_REPLAY_WINDOW_MS) {
+      return { valid: false, error: WEBHOOK_GENERIC_AUTH_ERROR };
+    }
   }
 
   return { valid: true };
@@ -135,7 +178,7 @@ export async function onRequestPost(context) {
 
   const auth = validateWebhookAuth(request, env);
   if (!auth.valid) {
-    return errorResponse(auth.error, 401);
+    return errorResponse(WEBHOOK_GENERIC_AUTH_ERROR, 401);
   }
 
   const { data: body, error: parseError } = await parseWebhookBody(request);
@@ -255,18 +298,19 @@ export async function onRequestPost(context) {
 }
 
 /**
- * OPTIONS /api/webhooks/serva — CORS preflight.
+ * OPTIONS /api/webhooks/serva — server-to-server endpoint, no CORS surface.
  *
- * @returns {Response}
+ * The provider calls this endpoint directly from its backend, not from a
+ * browser, so cross-origin preflight is unnecessary. Returning 405 keeps the
+ * attack surface small and prevents reflective CORS misuse.
+ *
+ * @returns {Response} HTTP 405 with the allowed methods header.
  */
 export function onRequestOptions() {
   return new Response(null, {
-    status: 204,
+    status: 405,
     headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": ALLOWED_METHODS,
-      "Access-Control-Allow-Headers": "Content-Type, x-webhook-secret, x-api-key",
-      "Access-Control-Max-Age": "86400",
+      Allow: ALLOWED_METHODS,
     },
   });
 }

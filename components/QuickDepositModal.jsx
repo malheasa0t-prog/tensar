@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppIcon from "@/components/AppIcon";
 import Button from "@/components/Button";
 import { useToast } from "@/components/ToastProvider";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import { loadSupabaseClient } from "@/lib/loadSupabaseClient";
 import {
   MAX_DEPOSIT_AMOUNT,
@@ -90,28 +91,22 @@ export default function QuickDepositModal({ onClose }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const { handleKeyDown: handleModalKeyDown } = useModalAccessibility({
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    isOpen: true,
+    onClose,
+  });
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
-    /**
-     * Closes modal on Escape key press.
-     *
-     * @param {KeyboardEvent} event
-     */
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
     return () => {
       document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, []);
 
   /**
    * Handles the deposit form submission.
@@ -157,9 +152,12 @@ export default function QuickDepositModal({ onClose }) {
       <div
         style={MODAL_CARD_STYLE}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleModalKeyDown}
         role="dialog"
         aria-modal="true"
         aria-labelledby="quick-deposit-title"
+        ref={dialogRef}
+        tabIndex={-1}
       >
         <div style={HEADER_STYLE}>
           <h3
@@ -172,6 +170,7 @@ export default function QuickDepositModal({ onClose }) {
             type="button"
             onClick={onClose}
             aria-label="إغلاق"
+            ref={closeButtonRef}
             style={{
               background: "none",
               border: "none",

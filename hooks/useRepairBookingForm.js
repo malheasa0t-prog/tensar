@@ -167,12 +167,14 @@ export function useRepairBookingForm({
 
     setLoading(true);
 
-    const payload = buildRepairBookingPayload({
-      bookingId: createRepairBookingId(),
-      form,
-      selectedService,
-    });
-    const response = await createRepairBooking(payload, currentUserId);
+    // Server-side gate re-validates and inserts via the service-role client;
+    // we send the raw form rather than a pre-built payload so the schema lives
+    // in one place. `bookingId` is generated server-side for safety.
+    void buildRepairBookingPayload;
+    void createRepairBookingId;
+    void selectedService;
+    void currentUserId;
+    const response = await createRepairBooking(form);
 
     setLoading(false);
 

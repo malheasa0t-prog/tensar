@@ -1,6 +1,6 @@
 .shell {
   position: fixed;
-  left: 24px;
+  inset-inline-start: 24px;
   bottom: 170px;
   z-index: 121;
 }
@@ -33,7 +33,7 @@
 
 .note {
   position: absolute;
-  left: calc(100% + 0.75rem);
+  inset-inline-start: calc(100% + 0.75rem);
   top: 50%;
   transform: translateY(-50%) translateX(-8px);
   white-space: nowrap;
@@ -53,7 +53,7 @@
 
 .welcomeBubble {
   position: absolute;
-  left: calc(100% + 0.75rem);
+  inset-inline-start: calc(100% + 0.75rem);
   bottom: 0;
   width: min(290px, calc(100vw - 2rem));
   padding: 0.95rem 1rem;
@@ -96,7 +96,7 @@
 
 @media (max-width: 768px) {
   .shell {
-    left: 16px;
+    inset-inline-start: 16px;
     bottom: 85px;
   }
 

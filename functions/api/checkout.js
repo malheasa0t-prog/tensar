@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { finalizeCheckoutResponse } from "./checkout-cors.js";
 import { guardGuestCheckoutRateLimit } from "../_lib/checkoutGuestRateLimit.js";
+import { withIdempotency } from "../_lib/idempotency.js";
 import {
   createSupabaseAdmin,
   errorResponse,
@@ -101,200 +102,214 @@ export function createCheckoutHandler(dependencies = {}) {
   return async function handleCheckoutPost(context) {
     const { env, request } = context;
 
-    try {
-      const guestCheckoutRateLimitResponse = await guardGuestCheckoutRateLimitImpl({
-        env,
+    const guestCheckoutRateLimitResponse = await guardGuestCheckoutRateLimitImpl({
+      env,
+      request,
+    });
+    if (guestCheckoutRateLimitResponse) {
+      return finalizeCheckoutResponse({
         request,
+        response: guestCheckoutRateLimitResponse,
       });
-      if (guestCheckoutRateLimitResponse) {
-        return finalizeCheckoutResponse({
-          request,
-          response: guestCheckoutRateLimitResponse,
-        });
+    }
+
+    const contentLength = Number(request.headers.get('content-length') || 0);
+    if (contentLength > 50_000) {
+      return finalizeCheckoutResponse({
+        request,
+        response: errorResponse('[CHK-100] حجم الطلب كبير جداً', 413),
+      });
+    }
+
+    let rawBody = "";
+    try {
+      rawBody = await request.text();
+    } catch (readError) {
+      console.error("[CHK-501] Failed to read checkout request body.", readError);
+      return finalizeCheckoutResponse({
+        request,
+        response: errorResponse("[CHK-501] تعذر قراءة بيانات الطلب", 400),
+      });
+    }
+
+    // The idempotency layer fingerprints the raw body and caches the resulting
+    // response, so a double-click on "Pay" or a retry on network error replays
+    // the original 200 instead of producing a second order.
+    const pipelineResponse = await withIdempotency({
+      env,
+      request,
+      requestBody: rawBody,
+      scope: "checkout",
+      handler: () => runCheckoutPipeline({ env, rawBody, request }),
+    });
+
+    return finalizeCheckoutResponse({ request, response: pipelineResponse });
+
+    /**
+     * Runs the parse → validate → reserve inventory → create order → provider
+     * sync pipeline. Returns plain Response objects so the idempotency layer
+     * can cache them; the surrounding handler adds CORS once at the end.
+     *
+     * @param {{ env: Record<string, unknown>, rawBody: string, request: Request }} pipelineInput - Pipeline input.
+     * @returns {Promise<Response>} Pipeline response (success or mapped error).
+     */
+    async function runCheckoutPipeline({ env: pipelineEnv, rawBody: pipelineRawBody, request: pipelineRequest }) {
+      let parsedBody;
+      try {
+        parsedBody = pipelineRawBody ? JSON.parse(pipelineRawBody) : {};
+      } catch (parseError) {
+        void parseError;
+        return errorResponse("[CHK-108] هيكل الطلب غير صالح", 400);
       }
-
-      const contentLength = Number(request.headers.get('content-length') || 0);
-      if (contentLength > 50_000) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse('[CHK-100] حجم الطلب كبير جداً', 413),
-        });
-      }
-
-      const checkoutRequest = parseCheckoutRequest(await request.json());
-      const admin = createSupabaseAdminImpl(env);
-      const requestClient = createCheckoutRequestClientImpl({ env, request });
-      const hasBearerToken = Boolean(extractBearerToken(request));
-      const userId = await resolveCheckoutUserIdImpl({ admin, request, requestClient });
-
-      if (hasBearerToken && !userId) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse('[CHK-104] جلسة غير صالحة. أعد تسجيل الدخول.', 401),
-        });
-      }
-      const checkoutCatalog = await loadCheckoutCatalog({
-        admin,
-        items: checkoutRequest.items,
-      });
-
-      validateCheckoutDigitalContact({
-        customerContactLink: checkoutRequest.customerContactLink,
-        serviceProducts: checkoutCatalog.serviceProducts,
-      });
-
-      const { orderItems, subtotal } = buildCheckoutOrderItems({
-        items: checkoutRequest.items,
-        productMap: checkoutCatalog.productMap,
-      });
-      const inventoryAdjustments = buildCheckoutInventoryAdjustments({
-        buildInventoryAdjustmentsImpl,
-        items: checkoutRequest.items,
-        physicalProducts: checkoutCatalog.physicalProducts,
-      });
-
-      // Step 1: Deduct inventory FIRST to prevent overselling.
-      // The deduct_inventory RPC uses FOR UPDATE locks, so concurrent
-      // requests will be serialized at the DB level.
-      let appliedInventoryAdjustments = [];
 
       try {
-        appliedInventoryAdjustments = await applyCheckoutInventoryAdjustments({
+        const checkoutRequest = parseCheckoutRequest(parsedBody);
+        const admin = createSupabaseAdminImpl(pipelineEnv);
+        const requestClient = createCheckoutRequestClientImpl({ env: pipelineEnv, request: pipelineRequest });
+        const hasBearerToken = Boolean(extractBearerToken(pipelineRequest));
+        const userId = await resolveCheckoutUserIdImpl({ admin, request: pipelineRequest, requestClient });
+
+        if (hasBearerToken && !userId) {
+          return errorResponse('[CHK-104] جلسة غير صالحة. أعد تسجيل الدخول.', 401);
+        }
+
+        const checkoutCatalog = await loadCheckoutCatalog({
+          admin,
+          items: checkoutRequest.items,
+        });
+
+        validateCheckoutDigitalContact({
+          customerContactLink: checkoutRequest.customerContactLink,
+          serviceProducts: checkoutCatalog.serviceProducts,
+        });
+
+        const { orderItems, subtotal } = buildCheckoutOrderItems({
+          items: checkoutRequest.items,
+          productMap: checkoutCatalog.productMap,
+        });
+        const inventoryAdjustments = buildCheckoutInventoryAdjustments({
+          buildInventoryAdjustmentsImpl,
+          items: checkoutRequest.items,
+          physicalProducts: checkoutCatalog.physicalProducts,
+        });
+
+        // Step 1: deduct inventory first. deduct_inventory RPC uses FOR UPDATE
+        // locks so concurrent attempts are serialized at the DB level.
+        const appliedInventoryAdjustments = await applyCheckoutInventoryAdjustments({
           admin,
           adjustments: inventoryAdjustments,
           applyInventoryAdjustmentsImpl,
         });
-      } catch (inventoryError) {
-        // No order was created yet, so no cleanup needed — just fail
-        throw inventoryError;
-      }
 
-      // Step 2: Create the order record AFTER inventory is secured
-      let orderId;
-      let displayNumber;
-      let total;
+        // Step 2: create the order record after inventory is secured.
+        let orderId;
+        let displayNumber;
+        let total;
+        try {
+          const orderResult = await createCheckoutOrderRecord({
+            admin,
+            customerEmail: checkoutRequest.customerEmail,
+            customerName: checkoutRequest.customerName,
+            customerPhone: checkoutRequest.customerPhone,
+            deliveryMethod: checkoutRequest.deliveryMethod,
+            notes: checkoutRequest.notes,
+            orderItems,
+            paymentMethod: checkoutRequest.paymentMethod,
+            subtotal,
+            userId,
+          });
+          orderId = orderResult.orderId;
+          displayNumber = orderResult.displayNumber;
+          total = orderResult.total;
+        } catch (orderError) {
+          await rollbackCheckoutProcessing({
+            admin,
+            appliedInventoryAdjustments,
+            orderId: null,
+            rollbackCheckoutStateImpl,
+          });
+          throw orderError;
+        }
 
-      try {
-        const orderResult = await createCheckoutOrderRecord({
-          admin,
-          customerEmail: checkoutRequest.customerEmail,
-          customerName: checkoutRequest.customerName,
-          customerPhone: checkoutRequest.customerPhone,
-          deliveryMethod: checkoutRequest.deliveryMethod,
-          notes: checkoutRequest.notes,
-          orderItems,
-          paymentMethod: checkoutRequest.paymentMethod,
-          subtotal,
-          userId,
-        });
-        orderId = orderResult.orderId;
-        displayNumber = orderResult.displayNumber;
-        total = orderResult.total;
-      } catch (orderError) {
-        // Order creation failed after inventory was deducted — rollback inventory
-        await rollbackCheckoutProcessing({
-          admin,
-          appliedInventoryAdjustments,
-          orderId: null,
-          rollbackCheckoutStateImpl,
-        });
-        throw orderError;
-      }
+        // Step 3: provider sync + notification. Failures here trigger full rollback.
+        try {
+          await syncCheckoutProviderOrders({
+            admin,
+            createProviderOrderImpl,
+            customerContactLink: checkoutRequest.customerContactLink,
+            customerPhone: checkoutRequest.customerPhone,
+            env: pipelineEnv,
+            items: checkoutRequest.items,
+            orderId,
+            productMap: checkoutCatalog.productMap,
+          });
 
-      // Step 3: Provider sync + notification (failures here trigger full rollback)
-      try {
-        await syncCheckoutProviderOrders({
-          admin,
-          createProviderOrderImpl,
-          customerContactLink: checkoutRequest.customerContactLink,
-          customerPhone: checkoutRequest.customerPhone,
-          env,
-          items: checkoutRequest.items,
-          orderId,
-          productMap: checkoutCatalog.productMap,
-        });
+          await sendCheckoutNotification({
+            admin,
+            displayNumber,
+            orderId,
+            orderItemsCount: orderItems.length,
+            total,
+            userId,
+          });
 
-        await sendCheckoutNotification({
-          admin,
-          displayNumber,
-          orderId,
-          orderItemsCount: orderItems.length,
-          total,
-          userId,
-        });
-
-        return finalizeCheckoutResponse({
-          request,
-          response: successResponse({
+          return successResponse({
             data: {
               order_id: orderId,
               display_number: displayNumber,
               total,
               items_count: orderItems.length,
             },
-          }),
-        });
-      } catch (processingError) {
-        await rollbackCheckoutProcessing({
-          admin,
-          appliedInventoryAdjustments:
-            processingError?.appliedInventoryAdjustments || appliedInventoryAdjustments,
-          orderId,
-          rollbackCheckoutStateImpl,
-        });
-        throw processingError;
+          });
+        } catch (processingError) {
+          await rollbackCheckoutProcessing({
+            admin,
+            appliedInventoryAdjustments:
+              processingError?.appliedInventoryAdjustments || appliedInventoryAdjustments,
+            orderId,
+            rollbackCheckoutStateImpl,
+          });
+          throw processingError;
+        }
+      } catch (error) {
+        return mapCheckoutErrorToResponse(error);
       }
-    } catch (error) {
-      const errorMessage = String(error?.message || "").trim();
-      console.error("[CHK-500] Checkout API error:", error);
-
-      if (["[CHK-101]", "[CHK-102]", "[CHK-103]", "[CHK-106]", "[CHK-107]", "[CHK-108]", "[CHK-112]"]
-        .some((code) => errorMessage.startsWith(code))) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse(errorMessage, 400),
-        });
-      }
-
-      if (errorMessage.startsWith("[CHK-104]")) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse(errorMessage, 403),
-        });
-      }
-
-      if (
-        ["[CHK-105]", "[CHK-109]", "[CHK-110]", "[CHK-113]", "[CHK-114]"].some((code) =>
-          errorMessage.startsWith(code)
-        )
-      ) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse(errorMessage, 500),
-        });
-      }
-
-      if (errorMessage.startsWith("[CKP-302]")) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse(errorMessage, 409),
-        });
-      }
-
-      if (errorMessage.startsWith("[CKP-301]") || errorMessage.startsWith("[CKP-303]")) {
-        return finalizeCheckoutResponse({
-          request,
-          response: errorResponse(errorMessage, 500),
-        });
-      }
-
-      return finalizeCheckoutResponse({
-        request,
-        response: errorResponse(
-          `[CHK-500] حدث خطأ غير متوقع: ${errorMessage}`,
-          500
-        ),
-      });
     }
   };
+}
+
+/**
+ * Maps a checkout pipeline error to the appropriate HTTP response.
+ *
+ * Defined at module scope so the catch path stays focused on classification
+ * and never leaks the raw `error.message` to the client for unmapped codes.
+ *
+ * @param {unknown} error - Thrown error from the checkout pipeline.
+ * @returns {Response} Public-safe error response.
+ */
+function mapCheckoutErrorToResponse(error) {
+  const errorMessage = String(error?.message || "").trim();
+  console.error("[CHK-500] Checkout API error:", error);
+
+  if (["[CHK-101]", "[CHK-102]", "[CHK-103]", "[CHK-106]", "[CHK-107]", "[CHK-108]", "[CHK-112]"]
+    .some((code) => errorMessage.startsWith(code))) {
+    return errorResponse(errorMessage, 400);
+  }
+  if (errorMessage.startsWith("[CHK-104]")) {
+    return errorResponse(errorMessage, 403);
+  }
+  if (["[CHK-105]", "[CHK-109]", "[CHK-110]", "[CHK-113]", "[CHK-114]"].some((code) =>
+    errorMessage.startsWith(code)
+  )) {
+    return errorResponse(errorMessage, 500);
+  }
+  if (errorMessage.startsWith("[CKP-302]")) {
+    return errorResponse(errorMessage, 409);
+  }
+  if (errorMessage.startsWith("[CKP-301]") || errorMessage.startsWith("[CKP-303]")) {
+    return errorResponse(errorMessage, 500);
+  }
+
+  // Final fallback — never echo error.message to the client.
+  return errorResponse("[CHK-500] حدث خطأ غير متوقع أثناء معالجة الطلب", 500);
 }

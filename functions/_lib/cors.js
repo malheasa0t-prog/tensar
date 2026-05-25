@@ -40,7 +40,7 @@ function buildCorsHeaders(request, methods = 'POST, OPTIONS') {
   return {
     'Access-Control-Allow-Origin': resolveOrigin(request),
     'Access-Control-Allow-Methods': methods,
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Idempotency-Key',
     'Vary': 'Origin',
   };
 }

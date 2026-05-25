@@ -61,3 +61,6 @@ scripts/setup_chat_table.py
 .sixth
 .open-next
 .wrangler
+
+# Claude Code personal settings (machine-specific permissions)
+.claude/settings.local.json

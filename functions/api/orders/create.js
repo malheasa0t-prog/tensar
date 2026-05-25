@@ -3,6 +3,12 @@
  */
 
 import { createProviderOrder } from "../../_lib/providerApi.js";
+import { withIdempotency } from "../../_lib/idempotency.js";
+import {
+  applyApiRateLimit,
+  buildRateLimitConfigurationErrorResponse,
+  buildRateLimitExceededResponse,
+} from "../../_lib/rateLimit.js";
 import { createSupabaseAdmin, extractBearerToken, errorResponse, successResponse } from "../../_lib/supabase.js";
 
 const ORDER_MESSAGES = Object.freeze({
@@ -16,6 +22,19 @@ const ORDER_MESSAGES = Object.freeze({
   UNAUTHORIZED: "غير مصرح - يجب تسجيل الدخول",
   UNEXPECTED: "حدث خطأ غير متوقع",
 });
+
+/**
+ * Adds operational headers to one service-order response.
+ *
+ * @param {Response} response
+ * @param {Record<string, string>} headersToApply
+ * @returns {Response}
+ */
+function withOperationalHeaders(response, headersToApply = {}) {
+  const headers = new Headers(response.headers);
+  Object.entries(headersToApply).forEach(([name, value]) => headers.set(name, value));
+  return new Response(response.body, { status: response.status, headers });
+}
 
 /**
  * Validates that a value is a positive number.
@@ -94,14 +113,62 @@ function buildOrderNotificationBody(serviceName, quantity, total) {
 /**
  * Creates a digital service order and optionally forwards it to Serva-S.
  *
+ * Wraps the pipeline in `withIdempotency` so a duplicate POST with the same
+ * `Idempotency-Key` header replays the cached response instead of creating a
+ * second service_order row + provider request.
+ *
  * @param {EventContext} context - Cloudflare Pages function context.
  * @returns {Promise<Response>} API response.
  */
 export async function onRequestPost(context) {
   const { env, request } = context;
+  const limit = await applyApiRateLimit({ env, request });
+  if (limit.configurationError) {
+    return buildRateLimitConfigurationErrorResponse(limit.headers);
+  }
 
+  if (!limit.allowed) {
+    return buildRateLimitExceededResponse(limit.headers);
+  }
+
+  let rawBody = "";
   try {
-    const body = await request.json();
+    rawBody = await request.text();
+  } catch (readError) {
+    console.error("[ORD-501] Failed to read order body.", readError);
+    return withOperationalHeaders(
+      errorResponse("[ORD-501] تعذر قراءة بيانات الطلب", 400),
+      limit.headers
+    );
+  }
+
+  const response = await withIdempotency({
+    env,
+    request,
+    requestBody: rawBody,
+    scope: "service-order",
+    handler: () => runServiceOrderPipeline({ env, rawBody, request }),
+  });
+
+  return withOperationalHeaders(response, limit.headers);
+}
+
+/**
+ * Runs the validated service-order creation pipeline.
+ *
+ * @param {{ env: Record<string, unknown>, rawBody: string, request: Request }} input - Pipeline input.
+ * @returns {Promise<Response>} Pipeline response.
+ */
+async function runServiceOrderPipeline({ env, rawBody, request }) {
+  try {
+    let body;
+    try {
+      body = rawBody ? JSON.parse(rawBody) : {};
+    } catch (parseError) {
+      void parseError;
+      return errorResponse(ORDER_MESSAGES.INVALID_REQUEST, 400);
+    }
+
     const { service_id: serviceId, quantity, link } = body || {};
     const userToken = getAuthToken(request);
     const normalizedQuantity = asPositiveNumber(quantity);
@@ -197,15 +264,48 @@ export async function onRequestPost(context) {
           .update({ external_order_id: providerResult.orderId, status: "processing" })
           .eq("id", orderId);
       } else {
-        await admin
-          .from("service_orders")
-          .update({
-            metadata: {
-              provider_error: providerResult.error,
-              provider_attempted_at: new Date().toISOString(),
-            },
-          })
-          .eq("id", orderId);
+        // Provider failed AFTER the wallet was debited inside the RPC.
+        // Roll the wallet back and mark the order as failed so the user gets
+        // their balance back instead of an indefinitely "pending" order.
+        // The release RPC is idempotent — re-running it on a non-pending
+        // order is a no-op.
+        const { error: rollbackError } = await admin.rpc("release_service_order_wallet", {
+          p_order_id: orderId,
+          p_reason: providerResult.error || "provider_unreachable",
+        });
+
+        if (rollbackError) {
+          console.error("[ORD-301] Wallet rollback failed after provider error.", {
+            orderId,
+            providerError: providerResult.error,
+            rollbackError,
+          });
+        }
+
+        // Merge metadata via RPC to avoid overwriting fields the create RPC
+        // already populated (e.g. provider_fields snapshot).
+        const { error: metadataError } = await admin.rpc("merge_service_order_metadata", {
+          p_order_id: orderId,
+          p_metadata: {
+            provider_error: String(providerResult.error || "unknown"),
+            provider_attempted_at: new Date().toISOString(),
+            wallet_rollback_attempted: !rollbackError,
+          },
+        });
+
+        if (metadataError) {
+          console.error("[ORD-302] Failed to merge provider failure metadata.", {
+            orderId,
+            metadataError,
+          });
+        }
+
+        return errorResponse(
+          rollbackError
+            ? "[ORD-303] فشل إنشاء الطلب وتعذر استرجاع الرصيد. تواصل مع الدعم."
+            : "[ORD-304] فشل إنشاء الطلب لدى المزود. تم استرجاع الرصيد إلى محفظتك.",
+          502
+        );
       }
     }
 
