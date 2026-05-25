@@ -126,8 +126,9 @@ export default function QuickDepositModal({ onClose }) {
     }
 
     if (!proofFile) {
-      setError("يجب رفع صورة إثبات التحويل.");
-      return;
+      // Allow empty proof file for automated Orange Money deposits
+      // setError("يجب رفع صورة إثبات التحويل.");
+      // return;
     }
 
     setLoading(true);
@@ -280,8 +281,11 @@ export default function QuickDepositModal({ onClose }) {
                 fontSize: "0.95rem",
               }}
             >
-              صورة إثبات التحويل <span style={{ color: '#e74c3c' }}>*</span>
+              صورة إثبات التحويل <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>(اختياري)</span>
             </label>
+            <div style={{ fontSize: "0.85rem", color: "var(--primary)", marginBottom: "8px" }}>
+              💡 إذا قمت بالتحويل عبر Orange Money من رقم هاتفك المسجل، سيتم تأكيد طلبك تلقائياً دون الحاجة لصورة!
+            </div>
             <input
               type="file"
               accept="image/*"
