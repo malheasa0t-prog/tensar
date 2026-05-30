@@ -7,7 +7,7 @@ const DIGITAL_CONTACT_ERROR_MESSAGE =
   "[CHK-112] رقم الواتساب أو وسيلة التواصل مطلوبة للخدمات الرقمية";
 
 const ALLOWED_DELIVERY_METHODS = Object.freeze(["delivery", "pickup", "digital"]);
-const ALLOWED_PAYMENT_METHODS = Object.freeze(["cod", "wallet", "card"]);
+const ALLOWED_PAYMENT_METHODS = Object.freeze(["cod", "wallet", "wallet_balance", "card"]);
 const DEFAULT_DELIVERY_METHOD = "delivery";
 const DEFAULT_PAYMENT_METHOD = "cod";
 

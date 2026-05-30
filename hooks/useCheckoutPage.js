@@ -72,6 +72,7 @@ export function useCheckoutPage() {
   const [success, setSuccess] = useState(null);
   const [isWalletTransferModalOpen, setIsWalletTransferModalOpen] = useState(false);
   const [coupon, setCoupon] = useState(IDLE_COUPON_STATE);
+  const [walletBalance, setWalletBalance] = useState(null);
   const submissionStateRef = useRef(createSubmissionState());
 
   useEffect(() => {
@@ -123,6 +124,15 @@ export function useCheckoutPage() {
           customer_phone: prev.customer_phone || profile?.phone || '',
           customer_email: prev.customer_email || user.email || '',
         }));
+
+        const walletResponse = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (mounted && !walletResponse.error) {
+          setWalletBalance(Number(walletResponse.data?.balance) || 0);
+        }
       } catch (prefillError) {
         void prefillError;
       }
@@ -309,6 +319,10 @@ export function useCheckoutPage() {
   const couponDiscount = coupon.status === 'valid' ? coupon.discount : 0;
   const payableTotal = Math.max(0, checkoutTotal - couponDiscount);
 
+  const walletPaySelected = form.payment_method === 'wallet_balance';
+  const walletPayAvailable = walletBalance != null;
+  const walletInsufficient = walletPaySelected && (!walletPayAvailable || walletBalance < payableTotal);
+
   return {
     items,
     cartTotal,
@@ -319,13 +333,16 @@ export function useCheckoutPage() {
     loading,
     error,
     success,
-    canSubmit,
+    canSubmit: canSubmit && !walletInsufficient,
     walletTransferInstructions,
     isWalletTransferModalOpen,
     isWalletTransferUnavailable,
     coupon,
     couponDiscount,
     payableTotal,
+    walletBalance,
+    walletPayAvailable,
+    walletInsufficient,
     applyCoupon,
     closeWalletTransferModal,
     updateField,

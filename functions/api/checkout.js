@@ -232,6 +232,40 @@ export function createCheckoutHandler(dependencies = {}) {
           throw orderError;
         }
 
+        // Step 2.5: pay from the in-app wallet balance (atomic debit) before
+        // dispatching anything. Insufficient balance rolls the order back.
+        if (checkoutRequest.paymentMethod === "wallet_balance") {
+          if (!userId) {
+            await rollbackCheckoutProcessing({
+              admin,
+              appliedInventoryAdjustments,
+              orderId,
+              rollbackCheckoutStateImpl,
+            });
+            return errorResponse("[CHK-112] يجب تسجيل الدخول للدفع من رصيد المحفظة.", 401);
+          }
+
+          const walletPayment = await admin.rpc("pay_order_from_wallet", {
+            p_order_id: orderId,
+            p_user_id: userId,
+            p_amount: total,
+          });
+
+          if (walletPayment.error) {
+            await rollbackCheckoutProcessing({
+              admin,
+              appliedInventoryAdjustments,
+              orderId,
+              rollbackCheckoutStateImpl,
+            });
+            const walletMessage = String(walletPayment.error.message || "");
+            if (walletMessage.includes("Insufficient balance")) {
+              return errorResponse("[CHK-113] رصيد المحفظة غير كافٍ لإتمام هذا الطلب.", 400);
+            }
+            return errorResponse("[CHK-114] تعذّر الدفع من رصيد المحفظة.", 400);
+          }
+        }
+
         // Step 3: provider sync + notification. Failures here trigger full rollback.
         try {
           await syncCheckoutProviderOrders({

@@ -34,6 +34,9 @@ export default function CheckoutPage() {
     coupon,
     couponDiscount,
     payableTotal,
+    walletBalance,
+    walletPayAvailable,
+    walletInsufficient,
     applyCoupon,
     closeWalletTransferModal,
     updateField,
@@ -58,6 +61,10 @@ export default function CheckoutPage() {
             canSubmit={canSubmit}
             checkoutTotal={checkoutTotal}
             coupon={coupon}
+            payableTotal={payableTotal}
+            walletBalance={walletBalance}
+            walletPayAvailable={walletPayAvailable}
+            walletInsufficient={walletInsufficient}
             hasDigitalItems={hasDigitalItems}
             walletTransferInstructions={walletTransferInstructions}
             isWalletTransferModalOpen={isWalletTransferModalOpen}

@@ -168,6 +168,13 @@
 
         root.style.cssText = 'display:grid;gap:18px;max-height:70vh;overflow:auto;padding-top:4px;';
         appendInfoCards(statsGrid, stats, false);
+
+        // Wallet balance is fetched on-demand (not preloaded for every customer).
+        var walletCard = createInfoCard('رصيد المحفظة', 'جارٍ التحميل…', false);
+        var walletValue = walletCard.querySelector('strong');
+        if (walletValue) walletValue.id = 'custWalletBalance';
+        statsGrid.appendChild(walletCard);
+
         appendInfoCards(detailsGrid, details, true);
 
         thead.innerHTML = '<tr><th>المرجع</th><th>النوع</th><th>القيمة</th><th>الحالة</th><th>التاريخ</th></tr>';
@@ -204,6 +211,29 @@
             title: 'تفاصيل العميل',
             type: 'info'
         });
+
+        loadCustomerWalletBalance(profile);
+    }
+
+    async function loadCustomerWalletBalance(profile) {
+        var walletUserId = (profile.user && (profile.user.authUserId || profile.user.id)) || resolveCustomerId(profile);
+        var setValue = function (text) {
+            var el = document.getElementById('custWalletBalance');
+            if (el) el.textContent = text;
+        };
+        if (!walletUserId) { setValue('-'); return; }
+        try {
+            var result = await TZ.supabase
+                .from('wallets')
+                .select('balance')
+                .eq('user_id', walletUserId)
+                .maybeSingle();
+            if (result.error) { setValue('غير متاح'); return; }
+            setValue(TZ.formatPrice(Number(result.data && result.data.balance) || 0));
+        } catch (walletError) {
+            void walletError;
+            setValue('غير متاح');
+        }
     }
 
     async function toggleCustomerStatus(userId, currentStatus) {

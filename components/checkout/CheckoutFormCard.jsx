@@ -49,6 +49,10 @@ export default function CheckoutFormCard({
   isWalletTransferModalOpen,
   isWalletTransferUnavailable,
   loading,
+  payableTotal,
+  walletBalance,
+  walletPayAvailable,
+  walletInsufficient,
   onApplyCoupon,
   onCloseWalletTransferModal,
   onFieldChange,
@@ -151,7 +155,20 @@ export default function CheckoutFormCard({
                   {option.value === "wallet" ? "محفظة Orange Money" : option.label}
                 </option>
               ))}
+              {walletPayAvailable ? (
+                <option value="wallet_balance">
+                  الدفع من رصيد المحفظة ({formatCurrency(walletBalance || 0)})
+                </option>
+              ) : null}
             </select>
+
+            {form.payment_method === "wallet_balance" ? (
+              <div className={walletInsufficient ? "form-alert error" : "form-alert success"} role="alert">
+                {walletInsufficient
+                  ? `رصيد محفظتك (${formatCurrency(walletBalance || 0)}) لا يكفي لدفع ${formatCurrency(payableTotal ?? checkoutTotal)}. اشحن المحفظة أو اختر طريقة دفع أخرى.`
+                  : `سيتم خصم ${formatCurrency(payableTotal ?? checkoutTotal)} من رصيد محفظتك فوراً وتأكيد الطلب — بدون تحويل أو انتظار.`}
+              </div>
+            ) : null}
 
             {form.payment_method === "wallet" ? (
               <div
