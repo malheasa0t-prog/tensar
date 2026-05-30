@@ -10,6 +10,12 @@
 
     var A = window.AdminApp;
     var DAYS_RANGE = 30;
+    var selectedRange = 30;
+    var RANGE_OPTIONS = [
+        { days: 1, label: 'اليوم' },
+        { days: 7, label: 'آخر 7 أيام' },
+        { days: 30, label: 'آخر 30 يوم' }
+    ];
     var EXCLUDED_STATUSES = { cancelled: 1, failed: 1, refunded: 1 };
     var PENDING_STATUSES = { pending: 1, processing: 1, in_progress: 1, awaiting_delivery: 1, awaiting_device: 1 };
     var chartRegistry = [];
@@ -81,7 +87,7 @@
     /* ── build insights ── */
 
     function buildInsights(db) {
-        var timeline = getTimeline(DAYS_RANGE);
+        var timeline = getTimeline(selectedRange);
         var revenueByDay = {}, ordersByDay = {};
         var allOrders = TZ.clone(db.orders || []);
 
@@ -187,6 +193,14 @@
 
             var html = '';
 
+            /* ── Date range selector ── */
+            html += '<div class="admin-dashboard-range" style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">';
+            RANGE_OPTIONS.forEach(function (opt) {
+                var active = opt.days === selectedRange;
+                html += '<button class="btn btn-sm ' + (active ? 'btn-primary' : 'btn-outline') + '" data-range="' + opt.days + '">' + opt.label + '</button>';
+            });
+            html += '</div>';
+
             /* ── KPI Cards ── */
             html += '<div class="stats-grid">'
                 + kpi('fa-calendar-day', 'green', TZ.formatPrice(ins.todayRevenue), 'إيرادات اليوم')
@@ -226,8 +240,9 @@
             html += '</div>';
 
             /* ── Charts ── */
+            var revenueRangeLabel = (RANGE_OPTIONS.filter(function (o) { return o.days === selectedRange; })[0] || { label: '' }).label;
             html += '<div class="admin-dashboard-chart-grid">'
-                + chartPanel('fa-chart-line', 'الإيرادات خلال آخر 30 يوم', 'dashRevenueChart')
+                + chartPanel('fa-chart-line', 'الإيرادات — ' + revenueRangeLabel, 'dashRevenueChart')
                 + chartPanel('fa-chart-column', 'الأكثر مبيعاً', 'dashTopChart')
                 + '</div>';
 
@@ -303,6 +318,14 @@
     /* ── quick actions ── */
 
     function bindActions() {
+        document.querySelectorAll('[data-range]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var days = Number(btn.dataset.range) || 30;
+                if (days === selectedRange) return;
+                selectedRange = days;
+                renderDashboard();
+            });
+        });
         document.querySelectorAll('[data-dashboard-action]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var action = btn.dataset.dashboardAction;

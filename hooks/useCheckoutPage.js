@@ -98,7 +98,38 @@ export function useCheckoutPage() {
       );
     }
 
+    /**
+     * Prefills the checkout form from the signed-in user's saved profile so
+     * returning customers don't retype their details. Empty fields only.
+     *
+     * @returns {Promise<void>}
+     */
+    async function prefillFromProfile() {
+      try {
+        const supabase = await loadSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !mounted) return;
+
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('full_name, phone')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!mounted) return;
+
+        setForm((prev) => ({
+          ...prev,
+          customer_name: prev.customer_name || profile?.full_name || user.user_metadata?.full_name || '',
+          customer_phone: prev.customer_phone || profile?.phone || '',
+          customer_email: prev.customer_email || user.email || '',
+        }));
+      } catch (prefillError) {
+        void prefillError;
+      }
+    }
+
     hydrateCheckoutSettings();
+    prefillFromProfile();
 
     return () => {
       mounted = false;
