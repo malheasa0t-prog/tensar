@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import OrdersEmptyState from '@/components/dashboard-orders/OrdersEmptyState';
 import OrderStatusPill from '@/components/dashboard-orders/OrderStatusPill';
+import { useSiteRuntime } from '@/components/SiteRuntimeProvider';
+import { printOrderInvoice } from '@/lib/printInvoice';
 import {
   orderCardStyle,
   sectionStyle,
@@ -24,6 +26,7 @@ import {
  * @returns {JSX.Element}
  */
 export default function ProductOrdersSection({ orders, orderItemsMap }) {
+  const { siteSettings } = useSiteRuntime();
   return (
     <section style={sectionStyle}>
       <div
@@ -95,6 +98,14 @@ export default function ProductOrdersSection({ orders, orderItemsMap }) {
                     >
                       {formatDashboardMoney(order.total)}
                     </div>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ marginTop: '8px' }}
+                      onClick={() => printOrderInvoice({ order, items, settings: siteSettings })}
+                    >
+                      🧾 تحميل الإيصال
+                    </button>
                   </div>
                 </div>
 
