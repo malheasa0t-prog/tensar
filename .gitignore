@@ -71,3 +71,7 @@ supabase/.temp/
 # Local scratch files
 test.json
 test_api.py
+
+# Local dev logs
+vite-dev.log
+*.log
