@@ -88,6 +88,10 @@
         return profile.authUserId || user.authUserId || user.id || '';
     }
 
+    function canManageCustomerWallet() {
+        return Helpers.canManageCustomerWallet(window.__TZ_ADMIN_ACCESS);
+    }
+
     function buildNameButton(profile) {
         var user = profile.user || {};
         var label = user.fullName || user.email || resolveCustomerId(profile) || 'عميل';
@@ -136,6 +140,20 @@
         });
     }
 
+    function createWalletActionButton(profile, walletValue) {
+        if (!canManageCustomerWallet()) return null;
+
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-outline';
+        button.innerHTML = '<i class="fas fa-wallet"></i> تعديل الرصيد';
+        button.style.cssText = 'width:100%;margin-top:12px;padding:8px 12px;font-size:0.85rem;';
+        button.addEventListener('click', function () {
+            void openWalletAdjustment(profile, walletValue, button);
+        });
+        return button;
+    }
+
     function buildCustomerModalContent(profile) {
         var user = profile.user || {};
         var root = document.createElement('div');
@@ -173,6 +191,8 @@
         var walletCard = createInfoCard('رصيد المحفظة', 'جارٍ التحميل…', false);
         var walletValue = walletCard.querySelector('strong');
         if (walletValue) walletValue.id = 'custWalletBalance';
+        var walletActionButton = createWalletActionButton(profile, walletValue);
+        if (walletActionButton) walletCard.appendChild(walletActionButton);
         statsGrid.appendChild(walletCard);
 
         appendInfoCards(detailsGrid, details, true);
@@ -213,6 +233,177 @@
         });
 
         loadCustomerWalletBalance(profile);
+    }
+
+    function buildWalletAdjustmentForm(input) {
+        var currentBalance = String((input && input.currentBalance) || 'غير متاح');
+        var mode = String((input && input.mode) || 'credit');
+        var amount = String((input && input.amount) || '');
+        var reason = String((input && input.reason) || '');
+        var root = document.createElement('div');
+        var summary = document.createElement('div');
+        var modeField = document.createElement('label');
+        var modeSelect = document.createElement('select');
+        var amountField = document.createElement('label');
+        var amountInput = document.createElement('input');
+        var reasonField = document.createElement('label');
+        var reasonInput = document.createElement('textarea');
+
+        root.style.cssText = 'display:grid;gap:14px;padding-top:8px;';
+        summary.style.cssText = 'padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;background:rgba(255,255,255,0.03);';
+        summary.innerHTML = '<small style="display:block;color:var(--text-muted);margin-bottom:6px;">الرصيد الحالي</small><strong>' + esc(currentBalance) + '</strong>';
+
+        modeField.style.cssText = 'display:grid;gap:8px;';
+        modeField.innerHTML = '<span>نوع التعديل</span>';
+        modeSelect.innerHTML = '<option value="credit">إضافة رصيد</option><option value="debit">خصم رصيد</option>';
+        modeSelect.value = mode === 'debit' ? 'debit' : 'credit';
+        modeSelect.style.cssText = 'width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--surface-color);color:inherit;font:inherit;';
+        modeField.appendChild(modeSelect);
+
+        amountField.style.cssText = 'display:grid;gap:8px;';
+        amountField.innerHTML = '<span>المبلغ</span>';
+        amountInput.type = 'number';
+        amountInput.min = '0.01';
+        amountInput.step = '0.01';
+        amountInput.inputMode = 'decimal';
+        amountInput.placeholder = '0.00';
+        amountInput.value = amount;
+        amountInput.style.cssText = 'width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--surface-color);color:inherit;font:inherit;';
+        amountField.appendChild(amountInput);
+
+        reasonField.style.cssText = 'display:grid;gap:8px;';
+        reasonField.innerHTML = '<span>السبب (اختياري)</span>';
+        reasonInput.rows = 3;
+        reasonInput.placeholder = 'مثال: تسوية يدوية أو تصحيح رصيد';
+        reasonInput.value = reason;
+        reasonInput.style.cssText = 'width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--surface-color);color:inherit;font:inherit;resize:vertical;';
+        reasonField.appendChild(reasonInput);
+
+        root.appendChild(summary);
+        root.appendChild(modeField);
+        root.appendChild(amountField);
+        root.appendChild(reasonField);
+        return {
+            amountInput: amountInput,
+            modeSelect: modeSelect,
+            reasonInput: reasonInput,
+            root: root
+        };
+    }
+
+    function syncWalletBalanceCache(userId, balance, walletId) {
+        if (!userId || !Number.isFinite(balance)) return;
+        if (!TZ.db) TZ.db = {};
+        if (!Array.isArray(TZ.db.wallets)) TZ.db.wallets = [];
+
+        var now = new Date().toISOString();
+        var wallet = TZ.db.wallets.find(function (item) {
+            return String(item && item.user_id || '') === String(userId);
+        });
+
+        if (wallet) {
+            wallet.balance = balance;
+            wallet.updated_at = now;
+            if (walletId && !wallet.id) wallet.id = walletId;
+            return;
+        }
+
+        TZ.db.wallets.push({
+            balance: balance,
+            created_at: now,
+            id: walletId || null,
+            updated_at: now,
+            user_id: userId
+        });
+    }
+
+    function handleWalletAdjustmentError(error) {
+        var message = String(error && error.message || '');
+
+        if (message.includes('Not authorized')) {
+            A.showErrorToast('CUS-305', 'لا تملك صلاحية تعديل رصيد العميل.');
+            return;
+        }
+        if (message.includes('Insufficient wallet balance')) {
+            A.showErrorToast('CUS-306', 'لا يمكن خصم مبلغ أكبر من الرصيد الحالي.');
+            return;
+        }
+        if (message.includes('Authentication required') || message.includes('Actor mismatch')) {
+            A.showErrorToast('CUS-304', 'انتهت الجلسة. أعد تسجيل الدخول ثم حاول مرة أخرى.');
+            return;
+        }
+
+        A.showErrorToast('CUS-308', 'تعذر حفظ تعديل الرصيد.');
+    }
+
+    async function openWalletAdjustment(profile, walletValue, triggerButton) {
+        var walletUserId = (profile.user && (profile.user.authUserId || profile.user.id)) || resolveCustomerId(profile);
+        if (!walletUserId) {
+            A.showErrorToast('CUS-309', 'تعذر تحديد حساب المحفظة لهذا العميل.');
+            return;
+        }
+
+        var actor = await TZ.getSupabaseUser();
+        if (!actor || !actor.id) {
+            A.showErrorToast('CUS-304', 'انتهت الجلسة. أعد تسجيل الدخول ثم حاول مرة أخرى.');
+            return;
+        }
+
+        var state = { amount: '', mode: 'credit', reason: '' };
+        if (triggerButton) triggerButton.disabled = true;
+        try {
+            while (true) {
+                var form = buildWalletAdjustmentForm({
+                    amount: state.amount,
+                    currentBalance: walletValue && walletValue.textContent,
+                    mode: state.mode,
+                    reason: state.reason
+                });
+                var confirmed = await A.showModal({
+                    cancelText: 'إلغاء',
+                    confirmText: 'حفظ التعديل',
+                    contentNode: form.root,
+                    title: 'تعديل رصيد العميل',
+                    type: 'warning'
+                });
+
+                if (!confirmed) return;
+
+                state = {
+                    amount: form.amountInput.value,
+                    mode: form.modeSelect.value,
+                    reason: form.reasonInput.value
+                };
+
+                var normalizedInput = Helpers.normalizeWalletAdjustmentInput(state);
+                if (normalizedInput.errorCode) {
+                    A.showErrorToast(normalizedInput.errorCode, normalizedInput.errorMessage);
+                    continue;
+                }
+
+                var result = await TZ.supabase.rpc('admin_adjust_wallet_balance', {
+                    p_admin_user_id: actor.id,
+                    p_amount: normalizedInput.amount,
+                    p_reason: normalizedInput.reason || null,
+                    p_target_user_id: walletUserId
+                });
+                if (result.error) {
+                    handleWalletAdjustmentError(result.error);
+                    return;
+                }
+
+                var payload = Array.isArray(result.data) ? result.data[0] : result.data;
+                var newBalance = Number(payload && payload.new_balance);
+                if (walletValue && Number.isFinite(newBalance)) {
+                    walletValue.textContent = TZ.formatPrice(newBalance);
+                }
+                syncWalletBalanceCache(walletUserId, newBalance, payload && payload.wallet_id);
+                A.showToast('تم تعديل رصيد العميل بنجاح.');
+                return;
+            }
+        } finally {
+            if (triggerButton) triggerButton.disabled = false;
+        }
     }
 
     async function loadCustomerWalletBalance(profile) {

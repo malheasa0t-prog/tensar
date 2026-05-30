@@ -11,7 +11,7 @@ const MUTATION_METHODS = new Set(["delete", "insert", "update", "upsert"]);
  * Maintains one normalized admin DB operation state for a proxied table query.
  *
  * @param {string} table
- * @returns {{ action: string | null, columns: string | null, filters: Array<{ column: string, type: string, value: unknown }>, limit: number | null, maybeSingle: boolean, orders: Array<{ ascending: boolean, column: string }>, options: Record<string, unknown> | null, select: string | null, single: boolean, table: string, type: "mutation" | "read" | null, values: unknown }}
+ * @returns {{ action: string | null, columns: string | null, filters: Array<{ column: string, operator?: string, type: string, value: unknown }>, limit: number | null, maybeSingle: boolean, orders: Array<{ ascending: boolean, column: string }>, options: Record<string, unknown> | null, select: string | null, single: boolean, table: string, type: "mutation" | "read" | null, values: unknown }}
  */
 function createTableOperationState(table) {
   return {
@@ -134,6 +134,18 @@ function createAdminTableProxy(options) {
           state.operation.filters.push({
             column: String(column || "").trim(),
             type: property,
+            value,
+          });
+          return state.proxy;
+        };
+      }
+
+      if (state.operation.type && property === "not") {
+        return (column, operator, value) => {
+          state.operation.filters.push({
+            column: String(column || "").trim(),
+            operator: String(operator || "").trim(),
+            type: "not",
             value,
           });
           return state.proxy;

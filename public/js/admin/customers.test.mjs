@@ -77,3 +77,51 @@ test("matchesCustomer should match admin detail lookups against profile id field
     true
   );
 });
+
+test("canManageCustomerWallet should allow full admins and granted staff only", () => {
+  const hooks = loadHooks();
+
+  assert.equal(hooks.canManageCustomerWallet(null), true);
+  assert.equal(hooks.canManageCustomerWallet({ isFullAdmin: true }), true);
+  assert.equal(
+    hooks.canManageCustomerWallet({ isFullAdmin: false, permissions: { customers: { manage: true } } }),
+    true
+  );
+  assert.equal(
+    hooks.canManageCustomerWallet({ isFullAdmin: false, permissions: { customers: { manage: false } } }),
+    false
+  );
+});
+
+test("normalizeWalletAdjustmentInput should return a signed amount and trimmed reason", () => {
+  const hooks = loadHooks();
+
+  assert.deepEqual(
+    normalizeValue(hooks.normalizeWalletAdjustmentInput({
+      amount: "12.5",
+      mode: "debit",
+      reason: "  تسوية يدوية  "
+    })),
+    {
+      amount: -12.5,
+      mode: "debit",
+      reason: "تسوية يدوية"
+    }
+  );
+});
+
+test("normalizeWalletAdjustmentInput should reject zero and invalid amounts", () => {
+  const hooks = loadHooks();
+
+  assert.deepEqual(
+    normalizeValue(hooks.normalizeWalletAdjustmentInput({
+      amount: "0",
+      mode: "credit",
+      reason: ""
+    })),
+    {
+      errorCode: "CUS-307",
+      errorMessage: "أدخل مبلغًا صحيحًا أكبر من صفر."
+    }
+  );
+});

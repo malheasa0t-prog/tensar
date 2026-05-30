@@ -43,6 +43,34 @@
         });
     }
 
+    function canManageCustomerWallet(access) {
+        if (!access) return true;
+        if (access.isFullAdmin === true) return true;
+
+        return Boolean(access.permissions
+            && access.permissions.customers
+            && access.permissions.customers.manage === true);
+    }
+
+    function normalizeWalletAdjustmentInput(input) {
+        var amount = Number(input && input.amount);
+        var mode = normalizeText(input && input.mode) === 'debit' ? 'debit' : 'credit';
+        var reason = String((input && input.reason) || '').trim();
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return {
+                errorCode: 'CUS-307',
+                errorMessage: 'أدخل مبلغًا صحيحًا أكبر من صفر.'
+            };
+        }
+
+        return {
+            amount: mode === 'debit' ? -Math.abs(amount) : Math.abs(amount),
+            mode: mode,
+            reason: reason
+        };
+    }
+
     function sortByCreatedAtDesc(first, second) {
         var secondTimestamp = new Date(second?.createdAt || second?.created_at || 0).getTime();
         var firstTimestamp = new Date(first?.createdAt || first?.created_at || 0).getTime();
@@ -164,10 +192,12 @@
         collectCustomerOrders: collectCustomerOrders,
         collectCustomerRepairBookings: collectCustomerRepairBookings,
         collectOrderActivity: collectOrderActivity,
+        canManageCustomerWallet: canManageCustomerWallet,
         filterCustomerProfiles: filterCustomerProfiles,
         formatCustomerStatus: formatCustomerStatus,
         getCustomerKeys: getCustomerKeys,
-        matchesCustomer: matchesCustomer
+        matchesCustomer: matchesCustomer,
+        normalizeWalletAdjustmentInput: normalizeWalletAdjustmentInput
     };
 
     if (window.__ENABLE_ADMIN_CUSTOMERS_TEST_HOOKS__) {
