@@ -69,6 +69,10 @@ function createQueryStub(result) {
       steps.push({ method: "limit", value });
       return builder;
     },
+    not(column, operator, value) {
+      steps.push({ method: "not", column, operator, value });
+      return builder;
+    },
     maybeSingle() {
       steps.push({ method: "maybeSingle" });
       return builder;
@@ -157,6 +161,44 @@ test("onRequestPost should execute one secured read with filters, order, and lim
     { method: "eq", column: "status", value: "new" },
     { method: "order", column: "created_at", options: { ascending: false } },
     { method: "limit", value: 25 },
+  ]);
+});
+
+test("onRequestPost should execute one secured read with not filters", async () => {
+  const query = createQueryStub([{ provider_service_id: "srv-1" }]);
+  const handlers = createAdminDbHandlers({
+    requireAdminAccess: async () => ({
+      user: { id: "admin-1", email: "admin@example.com" },
+      errorResponse: null,
+    }),
+    createSupabaseAdmin: () => ({
+      from(table) {
+        assert.equal(table, "services");
+        return query.builder;
+      },
+    }),
+  });
+
+  const response = await handlers.onRequestPost(createContext(new Request(
+    "https://tensr.systems/api/admin/db",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "read",
+        table: "services",
+        columns: "provider_service_id",
+        filters: [{ type: "not", column: "provider_service_id", operator: "is", value: null }],
+      }),
+      headers: { "Content-Type": "application/json" },
+    },
+  )));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.deepEqual(query.steps, [
+    { method: "select", columns: "provider_service_id" },
+    { method: "not", column: "provider_service_id", operator: "is", value: null },
   ]);
 });
 

@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Image from 'next/image';
 import '@/app/techfix-pages.css';
 import '@/app/techfix-neon.css';
 import '@/app/techfix-neon-effects.css';
@@ -23,6 +24,7 @@ import RepairOrderLookupCard from '@/components/repair-booking/RepairOrderLookup
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import { formatCurrency } from '@/lib/formatCurrency';
+import { isOptimizableImageSrc } from '@/lib/imageUtils';
 
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { getSiteSettings } from '@/lib/siteSettings';
@@ -226,8 +228,25 @@ export default function ServicesPage() {
             <div className="techfix-service-grid techfix-service-grid--compact">
               {services.map((service) => (
                 <article key={service.id} className="service-card-compact">
-                  <div className="service-card-compact-icon">
-                    <AppIcon name={service.icon || 'wrench'} size={24} />
+                  <div
+                    className={`service-card-compact-media${typeof service.image === 'string' && service.image.trim() ? '' : ' is-icon-only'}`}
+                  >
+                    {typeof service.image === 'string' && service.image.trim() ? (
+                      <Image
+                        src={service.image.trim()}
+                        alt={service.name || 'خدمة صيانة'}
+                        fill
+                        loading="lazy"
+                        quality={82}
+                        sizes="(max-width: 640px) 64px, 78px"
+                        unoptimized={!isOptimizableImageSrc(service.image.trim())}
+                        className="service-card-compact-image"
+                      />
+                    ) : (
+                      <div className="service-card-compact-icon">
+                        <AppIcon name={service.icon || 'wrench'} size={24} />
+                      </div>
+                    )}
                   </div>
                   <div className="service-card-compact-body">
                     <span className="service-card-compact-cat">

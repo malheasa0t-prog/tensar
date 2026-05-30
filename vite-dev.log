@@ -1,0 +1,17 @@
+
+> tensar@1.0.0 dev
+> vite --host 127.0.0.1 --port 4173
+
+[2m1:08:56 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+
+  [32m[1mVITE[22m v8.0.8[39m  [2mready in [0m[1m440[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m1:13:24 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.jsx, /components/SiteHeader.jsx, /components/SiteRuntimeProvider.jsx, /components/SiteFooterClient.jsx, /components/SeoProvider.jsx, /components/WhatsappFloatingButton.jsx, /app/services/page.jsx, /app/contact/page.jsx, /app/page.jsx, /components/CounterStats.jsx[22m
+[2m1:13:24 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/components/SiteRuntimeProvider.jsx[22m Could not Fast Refresh ("useSiteRuntime" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:13:24 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/ClientProviders.jsx, /components/SiteHeader.jsx, /components/SeoProvider.jsx, /components/WhatsappFloatingButton.jsx, /components/MaintenanceGate.jsx, /components/DynamicFavicon.jsx, /components/CounterStats.jsx[22m
+[2m1:13:24 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/components/SeoProvider.jsx[22m Could not Fast Refresh ("usePageSeo" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m1:13:24 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/components/ClientProviders.jsx[22m
+[2m1:15:43 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdist/tz-panel.html[22m
+[2m1:15:43 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdist/__tz-panel.html[22m

@@ -71,6 +71,51 @@ test("createAdminSupabaseClient should route admin reads through the secured adm
   assert.equal(client.storage.tag, "storage-client");
 });
 
+test("createAdminSupabaseClient should preserve not filters for secured admin reads", async () => {
+  const requests = [];
+  const client = createAdminSupabaseClient({
+    adminPage: true,
+    baseClient: {
+      auth: {
+        getSession: async () => ({ data: { session: { access_token: "token-1" } } }),
+      },
+      from() {
+        return {};
+      },
+    },
+    fetchImpl: async (url, request) => {
+      requests.push({ url, request });
+      return new Response(JSON.stringify({
+        success: true,
+        data: [{ provider_service_id: "srv-1" }],
+        count: null,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+  });
+
+  const result = await client
+    .from("services")
+    .select("provider_service_id")
+    .not("provider_service_id", "is", null);
+
+  assert.equal(requests.length, 1);
+  assert.deepEqual(JSON.parse(String(requests[0].request.body)), {
+    type: "read",
+    table: "services",
+    columns: "provider_service_id",
+    filters: [{ type: "not", column: "provider_service_id", operator: "is", value: null }],
+    orders: [],
+    limit: null,
+    single: false,
+    maybeSingle: false,
+  });
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, [{ provider_service_id: "srv-1" }]);
+});
+
 test("createAdminSupabaseClient should route writes through the secured admin API", async () => {
   const requests = [];
   const client = createAdminSupabaseClient({

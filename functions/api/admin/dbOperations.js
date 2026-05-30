@@ -31,7 +31,7 @@ function assertSectionAccess(context, section, level) {
   }
 }
 
-const ALLOWED_FILTER_TYPES = new Set(["eq", "ilike", "in"]);
+const ALLOWED_FILTER_TYPES = new Set(["eq", "ilike", "in", "not"]);
 const ALLOWED_MUTATION_ACTIONS = new Set(["delete", "insert", "update", "upsert"]);
 const APP_USERS_SAFE_COLUMNS = Object.freeze([
   "id",
@@ -164,7 +164,7 @@ function resolveReadColumns(input) {
  * Applies supported chained filters to one Supabase query builder.
  *
  * @param {Record<string, unknown>} builder
- * @param {Array<{ column?: string, type?: string, value?: unknown }>} filters
+ * @param {Array<{ column?: string, operator?: string, type?: string, value?: unknown }>} filters
  * @returns {Record<string, unknown>}
  * @throws {Error}
  */
@@ -175,6 +175,15 @@ function applyFilters(builder, filters) {
 
     if (!ALLOWED_FILTER_TYPES.has(filterType) || !column || typeof query?.[filterType] !== "function") {
       throw createRouteError("[ADB-104] فلتر طلب الإدارة غير مدعوم.", 400);
+    }
+
+    if (filterType === "not") {
+      const operator = String(filter?.operator || "").trim();
+      if (!operator) {
+        throw createRouteError("[ADB-104] فلتر طلب الإدارة غير مدعوم.", 400);
+      }
+
+      return query.not(column, operator, filter?.value);
     }
 
     return query[filterType](column, filter?.value);

@@ -36,6 +36,21 @@
     }
 
     /**
+     * Builds preview markup for one repair service image field.
+     *
+     * @param {unknown} image - Image URL/path.
+     * @returns {string} Preview HTML.
+     */
+    function buildServicePreviewMarkup(image) {
+        var normalizedImage = normalizeServiceImage(image);
+        if (!normalizedImage) {
+            return '<i class="fas fa-image" style="font-size:1.4rem;opacity:0.3;"></i>';
+        }
+
+        return '<img src="' + esc(normalizedImage) + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="صورة الخدمة">';
+    }
+
+    /**
      * Returns known category rows for service category suggestions.
      *
      * @returns {Array<Record<string, unknown>>} Category rows.
@@ -175,7 +190,7 @@
             + '<div class="admin-form-group"><label>المدة المتوقعة</label><div class="admin-input-wrap"><i class="fas fa-clock"></i><input type="text" id="svcDuration" value="' + esc(currentService.duration || '') + '" placeholder="مثال: 2-3 أيام"></div></div>'
             + '<div class="admin-form-group full"><label>صورة الخدمة</label><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
             + '<div id="svcImagePreview" style="width:82px;height:82px;border-radius:10px;border:2px dashed rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(0,0,0,0.15);flex-shrink:0;">'
-            + (existingImage ? '<img src="' + esc(existingImage) + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="صورة الخدمة">' : '<i class="fas fa-image" style="font-size:1.4rem;opacity:0.3;"></i>')
+            + buildServicePreviewMarkup(existingImage)
             + '</div><div style="flex:1;min-width:220px;display:grid;gap:8px;">'
             + '<input type="file" id="svcImageFile" accept="image/jpeg,image/png,image/webp">'
             + '<div class="admin-input-wrap"><i class="fas fa-link"></i><input type="text" id="svcImage" value="' + esc(existingImage) + '" placeholder="أو ضع رابط صورة خارجي"></div>'
@@ -259,13 +274,19 @@
     function bindServiceImagePreview(panel) {
         var fileInput = panel.querySelector('#svcImageFile');
         var preview = panel.querySelector('#svcImagePreview');
+        var urlInput = panel.querySelector('#svcImage');
 
         if (!fileInput || !preview) return;
+
+        function setPreviewMarkup(value) {
+            preview.innerHTML = buildServicePreviewMarkup(value);
+        }
 
         fileInput.addEventListener('change', function () {
             var file = this.files && this.files[0];
             if (!file) {
                 pendingServiceImageFile = null;
+                setPreviewMarkup(urlInput && urlInput.value);
                 return;
             }
 
@@ -289,6 +310,12 @@
                 preview.innerHTML = '<img src="' + event.target.result + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="معاينة الصورة">';
             };
             reader.readAsDataURL(file);
+        });
+
+        urlInput?.addEventListener('input', function () {
+            pendingServiceImageFile = null;
+            fileInput.value = '';
+            setPreviewMarkup(this.value);
         });
     }
 
@@ -448,6 +475,7 @@
 
     if (window.__ENABLE_SERVICE_ADMIN_TEST_HOOKS__) {
         window.__serviceAdminTestHooks = {
+            buildServicePreviewMarkup: buildServicePreviewMarkup,
             buildServiceCategoryOptionsMarkup: buildServiceCategoryOptionsMarkup,
             buildServicePayload: buildServicePayload,
             normalizeServiceImage: normalizeServiceImage
