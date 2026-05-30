@@ -54,17 +54,25 @@
 
     function destroyCharts() { chartRegistry.forEach(function (c) { c.destroy(); }); chartRegistry = []; }
 
+    function chartTheme() {
+        var isLight = (document.body && document.body.dataset.theme) === 'light';
+        return isLight
+            ? { legend: '#1f2937', tick: '#4b5563', grid: 'rgba(15,23,42,0.08)' }
+            : { legend: '#dfe6f5', tick: '#95a1c4', grid: 'rgba(255,255,255,0.04)' };
+    }
+
     function makeChart(id, type, data) {
         var el = document.getElementById(id);
         if (!el || !window.Chart) return;
+        var theme = chartTheme();
         chartRegistry.push(new window.Chart(el, {
             type: type, data: data,
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: '#dfe6f5', font: { family: 'Cairo' } } } },
+                plugins: { legend: { labels: { color: theme.legend, font: { family: 'Cairo' } } } },
                 scales: type === 'doughnut' ? {} : {
-                    x: { ticks: { color: '#95a1c4' }, grid: { color: 'rgba(255,255,255,0.04)' } },
-                    y: { beginAtZero: true, ticks: { color: '#95a1c4' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                    x: { ticks: { color: theme.tick }, grid: { color: theme.grid } },
+                    y: { beginAtZero: true, ticks: { color: theme.tick }, grid: { color: theme.grid } }
                 }
             }
         }));
@@ -89,8 +97,12 @@
 
         var totalRevenue = 0;
         for (var rk in revenueByDay) totalRevenue += revenueByDay[rk];
+        var todayRevenue = revenueByDay[toDayKey(new Date())] || 0;
+        var pendingDeposits = (db.deposits || []).filter(function (d) { return d.status === 'pending'; }).length;
 
         return {
+            todayRevenue: todayRevenue,
+            pendingDeposits: pendingDeposits,
             totalProducts: (db.products || []).length,
             totalOrders: allOrders.length + (db.repairBookings || []).length,
             totalRevenue: totalRevenue,
@@ -177,18 +189,18 @@
 
             /* ── KPI Cards ── */
             html += '<div class="stats-grid">'
-                + kpi('fa-shopping-bag', 'blue', ins.totalOrders, 'إجمالي الطلبات')
-                + kpi('fa-money-bill-wave', 'green', TZ.formatPrice(ins.totalRevenue), 'إجمالي الإيرادات')
-                + kpi('fa-box', 'orange', ins.totalProducts, 'المنتجات')
+                + kpi('fa-calendar-day', 'green', TZ.formatPrice(ins.todayRevenue), 'إيرادات اليوم')
+                + kpi('fa-money-bill-wave', 'blue', TZ.formatPrice(ins.totalRevenue), 'إجمالي الإيرادات')
+                + kpi('fa-shopping-bag', 'orange', ins.totalOrders, 'إجمالي الطلبات')
                 + kpi('fa-users', 'purple', ins.totalCustomers, 'العملاء')
                 + '</div>';
 
             /* ── Quick Stats ── */
             html += '<div class="quick-stats-row">'
-                + qstat(ins.pendingOrders, 'طلبات جديدة')
+                + qstat(ins.pendingOrders, 'طلبات معلّقة')
+                + qstat(ins.pendingDeposits, 'إيداعات تنتظر')
                 + qstat(ins.lowStock, 'مخزون منخفض')
                 + qstat(ins.outOfStock, 'نفد من المخزون')
-                + qstat(ins.totalCategories, 'الفئات')
                 + '</div>';
 
             /* ── Health ── */

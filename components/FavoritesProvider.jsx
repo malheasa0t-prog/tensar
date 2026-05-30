@@ -21,7 +21,7 @@ const FavoritesContext = createContext(null);
  *   isFavorite: (productId: unknown) => boolean,
  *   clearFavorites: () => void,
  *   removeFavorite: (productId: unknown) => void,
- *   toggleFavorite: (productId: unknown) => { isFavorite: boolean },
+ *   toggleFavorite: (productId: unknown) => { isFavorite: boolean, isAtLimit: boolean },
  * }}
  */
 export function useFavorites() {
@@ -81,7 +81,7 @@ export default function FavoritesProvider({ children }) {
     (productId) => {
       const result = toggleFavoriteId(favoriteIds, productId);
       setFavoriteIds(result.favoriteIds);
-      return { isFavorite: result.isFavorite };
+      return { isFavorite: result.isFavorite, isAtLimit: result.isAtLimit };
     },
     [favoriteIds]
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "./ToastProvider";
 import { trackAddToCart } from "@/lib/analyticsModel";
 import { validateCartChange } from "@/lib/cartAvailabilityModel";
@@ -265,23 +265,38 @@ export default function CartProvider({ children }) {
 
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+  const revalidateCart = useCallback(() => revalidateCartItems(itemsRef.current), [revalidateCartItems]);
+  const contextValue = useMemo(() => ({
+    items,
+    cartCount,
+    cartSavings,
+    cartTotal,
+    addToCart,
+    removeFromCart,
+    updateQty,
+    clearCart,
+    sidebarOpen,
+    openSidebar,
+    closeSidebar,
+    revalidateCart,
+  }), [
+    addToCart,
+    cartCount,
+    cartSavings,
+    cartTotal,
+    clearCart,
+    closeSidebar,
+    items,
+    openSidebar,
+    removeFromCart,
+    revalidateCart,
+    sidebarOpen,
+    updateQty,
+  ]);
 
   return (
     <CartContext.Provider
-      value={{
-        items,
-        cartCount,
-        cartSavings,
-        cartTotal,
-        addToCart,
-        removeFromCart,
-        updateQty,
-        clearCart,
-        sidebarOpen,
-        openSidebar,
-        closeSidebar,
-        revalidateCart: () => revalidateCartItems(itemsRef.current),
-      }}
+      value={contextValue}
     >
       {children}
     </CartContext.Provider>

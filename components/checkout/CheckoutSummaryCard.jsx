@@ -5,10 +5,12 @@ import { formatCurrency } from "@/lib/formatCurrency";
 /**
  * Displays the current cart summary beside the checkout form.
  *
- * @param {{ items: Array<Record<string, unknown>>, cartTotal: number, shippingFee: number, checkoutTotal: number }} props - Checkout totals.
+ * @param {{ items: Array<Record<string, unknown>>, cartTotal: number, shippingFee: number, checkoutTotal: number, couponDiscount?: number, payableTotal?: number }} props - Checkout totals.
  * @returns {JSX.Element} Checkout summary card.
  */
-export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, checkoutTotal }) {
+export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, checkoutTotal, couponDiscount = 0, payableTotal }) {
+  const hasDiscount = Number(couponDiscount) > 0;
+  const finalTotal = typeof payableTotal === "number" ? payableTotal : checkoutTotal;
   return (
     <aside className="surface-card checkout-summary-card">
       <h2 style={{ fontSize: "1.05rem", marginBottom: "0.9rem" }}>ملخص السلة</h2>
@@ -59,6 +61,21 @@ export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, che
             <span>{formatCurrency(shippingFee)}</span>
           </div>
 
+          {hasDiscount ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: "0.5rem",
+                color: "var(--success, #16a34a)",
+                fontSize: "0.92rem",
+              }}
+            >
+              <span>خصم الكوبون</span>
+              <span>− {formatCurrency(couponDiscount)}</span>
+            </div>
+          ) : null}
+
           <div
             style={{
               display: "flex",
@@ -70,7 +87,7 @@ export default function CheckoutSummaryCard({ items, cartTotal, shippingFee, che
             }}
           >
             <span>الإجمالي</span>
-            <span>{formatCurrency(checkoutTotal)}</span>
+            <span>{formatCurrency(finalTotal)}</span>
           </div>
         </>
       )}

@@ -25,16 +25,29 @@ function createContext(input = {}) {
 /**
  * Creates a lookup handler with safe default test doubles.
  *
- * @param {{ lookupResult?: Record<string, unknown> | null, onLookup?: (input: Record<string, unknown>) => void }} [input]
+ * @param {{
+ *   lookupResult?: Record<string, unknown> | null,
+ *   onLookup?: (input: Record<string, unknown>) => void,
+ *   onRateLimit?: (input: Record<string, unknown>) => void,
+ *   rateLimitResults?: Array<Record<string, unknown>>,
+ * }} [input]
  * @returns {(context: ReturnType<typeof createContext>) => Promise<Response>}
  */
 function createHandler(input = {}) {
+  let rateLimitCallCount = 0;
+
   return createOrderLookupHandler({
-    applyApiRateLimit: async () => ({
-      allowed: true,
-      configurationError: false,
-      headers: { "X-RateLimit-Mode": "local" },
-    }),
+    applyApiRateLimit: async (rateLimitInput) => {
+      input.onRateLimit?.(rateLimitInput);
+      const result = input.rateLimitResults?.[rateLimitCallCount];
+      rateLimitCallCount += 1;
+
+      return result || {
+        allowed: true,
+        configurationError: false,
+        headers: { "X-RateLimit-Mode": "local" },
+      };
+    },
     createSupabaseAdmin: () => ({ marker: "admin-client" }),
     lookupPublicOrderByNumber: async (lookupInput) => {
       input.onLookup?.(lookupInput);
@@ -76,6 +89,63 @@ test("onRequestPost should resolve public orders with a phone suffix", async () 
   assert.equal(lookupInput.lookupType, "delivery");
   assert.equal(lookupInput.orderNumber, "#1001");
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://tensr.systems");
+});
+
+test("onRequestPost should rate-limit attempts by normalized order number", async () => {
+  const rateLimitPaths = [];
+  const handler = createHandler({
+    onRateLimit(input) {
+      rateLimitPaths.push(new URL(input.request.url).pathname);
+    },
+  });
+
+  const response = await handler(createContext({
+    body: JSON.stringify({
+      contactSuffix: "1234",
+      lookupType: "delivery",
+      orderNumber: " #ORD-1001 ",
+    }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(rateLimitPaths, [
+    "/api/orders/lookup",
+    "/api/orders/lookup/by-order/%23ord-1001",
+  ]);
+});
+
+test("onRequestPost should stop before database lookup when order-scoped limit is exceeded", async () => {
+  let lookupCalled = false;
+  const handler = createHandler({
+    onLookup() {
+      lookupCalled = true;
+    },
+    rateLimitResults: [
+      {
+        allowed: true,
+        configurationError: false,
+        headers: { "X-RateLimit-Mode": "local" },
+      },
+      {
+        allowed: false,
+        configurationError: false,
+        headers: { "Retry-After": "60", "X-RateLimit-Mode": "local" },
+      },
+    ],
+  });
+
+  const response = await handler(createContext({
+    body: JSON.stringify({
+      contactSuffix: "1234",
+      lookupType: "all",
+      orderNumber: "#9999",
+    }),
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 429);
+  assert.equal(lookupCalled, false);
+  assert.match(payload.error, /\[RAT-201\]/);
 });
 
 test("onRequestPost should return not found when the lookup has no match", async () => {

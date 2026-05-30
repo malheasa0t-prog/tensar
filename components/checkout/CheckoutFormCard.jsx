@@ -42,12 +42,14 @@ export default function CheckoutFormCard({
   canSubmit,
   checkoutOptions,
   checkoutTotal,
+  coupon,
   error,
   form,
   hasDigitalItems,
   isWalletTransferModalOpen,
   isWalletTransferUnavailable,
   loading,
+  onApplyCoupon,
   onCloseWalletTransferModal,
   onFieldChange,
   onSubmit,
@@ -146,7 +148,7 @@ export default function CheckoutFormCard({
             >
               {checkoutOptions.paymentMethods.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {option.value === "wallet" ? "محفظة Orange Money" : option.label}
                 </option>
               ))}
             </select>
@@ -158,10 +160,46 @@ export default function CheckoutFormCard({
               >
                 {isWalletTransferUnavailable
                   ? "تحويل المحفظة غير متاح لهذا الطلب."
-                  : `سيظهر لك رقم محفظة Orange Money والمبلغ المطلوب (${walletTransferInstructions?.amountText || formatCurrency(checkoutTotal)}) في نافذة منبثقة. سيتم تأكيد الدفع تلقائياً فور وصول الحوالة!`}
+                  : `سيظهر لك رقم محفظة Orange Money والمبلغ المطلوب (${walletTransferInstructions?.amountText || formatCurrency(checkoutTotal)}) في نافذة منبثقة. استخدم نفس رقم الهاتف المكتوب في بيانات الطلب حتى تتم مطابقة الحوالة وتأكيد الطلب تلقائياً فور وصولها.`}
               </div>
             ) : null}
           </div>
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="coupon_code">كود الخصم (اختياري)</label>
+          <div style={{ display: "flex", gap: "8px", alignItems: "stretch" }}>
+            <input
+              id="coupon_code"
+              className="form-input"
+              type="text"
+              name="coupon_code"
+              value={form.coupon_code || ""}
+              onChange={onFieldChange}
+              placeholder="أدخل كود الكوبون إن وُجد"
+              style={{ textTransform: "uppercase", flex: 1 }}
+              autoComplete="off"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onApplyCoupon}
+              disabled={!form.coupon_code?.trim() || coupon?.status === "checking"}
+              loading={coupon?.status === "checking"}
+            >
+              تطبيق
+            </Button>
+          </div>
+          {coupon?.status === "valid" ? (
+            <p style={{ marginTop: "6px", color: "var(--success, #16a34a)", fontSize: "0.9rem" }}>
+              ✓ تم تطبيق الخصم: {formatCurrency(coupon.discount)}
+            </p>
+          ) : null}
+          {coupon?.status === "invalid" ? (
+            <p style={{ marginTop: "6px", color: "var(--danger, #dc2626)", fontSize: "0.9rem" }}>
+              {coupon.message}
+            </p>
+          ) : null}
         </div>
 
         <div className="form-field">

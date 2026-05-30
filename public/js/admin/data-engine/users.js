@@ -1,7 +1,7 @@
-﻿// ===== TechZone Admin Data Engine - Users =====
+// ===== TechZone Admin Data Engine - Users =====
 // User mapping, role checks, and admin access helpers.
 
-import { ADMIN_SECTIONS, ROLES, db } from './core.js?v=20260523-2';
+import { ADMIN_SECTIONS, ROLES, db } from './core.js?v=20260530-2';
 
 const ALLOWED_ADMIN_SECTIONS = new Set([
     'dashboard',
@@ -23,6 +23,7 @@ const ALLOWED_ADMIN_SECTIONS = new Set([
     'support-chats',
     'notifications',
     'deposits',
+    'orange-money',
     'coupons',
     'refunds',
     'sellers',
@@ -31,7 +32,8 @@ const ALLOWED_ADMIN_SECTIONS = new Set([
     'serva-catalog',
     'settings',
     'logs',
-    'audit-logs'
+    'audit-logs',
+    'staff'
 ]);
 
 function normalizeRole(role) {

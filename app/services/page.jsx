@@ -143,6 +143,13 @@ export default function ServicesPage() {
             <PageSectionBreadcrumbs />
           </div>
 
+          <header style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 1.5rem' }}>
+            <h1 style={{ margin: 0 }}>خدمات الصيانة</h1>
+            <p style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+              احجز خدمة صيانة احترافية بخطوة واحدة، وتابع تفاصيل الأسعار ومدة التنفيذ.
+            </p>
+          </header>
+
           {/* ── Booking Form — Full Width ── */}
           <div style={{ maxWidth: '720px', margin: '0 auto' }}>
             <RepairBookingForm

@@ -1,7 +1,9 @@
 import { loadSupabaseClient } from "@/lib/loadSupabaseClient";
 import { mapProductsExplorerProduct } from "@/lib/productsExplorerModel";
 
-const PRODUCTS_PAGE_CACHE_TTL_MS = 60_000;
+// Short TTL so price/stock/status changes made in the admin dashboard surface
+// on the storefront within ~20s instead of up to a minute.
+const PRODUCTS_PAGE_CACHE_TTL_MS = 20_000;
 const PRODUCTS_QUERY_COLUMNS = [
   "id",
   "name",
@@ -13,6 +15,8 @@ const PRODUCTS_QUERY_COLUMNS = [
   "description",
   "brand",
   "rating",
+  "review_count",
+  "icon",
   "sold",
   "images",
   "status",
@@ -122,6 +126,57 @@ export async function loadProductsPageSnapshot(options = {}) {
  */
 export function prefetchProductsPageSnapshot() {
   return loadProductsPageSnapshot().catch(() => null);
+}
+
+/**
+ * Drops the cached snapshot so the next load fetches fresh rows.
+ *
+ * @returns {void}
+ */
+export function invalidateProductsPageCache() {
+  cachedProductsPageSnapshot = null;
+  cachedProductsPageSnapshotTime = 0;
+}
+
+/**
+ * Subscribes to product/category realtime changes so the storefront updates
+ * within moments of an admin edit instead of waiting for the cache TTL.
+ *
+ * @param {() => void} onChange
+ * @returns {() => void} Unsubscribe callback.
+ */
+export function subscribeToProductsPage(onChange) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+
+  let active = true;
+  let cleanup = () => {};
+
+  async function attachChannels() {
+    const supabase = await loadSupabaseClient();
+    if (!active) return;
+
+    const handleChange = () => {
+      invalidateProductsPageCache();
+      onChange();
+    };
+
+    const channel = supabase
+      .channel("storefront-products")
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, handleChange)
+      .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, handleChange)
+      .subscribe();
+
+    cleanup = () => supabase.removeChannel(channel);
+  }
+
+  void attachChannels();
+
+  return () => {
+    active = false;
+    cleanup();
+  };
 }
 
 /**

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { loadCategoryPageSnapshot } from '@/services/categoryPageService';
+import { loadCategoryPageSnapshot, subscribeToCategoryPage } from '@/services/categoryPageService';
 
 /**
  * Loads and stores the client-side category services snapshot.
@@ -40,9 +40,11 @@ export function useCategoryPage(routeValue) {
      *
      * @returns {Promise<void>}
      */
-    async function hydrateCategoryPage() {
-      setLoading(true);
-      setError(false);
+    async function hydrateCategoryPage(silent = false) {
+      if (!silent) {
+        setLoading(true);
+        setError(false);
+      }
 
       const snapshot = await loadCategoryPageSnapshot(routeValue);
       if (!active) {
@@ -59,9 +61,13 @@ export function useCategoryPage(routeValue) {
     }
 
     hydrateCategoryPage();
+    const unsubscribe = subscribeToCategoryPage(() => {
+      hydrateCategoryPage(true);
+    });
 
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [routeValue]);
 

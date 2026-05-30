@@ -64,3 +64,10 @@ scripts/setup_chat_table.py
 
 # Claude Code personal settings (machine-specific permissions)
 .claude/settings.local.json
+
+# Supabase CLI local temp
+supabase/.temp/
+
+# Local scratch files
+test.json
+test_api.py

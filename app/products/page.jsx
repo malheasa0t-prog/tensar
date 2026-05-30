@@ -17,7 +17,7 @@ import ProductsExplorerClient from '@/components/ProductsExplorerClient';
 import StatusPanel from '@/components/StatusPanel';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
 import Link from 'next/link';
-import { loadProductsPageSnapshot } from '@/services/productsPageService';
+import { loadProductsPageSnapshot, subscribeToProductsPage } from '@/services/productsPageService';
 
 /**
  * Renders the products explorer page with filtering and search.
@@ -52,8 +52,13 @@ export default function ProductsPage() {
     }
 
     loadData();
+    const unsubscribe = subscribeToProductsPage(() => {
+      loadData();
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

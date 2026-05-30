@@ -39,11 +39,13 @@ function escapeHtml(value) {
  *   buildPhysicalStatusActionsMarkup: Function,
  *   getOrderDisplayStatus: Function,
  *   getOrdersForTab: Function,
+ *   getOrderPriorityRank: Function,
  *   getOrderType: Function,
  *   getOrderTypeLabel: Function,
  *   getStatusLabel: Function,
  *   getStatusOptionsForTab: Function,
  *   normalizePhysicalOrderStatus: Function,
+ *   sortOrdersList: Function,
  * }}
  */
 function loadOrderHooks(db = {}) {
@@ -154,4 +156,27 @@ test('buildPhysicalStatusActionsMarkup should disable buttons while a status upd
   });
 
   assert.equal((html.match(/ disabled/g) || []).length, 4);
+});
+
+test('getOrderPriorityRank should prioritize pending and active work ahead of completed rows', () => {
+  const hooks = loadOrderHooks();
+
+  assert.equal(hooks.getOrderPriorityRank({ status: 'pending' }), 0);
+  assert.equal(hooks.getOrderPriorityRank({ status: 'processing' }), 1);
+  assert.equal(hooks.getOrderPriorityRank({ status: 'delivered' }), 2);
+  assert.equal(hooks.getOrderPriorityRank({ status: 'cancelled' }), 3);
+});
+
+test('sortOrdersList should place urgent rows before completed rows in priority mode', () => {
+  const hooks = loadOrderHooks();
+  const sorted = normalizeValue(hooks.sortOrdersList([
+    { id: 'ord-complete', status: 'delivered', created_at: '2026-05-30T10:00:00Z' },
+    { id: 'ord-pending', status: 'pending', created_at: '2026-05-29T10:00:00Z' },
+    { id: 'ord-processing', status: 'processing', created_at: '2026-05-30T09:00:00Z' }
+  ]));
+
+  assert.deepEqual(
+    sorted.map((order) => order.id),
+    ['ord-pending', 'ord-processing', 'ord-complete']
+  );
 });

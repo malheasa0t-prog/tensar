@@ -1,3 +1,6 @@
+\echo 'DO NOT RUN: legacy snapshot. Use db/complete_database_setup.sql plus chronological migrations from db/README.md.'
+\q
+
 -- ============================================
 -- Migration: Dynamic content support for homepage and service flows
 -- ============================================

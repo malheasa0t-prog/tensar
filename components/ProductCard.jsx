@@ -7,6 +7,7 @@ import { ArrowRight, Bell, Check, Heart, RefreshCw, ShoppingCart } from "lucide-
 import { useCart } from "./CartProvider";
 import { useComparison } from "./ComparisonProvider";
 import { useFavorites } from "./FavoritesProvider";
+import { FAVORITES_LIMIT_MESSAGE } from "@/lib/favoritesModel";
 import ProductCardRating from "./ProductCardRating";
 import { useToast } from "./ToastProvider";
 import AppIcon from "./AppIcon";
@@ -134,6 +135,12 @@ const ProductCard = memo(function ProductCard({ layout = "grid", product, reveal
 
   function handleToggleFavorite() {
     const result = toggleFavorite(product.id);
+
+    if (result.isAtLimit) {
+      showToast(FAVORITES_LIMIT_MESSAGE, { type: "warning" });
+      return;
+    }
+
     if (result.isFavorite) {
       triggerFavoriteFeedback();
     }

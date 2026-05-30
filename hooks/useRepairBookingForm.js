@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildRepairBookingPayload,
   createRepairBookingFormState,
@@ -9,13 +9,24 @@ import {
   validateRepairBookingForm,
 } from "@/lib/repairBookingModel.mjs";
 import {
+  acquireSubmissionLock,
+  createSubmissionState,
+  releaseSubmissionLock,
+  resetSubmissionIdempotencyKey,
+  resolveSubmissionIdempotencyKey,
+} from "@/lib/idempotencyKey";
+import {
   createRepairBooking,
   createRepairBookingId,
   getRepairBookingAccountSnapshot,
 } from "@/services/repairBookingService";
 
-const REPAIR_BOOKING_SUBMIT_ERROR = "[RBK-301] تعذر إرسال طلب الصيانة حالياً. حاول مرة أخرى.";
-const REPAIR_BOOKING_PREFILL_ERROR = "[RBK-302] تعذر تحميل بيانات الحساب لحجز الصيانة.";
+const REPAIR_BOOKING_SUBMIT_ERROR =
+  "[RBK-301] \u062a\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0635\u064a\u0627\u0646\u0629 \u062d\u0627\u0644\u064a\u0627\u064b. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.";
+const REPAIR_BOOKING_PREFILL_ERROR =
+  "[RBK-302] \u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u062d\u0633\u0627\u0628 \u0644\u062d\u062c\u0632 \u0627\u0644\u0635\u064a\u0627\u0646\u0629.";
+const REPAIR_BOOKING_SUCCESS_MESSAGE =
+  "\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0635\u064a\u0627\u0646\u0629 \u0628\u0646\u062c\u0627\u062d. \u0633\u0646\u062a\u0648\u0627\u0635\u0644 \u0645\u0639\u0643 \u0642\u0631\u064a\u0628\u0627\u064b.";
 
 /**
  * @typedef {Object} RepairBookingFormState
@@ -68,6 +79,7 @@ export function useRepairBookingForm({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const submissionStateRef = useRef(createSubmissionState());
 
   const selectedService = useMemo(
     () => services.find((service) => service.id === form.serviceId),
@@ -156,46 +168,65 @@ export function useRepairBookingForm({
    */
   async function handleSubmit(event) {
     event.preventDefault();
-    setError("");
-    setMessage("");
-
-    const validationError = validateRepairBookingForm(form);
-    if (validationError) {
-      setError(validationError);
+    if (!acquireSubmissionLock(submissionStateRef.current)) {
       return;
     }
 
-    setLoading(true);
+    let shouldResetIdempotencyKey = false;
 
-    // Server-side gate re-validates and inserts via the service-role client;
-    // we send the raw form rather than a pre-built payload so the schema lives
-    // in one place. `bookingId` is generated server-side for safety.
-    void buildRepairBookingPayload;
-    void createRepairBookingId;
-    void selectedService;
-    void currentUserId;
-    const response = await createRepairBooking(form);
+    try {
+      setError("");
+      setMessage("");
 
-    setLoading(false);
+      const validationError = validateRepairBookingForm(form);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
 
-    if (response.error) {
-      setError(response.error.message || REPAIR_BOOKING_SUBMIT_ERROR);
-      return;
+      setLoading(true);
+
+      // Server-side gate re-validates and inserts via the service-role client;
+      // we send the raw form rather than a pre-built payload so the schema lives
+      // in one place. `bookingId` is generated server-side for safety.
+      void buildRepairBookingPayload;
+      void createRepairBookingId;
+      void selectedService;
+      void currentUserId;
+      const response = await createRepairBooking({
+        form,
+        idempotencyKey: resolveSubmissionIdempotencyKey({
+          state: submissionStateRef.current,
+          fingerprint: JSON.stringify(form),
+        }),
+      });
+
+      if (response.error) {
+        setError(response.error.message || REPAIR_BOOKING_SUBMIT_ERROR);
+        return;
+      }
+
+      setMessage(REPAIR_BOOKING_SUCCESS_MESSAGE);
+      setForm(
+        createRepairBookingFormState({
+          services,
+          deliveryOptions,
+          preservedValues: isAccountPrefilled
+            ? {
+                name: form.name,
+                phone: form.phone,
+              }
+            : {},
+        })
+      );
+      shouldResetIdempotencyKey = true;
+    } finally {
+      if (shouldResetIdempotencyKey) {
+        resetSubmissionIdempotencyKey(submissionStateRef.current);
+      }
+      releaseSubmissionLock(submissionStateRef.current);
+      setLoading(false);
     }
-
-    setMessage("تم إرسال طلب الصيانة بنجاح. سنتواصل معك قريباً.");
-    setForm(
-      createRepairBookingFormState({
-        services,
-        deliveryOptions,
-        preservedValues: isAccountPrefilled
-          ? {
-              name: form.name,
-              phone: form.phone,
-            }
-          : {},
-      })
-    );
   }
 
   return {

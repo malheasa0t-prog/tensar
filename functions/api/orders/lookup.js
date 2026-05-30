@@ -15,9 +15,44 @@ import {
 } from "../../_lib/rateLimit.js";
 import { lookupPublicOrderByNumber } from "../../../services/orderLookupService.js";
 
+const LOOKUP_RATE_LIMIT_PATH_PREFIX = "/api/orders/lookup/by-order";
+const LOOKUP_RATE_LIMIT_UNKNOWN_ORDER = "unknown";
+
 const LOOKUP_NOT_FOUND_ERROR = "[OLK-404] لم نجد طلبًا مطابقًا لهذه البيانات.";
 const LOOKUP_PARSE_ERROR = "[OLK-102] تعذر قراءة بيانات الاستعلام.";
 const LOOKUP_UNEXPECTED_ERROR = "[OLK-500] تعذر إتمام الاستعلام حاليًا.";
+
+/**
+ * Normalizes an order number for use inside the route-scoped rate-limit key.
+ *
+ * @param {unknown} orderNumber - User-provided order number.
+ * @returns {string} Safe path segment used for throttling attempts.
+ */
+function normalizeOrderNumberRateLimitKey(orderNumber) {
+  const normalized = String(orderNumber || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9#-]/g, "");
+
+  return normalized || LOOKUP_RATE_LIMIT_UNKNOWN_ORDER;
+}
+
+/**
+ * Builds a synthetic request whose pathname scopes rate limiting to one order.
+ *
+ * @param {{ orderNumber: unknown, request: Request }} input - Incoming request data.
+ * @returns {Request} Request clone used only by the shared rate limiter.
+ */
+function buildOrderScopedRateLimitRequest(input) {
+  const url = new URL(input.request.url);
+  const orderKey = encodeURIComponent(normalizeOrderNumberRateLimitKey(input.orderNumber));
+  url.pathname = `${LOOKUP_RATE_LIMIT_PATH_PREFIX}/${orderKey}`;
+
+  return new Request(url.toString(), {
+    headers: input.request.headers,
+    method: input.request.method,
+  });
+}
 
 /**
  * Adds CORS and rate-limit headers to an API response.
@@ -92,6 +127,27 @@ export function createOrderLookupHandler(dependencies = {}) {
 
     try {
       const body = await readLookupBody(request);
+      const orderLimit = await rateLimit({
+        env,
+        request: buildOrderScopedRateLimitRequest({ orderNumber: body.orderNumber, request }),
+      });
+
+      if (orderLimit.configurationError) {
+        return finalizeLookupResponse({
+          extraHeaders: orderLimit.headers,
+          request,
+          response: buildRateLimitConfigurationErrorResponse(orderLimit.headers),
+        });
+      }
+
+      if (!orderLimit.allowed) {
+        return finalizeLookupResponse({
+          extraHeaders: orderLimit.headers,
+          request,
+          response: buildRateLimitExceededResponse(orderLimit.headers),
+        });
+      }
+
       const result = await lookupOrder({
         adminClient: createAdmin(env),
         contactSuffix: body.contactSuffix,
@@ -100,7 +156,7 @@ export function createOrderLookupHandler(dependencies = {}) {
       });
 
       return finalizeLookupResponse({
-        extraHeaders: limit.headers,
+        extraHeaders: orderLimit.headers,
         request,
         response: result ? successResponse(result) : errorResponse(LOOKUP_NOT_FOUND_ERROR, 404),
       });

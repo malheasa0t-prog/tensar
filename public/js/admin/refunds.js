@@ -36,68 +36,37 @@
     }
 
     /**
-     * Approves a refund: credits the user wallet and marks request approved.
+     * Approves a refund via the atomic, idempotent admin_approve_refund RPC.
      *
-     * @param {{ id: string, user_id: string, amount: number, order_id: string, service_name: string }} req
+     * The wallet credit, transaction, status flip, notification and audit log all
+     * run server-side in one transaction with a FOR UPDATE lock and a
+     * status='pending' guard, so a double-click or concurrent approval cannot
+     * double-credit the wallet.
+     *
+     * @param {{ id: string, amount: number }} req
      * @returns {Promise<boolean>}
      */
     async function approveRefund(req) {
-        var walletRes = await TZ.supabase
-            .from('wallets')
-            .select('id, balance')
-            .eq('user_id', req.user_id)
-            .maybeSingle();
-
-        if (walletRes.error || !walletRes.data) {
-            A.showErrorToast('REF-301', 'لم يتم العثور على محفظة المستخدم');
+        var authUser = await TZ.getSupabaseUser();
+        if (!authUser) {
+            A.showErrorToast('REF-300', 'انتهت الجلسة. أعد تسجيل الدخول.');
             return false;
         }
 
-        var wallet = walletRes.data;
-        var newBalance = Number(wallet.balance) + Number(req.amount);
+        var result = await TZ.supabase.rpc('admin_approve_refund', {
+            p_admin_user_id: authUser.id,
+            p_request_id: req.id
+        });
 
-        var updateRes = await TZ.supabase
-            .from('wallets')
-            .update({ balance: newBalance, updated_at: new Date().toISOString() })
-            .eq('id', wallet.id);
-
-        if (updateRes.error) {
-            A.showErrorToast('REF-302', 'فشل تحديث رصيد المحفظة');
+        if (result.error) {
+            var msg = String(result.error.message || '');
+            if (msg.includes('already processed')) {
+                A.showErrorToast('REF-305', 'تم معالجة هذا الطلب مسبقاً');
+            } else {
+                A.showErrorToast('REF-301', 'فشل استرجاع المبلغ: ' + msg);
+            }
             return false;
         }
-
-        await TZ.supabase.from('wallet_transactions').insert([{
-            wallet_id: wallet.id,
-            user_id: req.user_id,
-            type: 'refund',
-            amount: req.amount,
-            balance_after: newBalance,
-            description: 'استرجاع يدوي — ' + (req.service_name || 'طلب') + ' #' + req.order_id,
-            reference_id: req.order_id
-        }]);
-
-        var markRes = await TZ.supabase
-            .from(TABLE)
-            .update({
-                status: 'approved',
-                processed_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', req.id);
-
-        if (markRes.error) {
-            A.showErrorToast('REF-303', 'تم إرجاع المبلغ لكن فشل تحديث حالة الطلب');
-            return false;
-        }
-
-        await TZ.supabase.from('notifications').insert([{
-            user_id: req.user_id,
-            title: 'تم استرجاع رصيدك 💰',
-            body: 'تم إعادة ' + Number(req.amount).toFixed(2) + ' د.أ إلى محفظتك.',
-            type: 'success',
-            reference_type: 'refund',
-            reference_id: req.id
-        }]);
 
         A.showToast('تم استرجاع ' + Number(req.amount).toFixed(2) + ' د.أ بنجاح');
         return true;
@@ -119,7 +88,8 @@
                 processed_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             })
-            .eq('id', reqId);
+            .eq('id', reqId)
+            .eq('status', 'pending');
 
         if (res.error) {
             A.showErrorToast('REF-304', 'فشل رفض طلب الاسترجاع');

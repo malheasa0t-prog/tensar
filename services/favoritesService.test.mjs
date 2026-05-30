@@ -55,7 +55,7 @@ test("fetchFavoriteProductSnapshots should query products with active and out-of
     ["from", "products"],
     [
       "select",
-      "id,name,price,discount_price,images,status,quantity,category_id,icon,brand,description,rating,review_count,reviews_count,sold,product_type,created_at",
+      "id,name,price,discount_price,images,status,quantity,category_id,icon,brand,description,rating,review_count,sold,product_type,created_at",
     ],
     ["in", "id", ["p-1", "p-2"]],
     ["in", "status", ["active", "out_of_stock"]],

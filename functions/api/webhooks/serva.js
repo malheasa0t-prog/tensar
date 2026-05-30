@@ -9,6 +9,7 @@
  */
 
 import { createSupabaseAdmin, errorResponse, successResponse } from "../../_lib/supabase.js";
+import { timingSafeEqualStrings } from "../../_lib/timingSafeEqual.js";
 
 /* ─── Constants ─── */
 
@@ -40,31 +41,6 @@ const STATUS_LABELS = Object.freeze({
 
 const WEBHOOK_REPLAY_WINDOW_MS = 5 * 60 * 1000;
 const WEBHOOK_GENERIC_AUTH_ERROR = "Unauthorized.";
-
-/**
- * Compares two byte sequences in constant time.
- *
- * Falls back to a manual XOR scan when SubtleCrypto's timingSafeEqual is not
- * available in the Workers runtime. Length-mismatched inputs still iterate
- * to avoid leaking length differences via early-return timing.
- *
- * @param {string} candidate - Untrusted value supplied by the caller.
- * @param {string} expected - Trusted secret stored on the server.
- * @returns {boolean} True when both inputs are byte-for-byte identical.
- */
-function timingSafeEqualStrings(candidate, expected) {
-  const candidateBytes = new TextEncoder().encode(String(candidate || ""));
-  const expectedBytes = new TextEncoder().encode(String(expected || ""));
-  const length = Math.max(candidateBytes.length, expectedBytes.length);
-  let diff = candidateBytes.length ^ expectedBytes.length;
-  for (let index = 0; index < length; index += 1) {
-    const left = index < candidateBytes.length ? candidateBytes[index] : 0;
-    const right = index < expectedBytes.length ? expectedBytes[index] : 0;
-    diff |= left ^ right;
-  }
-
-  return diff === 0;
-}
 
 /**
  * Validates the webhook secret and optional timestamp from request headers.

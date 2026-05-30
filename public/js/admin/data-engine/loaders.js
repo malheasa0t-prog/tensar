@@ -1,4 +1,4 @@
-﻿// ===== TechZone Admin Data Engine - Loaders =====
+// ===== TechZone Admin Data Engine - Loaders =====
 // Scoped Supabase loading and DB hydration.
 
 import {
@@ -6,22 +6,24 @@ import {
     dispatchReadyEvent,
     estimateActiveSessions,
     getDataScopeConfig,
+    mergeSettingsData,
     nowIso,
     supabase,
     updateHealthStatus
-} from './core.js?v=20260523-2';
+} from './core.js?v=20260530-2';
 import {
     buildItemsByOrder,
     mapAuditLog,
     mapContactMessage,
     mapCoupon,
     mapDeposit,
+    mapOrangeMoneyLog,
     mapOrder,
     mapRepairBooking,
     mapServiceOrder
-} from './orders.js?v=20260523-2';
-import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260523-2';
-import { mergeUsers } from './users.js?v=20260523-2';
+} from './orders.js?v=20260530-2';
+import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260530-2';
+import { mergeUsers } from './users.js?v=20260530-2';
 
 const LEGACY_USER_SAFE_FIELDS = 'id,auth_user_id,full_name,email,phone,role,status,created_at,updated_at';
 const PROFILE_SAFE_FIELDS = [
@@ -56,7 +58,8 @@ const QUERY_BUILDERS = {
     repairBookings: () => supabase.from('repair_bookings').select('*').order('created_at', { ascending: false }),
     messages: () => supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
     logs: () => supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
-    deposits: () => supabase.from('deposits').select('*').order('created_at', { ascending: false })
+    deposits: () => supabase.from('deposits').select('*').order('created_at', { ascending: false }),
+    orangeMoneyLogs: () => supabase.from('orange_money_logs').select('*').order('created_at', { ascending: false }).limit(250)
 };
 
 function buildScopedQueries(queryKeys) {
@@ -93,11 +96,12 @@ function hydrateOrders(results) {
     if (results.serviceOrders?.data) db.serviceOrders = results.serviceOrders.data.map(mapServiceOrder);
     if (results.repairBookings?.data) db.repairBookings = results.repairBookings.data.map(mapRepairBooking);
     if (results.deposits?.data) db.deposits = results.deposits.data.map(mapDeposit);
+    if (results.orangeMoneyLogs?.data) db.orangeMoneyLogs = results.orangeMoneyLogs.data.map(mapOrangeMoneyLog);
 }
 
 function hydrateContent(results) {
     if (results.settings?.data?.length) {
-        db.settings = { ...db.settings, ...results.settings.data[0].data };
+        db.settings = mergeSettingsData(db.settings, results.settings.data[0].data);
     }
     if (results.coupons?.data) db.coupons = results.coupons.data.map(mapCoupon);
     if (results.messages?.data) db.contactMessages = results.messages.data.map(mapContactMessage);

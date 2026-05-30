@@ -13,11 +13,14 @@ import Link from 'next/link';
 import AppIcon from '@/components/AppIcon';
 import InternalPageHero from '@/components/InternalPageHero';
 import CatalogPageSkeleton from '@/components/CatalogPageSkeleton';
+import StatusPanel from '@/components/StatusPanel';
+import { useSiteRuntime } from '@/components/SiteRuntimeProvider';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { usePageSeo } from '@/hooks/usePageSeo';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { buildServiceStructuredData } from '@/lib/seo';
+import { getWhatsappSupportLink, normalizeSiteSettings } from '@/lib/contactChannels';
 
 /**
  * Generates a simple Arabic slug from text.
@@ -72,13 +75,19 @@ async function findActiveServiceBySlug(slug, supabase) {
 export default function ServiceDetailsPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { siteSettings } = useSiteRuntime();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const whatsappBaseHref = getWhatsappSupportLink(siteSettings || normalizeSiteSettings());
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadService() {
+      setLoading(true);
+      setError(false);
       try {
         const supabase = await loadSupabaseClient();
         const found = await findActiveServiceBySlug(slug, supabase);
@@ -90,8 +99,9 @@ export default function ServiceDetailsPage() {
         }
 
         setService(found);
-      } catch (error) {
-        console.error('[SPG-500] ServiceDetailsPage: failed to load', error);
+      } catch (caughtError) {
+        console.error('[SPG-500] ServiceDetailsPage: failed to load', caughtError);
+        if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -99,7 +109,7 @@ export default function ServiceDetailsPage() {
 
     loadService();
     return () => { cancelled = true; };
-  }, [slug, navigate]);
+  }, [slug, navigate, reloadToken]);
 
   usePageSeo(service ? {
     title: service.name,
@@ -123,6 +133,33 @@ export default function ServiceDetailsPage() {
   } : null);
 
   if (loading) return <CatalogPageSkeleton productCount={3} />;
+
+  if (error) {
+    return (
+      <section className="section page-top">
+        <div className="container">
+          <StatusPanel
+            tone="error"
+            icon="refresh-cw"
+            eyebrow="تعذر تحميل الخدمة"
+            title="لم نتمكن من عرض تفاصيل الخدمة الآن"
+            description="[SPG-500] حدث خلل أثناء جلب الخدمة. تأكد من اتصالك وأعد المحاولة، أو تصفّح بقية الخدمات."
+            actions={
+              <>
+                <button type="button" className="btn btn-primary" onClick={() => setReloadToken((token) => token + 1)}>
+                  إعادة المحاولة
+                </button>
+                <Link href="/services" className="btn btn-outline">
+                  كل الخدمات
+                </Link>
+              </>
+            }
+          />
+        </div>
+      </section>
+    );
+  }
+
   if (!service) return null;
 
   return (
@@ -202,15 +239,17 @@ export default function ServiceDetailsPage() {
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <Link href="/services" className="btn btn-outline">العودة إلى خدمات الصيانة</Link>
-                <a
-                  href={`https://wa.me/962771234567?text=${encodeURIComponent(`مرحباً، أريد طلب خدمة: ${service.name}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary"
-                >
-                  <AppIcon name="message-circle" size={16} />
-                  طلب عبر واتساب
-                </a>
+                {whatsappBaseHref ? (
+                  <a
+                    href={`${whatsappBaseHref}${whatsappBaseHref.includes('?') ? '&' : '?'}text=${encodeURIComponent(`مرحباً، أريد طلب خدمة: ${service.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                  >
+                    <AppIcon name="message-circle" size={16} />
+                    طلب عبر واتساب
+                  </a>
+                ) : null}
               </div>
             </div>
 

@@ -9,6 +9,7 @@
         'service-orders': { label: 'طلبات الخدمات', group: 'إدارة الطلبات' },
         'accessory-orders': { label: 'طلبات الإكسسوارات', group: 'إدارة الطلبات' },
         'repair-orders': { label: 'حجوزات الصيانة', group: 'إدارة الطلبات' },
+        'orange-money': { label: 'عمليات Orange Money', group: 'المالية' },
         'serva-catalog': { label: 'استيراد خدمات Serva-S', group: 'النظام' },
         'provider-alerts': { label: 'تنبيهات المزود', group: 'النظام' }
     };

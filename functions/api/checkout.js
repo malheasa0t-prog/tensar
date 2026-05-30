@@ -216,6 +216,7 @@ export function createCheckoutHandler(dependencies = {}) {
             orderItems,
             paymentMethod: checkoutRequest.paymentMethod,
             subtotal,
+            couponCode: checkoutRequest.couponCode,
             userId,
           });
           orderId = orderResult.orderId;

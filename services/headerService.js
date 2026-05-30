@@ -5,6 +5,7 @@ import {
 } from "../lib/headerSnapshotModel.js";
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 import { loadSiteSettingsClient } from "../lib/siteSettingsClient.js";
+import { subscribeToTableChanges } from "../lib/realtimeTableSubscription.js";
 
 const LOGIN_LABEL = "تسجيل الدخول";
 
@@ -71,6 +72,36 @@ export async function fetchHeaderSnapshot(client) {
   headerSnapshotCacheTime = now;
 
   return snapshot;
+}
+
+/**
+ * Drops the cached header snapshot so the next fetch re-reads categories/settings.
+ *
+ * @returns {void}
+ */
+export function invalidateHeaderSnapshotCache() {
+  headerSnapshotCache = null;
+  headerSnapshotCacheTime = 0;
+}
+
+/**
+ * Subscribes to category/settings changes so header nav links and branding
+ * refresh shortly after an admin edit instead of waiting up to 5 minutes.
+ *
+ * @param {() => void} onChange
+ * @param {Record<string, unknown>} [client]
+ * @returns {() => void}
+ */
+export function subscribeToHeaderData(onChange, client) {
+  return subscribeToTableChanges({
+    channel: "storefront-header",
+    tables: ["categories", "settings"],
+    client,
+    onChange: () => {
+      invalidateHeaderSnapshotCache();
+      if (typeof onChange === "function") onChange();
+    },
+  });
 }
 
 /**

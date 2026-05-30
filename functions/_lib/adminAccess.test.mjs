@@ -133,6 +133,31 @@ test("hasStoredAdminAccess should accept active admin profile records", async ()
   );
 });
 
+test("hasStoredAdminAccess should reject legacy rows matched only via ilike wildcards", async () => {
+  // Attacker authenticates as `_dmin@store.com`; `_` is a SQL LIKE wildcard so
+  // the ilike pattern matches the real `admin@store.com` row. The exact-email
+  // guard must reject this escalation attempt.
+  const adminClient = createAdminClientStub({
+    appUserRecord: { email: "admin@store.com", role: "admin", status: "active" },
+  });
+
+  assert.equal(
+    await hasStoredAdminAccess(adminClient, { id: "user-evil", email: "_dmin@store.com" }),
+    false
+  );
+});
+
+test("hasStoredAdminAccess should accept legacy rows with an exact (case-insensitive) email", async () => {
+  const adminClient = createAdminClientStub({
+    appUserRecord: { email: "admin@store.com", role: "admin", status: "active" },
+  });
+
+  assert.equal(
+    await hasStoredAdminAccess(adminClient, { id: "user-1", email: "Admin@Store.com" }),
+    true
+  );
+});
+
 test("requireAdminAccess should reject missing bearer tokens", async () => {
   const result = await requireAdminAccess(
     new Request("https://tensr.systems/api/provider/services"),

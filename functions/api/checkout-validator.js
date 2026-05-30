@@ -204,6 +204,7 @@ export function parseCheckoutRequest(body) {
     ),
     items: normalizeItems(body?.items),
     notes: normalizeText(body?.notes),
+    couponCode: normalizeText(body?.coupon_code),
     paymentMethod: resolveEnumValue(
       body?.payment_method,
       ALLOWED_PAYMENT_METHODS,

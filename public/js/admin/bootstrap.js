@@ -1,9 +1,9 @@
-﻿// ===== TechZone Legacy Admin Bootstrap =====
+// ===== TechZone Legacy Admin Bootstrap =====
 // Loads the heavy data engine lazily, then hydrates the legacy admin bundles in order.
 (function () {
     'use strict';
 
-    const ADMIN_ASSET_VERSION = '20260523-2';
+    const ADMIN_ASSET_VERSION = '20260530-2';
     const DATA_ENGINE_MODULE_PATH = `/js/admin/data-engine.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_SERVICE_WORKER_PATH = `/admin-sw.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_RUNTIME_ROUTE = '/api/admin/runtime';
@@ -41,11 +41,13 @@
         'service-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
         'accessory-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
         'repair-orders': ['js/admin/orders.constants.js', 'js/admin/orders.js'],
+        products: ['js/admin/products.js'],
         categories: ['js/admin/categories.js'],
         'main-categories': ['js/admin/categories.js'],
         subcategories: ['js/admin/categories.js'],
         customers: ['js/admin/customers.helpers.js', 'js/admin/customers.js'],
         deposits: ['js/admin/deposits.js'],
+        'orange-money': ['js/admin/orange-money.js'],
         coupons: ['js/admin/coupons.js'],
         notifications: ['js/admin/notifications.js'],
         services: ['js/admin/services.js'],
@@ -61,7 +63,8 @@
         'refunds': ['js/admin/refunds.js'],
         'sellers': ['js/admin/sellers.js'],
         'provider-alerts': ['js/admin/provider-alerts.js'],
-        'serva-catalog': ['js/admin/serva-catalog.js']
+        'serva-catalog': ['js/admin/serva-catalog.js'],
+        staff: ['js/admin/staff.js']
     });
     const loadedScripts = new Set();
     const loadedExternalScripts = new Set();
@@ -302,15 +305,14 @@
      * @returns {Promise<void>}
      */
     async function registerAdminServiceWorker() {
-        if (!('serviceWorker' in navigator)) {
-            return;
-        }
-
-        try {
-            await navigator.serviceWorker.register(ADMIN_SERVICE_WORKER_PATH, { scope: ADMIN_SERVICE_WORKER_SCOPE });
-        } catch (error) {
-            console.error('[BST-401] Failed to register admin service worker.', error);
-        }
+        // The admin shell service worker is intentionally DISABLED. It previously
+        // fought with admin-gate.js (which unregisters it and clears its caches on
+        // every load) and its precache versions drifted from the served assets,
+        // causing stale dashboard bundles. For an internal, low-traffic admin tool
+        // fresh assets matter far more than offline support, so we no longer
+        // register it. admin-gate.js still unregisters any previously-installed
+        // copy so existing operators are cleaned up automatically.
+        return;
     }
 
     /**

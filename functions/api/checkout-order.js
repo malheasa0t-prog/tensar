@@ -2,10 +2,83 @@
  * Checkout order persistence and provider-sync helpers.
  */
 
+import { evaluateCoupon, normalizeCouponCode } from "../../lib/couponModel.js";
+
 const DEFAULT_DELIVERY_METHODS = Object.freeze([
   { value: "delivery", label: "توصيل", fee: 2 },
   { value: "pickup", label: "استلام", fee: 0 },
 ]);
+
+/**
+ * Validates a coupon code against the order subtotal and atomically reserves
+ * one use via a compare-and-swap on used_count. The discount is always derived
+ * from the DB row, never trusted from the client.
+ *
+ * @param {{ admin: import("@supabase/supabase-js").SupabaseClient, couponCode: string, subtotal: number }} input
+ * @returns {Promise<{ discount: number, appliedCode: string | null }>}
+ * @throws {Error} When the coupon is invalid/expired/exhausted/below min order.
+ */
+async function reserveCheckoutCoupon({ admin, couponCode, subtotal }) {
+  const code = normalizeCouponCode(couponCode);
+  if (!code) return { discount: 0, appliedCode: null };
+
+  const { data: coupon } = await admin
+    .from("coupons")
+    .select("id, code, type, value, min_order, max_discount, max_uses, used_count, status, expires_at")
+    .eq("code", code)
+    .maybeSingle();
+
+  const evaluation = evaluateCoupon({ coupon, subtotal });
+  if (!evaluation.valid) {
+    throw new Error(`[CHK-111] ${evaluation.reason}`);
+  }
+
+  // Compare-and-swap: only succeeds if used_count is still what we read, so two
+  // concurrent checkouts can never both consume the last allowed use.
+  const previousUses = Number(coupon.used_count) || 0;
+  const { data: reserved } = await admin
+    .from("coupons")
+    .update({ used_count: previousUses + 1, updated_at: new Date().toISOString() })
+    .eq("id", coupon.id)
+    .eq("used_count", previousUses)
+    .select("id")
+    .maybeSingle();
+
+  if (!reserved) {
+    throw new Error("[CHK-111] تعذّر تطبيق الكوبون، حاول مرة أخرى.");
+  }
+
+  return { discount: evaluation.discount, appliedCode: code };
+}
+
+/**
+ * Best-effort release of a previously reserved coupon use (rollback path).
+ *
+ * @param {{ admin: import("@supabase/supabase-js").SupabaseClient, couponCode: string | null }} input
+ * @returns {Promise<void>}
+ */
+async function releaseReservedCoupon({ admin, couponCode }) {
+  const code = normalizeCouponCode(couponCode);
+  if (!code) return;
+
+  try {
+    const { data: coupon } = await admin
+      .from("coupons")
+      .select("id, used_count")
+      .eq("code", code)
+      .maybeSingle();
+    if (!coupon) return;
+
+    const currentUses = Number(coupon.used_count) || 0;
+    await admin
+      .from("coupons")
+      .update({ used_count: Math.max(0, currentUses - 1) })
+      .eq("id", coupon.id)
+      .eq("used_count", currentUses);
+  } catch (releaseError) {
+    void releaseError;
+  }
+}
 
 /**
  * Calculates the delivery fee for the selected delivery method.
@@ -176,6 +249,7 @@ export async function createCheckoutOrderRecord({
   orderItems,
   paymentMethod,
   subtotal,
+  couponCode,
   userId,
 }) {
   const deliveryMethods = await loadDeliveryMethods(admin);
@@ -184,7 +258,16 @@ export async function createCheckoutOrderRecord({
   }
 
   const shippingFee = getShippingFee(deliveryMethod, deliveryMethods);
-  const total = subtotal + shippingFee;
+
+  // Coupon is evaluated and atomically reserved server-side. The client only
+  // sends a code; the discount is always computed from the DB row.
+  const { discount, appliedCode } = await reserveCheckoutCoupon({
+    admin,
+    couponCode,
+    subtotal,
+  });
+
+  const total = Math.max(0, subtotal + shippingFee - discount);
   const { data: orderRow, error: orderError } = await admin
     .from("orders")
     .insert([
@@ -199,6 +282,8 @@ export async function createCheckoutOrderRecord({
         delivery_method: deliveryMethod,
         payment_method: paymentMethod,
         shipping_fee: shippingFee,
+        discount_amount: discount,
+        coupon_code: appliedCode || null,
         notes: notes || null,
       },
     ])
@@ -206,6 +291,7 @@ export async function createCheckoutOrderRecord({
     .single();
 
   if (orderError || !orderRow) {
+    await releaseReservedCoupon({ admin, couponCode: appliedCode });
     throw new Error(
       `[CHK-109] تعذر إنشاء الطلب: ${orderError?.message || "خطأ غير معروف"}`
     );
@@ -219,12 +305,13 @@ export async function createCheckoutOrderRecord({
 
   if (itemsError) {
     await admin.from("orders").delete().eq("id", orderId);
+    await releaseReservedCoupon({ admin, couponCode: appliedCode });
     throw new Error(
       `[CHK-110] تعذر حفظ عناصر الطلب: ${itemsError?.message || "خطأ غير معروف"}`
     );
   }
 
-  return { displayNumber, orderId, total };
+  return { displayNumber, orderId, total, discount, couponCode: appliedCode || null };
 }
 
 /**

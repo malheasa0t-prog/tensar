@@ -31,6 +31,10 @@ export default function CheckoutPage() {
     walletTransferInstructions,
     isWalletTransferModalOpen,
     isWalletTransferUnavailable,
+    coupon,
+    couponDiscount,
+    payableTotal,
+    applyCoupon,
     closeWalletTransferModal,
     updateField,
     submitCheckout,
@@ -53,10 +57,12 @@ export default function CheckoutPage() {
             success={success}
             canSubmit={canSubmit}
             checkoutTotal={checkoutTotal}
+            coupon={coupon}
             hasDigitalItems={hasDigitalItems}
             walletTransferInstructions={walletTransferInstructions}
             isWalletTransferModalOpen={isWalletTransferModalOpen}
             isWalletTransferUnavailable={isWalletTransferUnavailable}
+            onApplyCoupon={applyCoupon}
             onCloseWalletTransferModal={closeWalletTransferModal}
             onSubmit={submitCheckout}
             onFieldChange={updateField}
@@ -66,6 +72,8 @@ export default function CheckoutPage() {
             cartTotal={cartTotal}
             shippingFee={shippingFee}
             checkoutTotal={checkoutTotal}
+            couponDiscount={couponDiscount}
+            payableTotal={payableTotal}
           />
         </div>
 

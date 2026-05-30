@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
     <script>
-    /* Force clear old admin SW caches — v20260523-2 */
+    /* Force clear old admin SW caches — v20260530-2 */
     (function(){
-        var EXPECTED='tz-admin-shell-20260523-2';
+        var EXPECTED='tz-admin-shell-20260530-2';
         if(!('caches' in window))return;
         caches.keys().then(function(k){
             k.forEach(function(n){if(n!==EXPECTED&&n.indexOf('tz-admin-shell')===0)caches.delete(n);});
@@ -15,7 +15,7 @@
             navigator.serviceWorker.getRegistrations().then(function(regs){
                 regs.forEach(function(r){
                     var u=String(r.active&&r.active.scriptURL||r.installing&&r.installing.scriptURL||'');
-                    if(u.indexOf('admin-sw.js')!==-1&&u.indexOf('20260523-2')===-1)r.unregister();
+                    if(u.indexOf('admin-sw.js')!==-1&&u.indexOf('20260530-2')===-1)r.unregister();
                 });
             });
         }
@@ -27,36 +27,38 @@
     <title>TechZone | لوحة التحكم</title>
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%236c5ce7'/><text x='50' y='68' text-anchor='middle' fill='white' font-size='50' font-family='Arial' font-weight='bold'>TZ</text></svg>">
-    <link rel="stylesheet" href="css/variables.css?v=20260420-1">
-    <link rel="stylesheet" href="css/base.css?v=20260420-1">
-    <link rel="stylesheet" href="css/utilities.css?v=20260420-1">
-    <link rel="stylesheet" href="css/admin/layout.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/surfaces.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/tables.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/dashboard.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/forms.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/inputs.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/modals.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/orders.css?v=20260425-1">
-    <link rel="stylesheet" href="css/admin/customers.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/notifications.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/chats.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/logs.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/search.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/shell-enhancements.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/loading-states.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/filters.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/table-enhancements.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/buttons.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/cards.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/bulk-actions.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/components.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/responsive-overrides.css?v=20260421-1">
-    <link rel="stylesheet" href="css/admin/responsive.css?v=20260421-1">
+    <link rel="stylesheet" href="css/variables.css?v=20260530-2">
+    <link rel="stylesheet" href="css/base.css?v=20260530-2">
+    <link rel="stylesheet" href="css/utilities.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/layout.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/surfaces.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/tables.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/dashboard.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/forms.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/inputs.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/modals.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/orders.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/customers.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/notifications.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/chats.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/logs.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/search.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/shell-enhancements.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/loading-states.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/filters.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/table-enhancements.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/buttons.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/cards.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/bulk-actions.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/components.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/responsive-overrides.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/responsive.css?v=20260530-2">
     <link href="/fonts/fonts.css"
         rel="stylesheet"
         integrity="sha384-9OZeJ2MnqWntiV3TguadXC2ROtGkfi2t2G3dGpnjHQ6wZRAkfoDsdApAs7iFZarc">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/admin/modern-theme.css?v=20260530-2">
+    <link rel="stylesheet" href="css/admin/control-room.css?v=20260530-2">
 </head>
 
 <body data-theme="dark">
@@ -116,6 +118,9 @@
                         <a href="#" class="sidebar-link" data-section="services">
                             <i class="fas fa-bolt"></i><span>الخدمات</span>
                         </a>
+                        <a href="#" class="sidebar-link sidebar-link--nested" data-section="serva-catalog">
+                            <i class="fas fa-cloud-download-alt"></i><span>استيراد خدمات Serva-S</span>
+                        </a>
                     </div>
                 </section>
                 <section class="sidebar-group is-open" data-sidebar-group="engagement">
@@ -150,6 +155,9 @@
                         <a href="#" class="sidebar-link" data-section="deposits">
                             <i class="fas fa-money-check-alt"></i><span>طلبات الإيداع</span>
                         </a>
+                        <a href="#" class="sidebar-link" data-section="orange-money">
+                            <i class="fas fa-mobile-screen-button"></i><span>عمليات Orange Money</span>
+                        </a>
                         <a href="#" class="sidebar-link" data-section="coupons">
                             <i class="fas fa-percent"></i><span>الكوبونات</span>
                         </a>
@@ -172,9 +180,6 @@
                         </a>
                         <a href="#" class="sidebar-link" data-section="provider-alerts">
                             <i class="fas fa-satellite-dish"></i><span>تنبيهات المزود</span>
-                        </a>
-                        <a href="#" class="sidebar-link" data-section="serva-catalog">
-                            <i class="fas fa-cloud-download-alt"></i><span>استيراد الخدمات</span>
                         </a>
                         <a href="#" class="sidebar-link" data-section="logs">
                             <i class="fas fa-history"></i><span>سجل العمليات</span>
@@ -274,7 +279,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="/js/admin/bootstrap.js?v=20260523-2" defer></script>
+    <script src="/js/admin/bootstrap.js?v=20260530-2" defer></script>
 </body>
 
 </html>

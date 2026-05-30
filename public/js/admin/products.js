@@ -24,6 +24,17 @@
         return TZ.escapeHtml(value == null ? '' : String(value));
     }
 
+    function slugifyProduct(value) {
+        var base = String(value == null ? '' : value)
+            .trim()
+            .toLowerCase()
+            .replace(/[\s_]+/g, '-')
+            .replace(/[^؀-ۿa-z0-9-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        return base || null;
+    }
+
     function normalizeType(product) {
         return String(product?.product_type || product?.productType || '').trim().toLowerCase();
     }
@@ -143,6 +154,10 @@
             status: input.status || 'active',
             description: input.description || '',
             low_stock_alert: Number(input.lowStockAlert) || 5,
+            sku: input.sku || null,
+            slug: slugifyProduct(input.slug || input.name),
+            icon: input.icon || null,
+            is_featured: Boolean(input.isFeatured),
             images: images,
             updated_at: new Date().toISOString(),
         };
@@ -297,6 +312,25 @@
                                 <option value="draft"${currentProduct.status === 'draft' ? ' selected' : ''}>مسودة</option>
                             </select>
                         </div>
+                        <div class="admin-form-group">
+                            <label>رمز المنتج (SKU)</label>
+                            <div class="admin-input-wrap"><i class="fas fa-barcode"></i><input type="text" id="prdSku" value="${esc(currentProduct.sku || '')}"></div>
+                        </div>
+                        <div class="admin-form-group">
+                            <label>الرابط المختصر (Slug)</label>
+                            <div class="admin-input-wrap"><i class="fas fa-link"></i><input type="text" id="prdSlug" value="${esc(currentProduct.slug || '')}" placeholder="يُولَّد تلقائياً من الاسم"></div>
+                        </div>
+                        <div class="admin-form-group">
+                            <label>أيقونة (اختياري)</label>
+                            <div class="admin-input-wrap"><i class="fas fa-icons"></i><input type="text" id="prdIcon" value="${esc(currentProduct.icon || '')}" placeholder="مثل: fa-laptop"></div>
+                        </div>
+                        <div class="admin-form-group">
+                            <label>منتج مميّز</label>
+                            <label class="admin-checkbox-row" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="checkbox" id="prdFeatured"${currentProduct.isFeatured || currentProduct.is_featured ? ' checked' : ''}>
+                                <span>عرض ضمن المنتجات المميّزة</span>
+                            </label>
+                        </div>
                         <div class="admin-form-group full">
                             <label>الوصف</label>
                             <textarea id="prdDesc" rows="4">${esc(currentProduct.description || '')}</textarea>
@@ -388,6 +422,10 @@
                 lowStockAlert: panel.querySelector('#prdLowStock').value,
                 status: panel.querySelector('#prdStatus').value,
                 description: panel.querySelector('#prdDesc').value.trim(),
+                sku: panel.querySelector('#prdSku').value.trim(),
+                slug: panel.querySelector('#prdSlug').value.trim(),
+                icon: panel.querySelector('#prdIcon').value.trim(),
+                isFeatured: panel.querySelector('#prdFeatured').checked,
             });
 
             if (!success) {

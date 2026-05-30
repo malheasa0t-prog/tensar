@@ -52,6 +52,50 @@ export default function SiteRuntimeProvider({
 }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [authSnapshot, setAuthSnapshot] = useState(DEFAULT_AUTH_SNAPSHOT);
+  const [headerData, setHeaderData] = useState({
+    dynamicLinks: Array.isArray(initialDynamicLinks) ? initialDynamicLinks : [],
+    siteSettings:
+      initialSiteSettings && typeof initialSiteSettings === "object"
+        ? initialSiteSettings
+        : DEFAULT_SITE_SETTINGS,
+  });
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribe = () => {};
+
+    /**
+     * Refreshes header nav links + branding when categories/settings change.
+     *
+     * @returns {Promise<void>}
+     */
+    async function refreshHeaderData() {
+      const { fetchHeaderSnapshot } = await import("@/services/headerService");
+      const snapshot = await fetchHeaderSnapshot().catch(() => null);
+      if (!active || !snapshot) {
+        return;
+      }
+      setHeaderData({
+        dynamicLinks: Array.isArray(snapshot.dynamicLinks) ? snapshot.dynamicLinks : [],
+        siteSettings: snapshot.siteSettings || DEFAULT_SITE_SETTINGS,
+      });
+    }
+
+    async function subscribeToHeaderDataChanges() {
+      const { subscribeToHeaderData } = await import("@/services/headerService");
+      if (!active) {
+        return;
+      }
+      unsubscribe = subscribeToHeaderData(() => refreshHeaderData());
+    }
+
+    void subscribeToHeaderDataChanges();
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -103,14 +147,11 @@ export default function SiteRuntimeProvider({
   const value = useMemo(
     () => ({
       authLoading,
-      dynamicLinks: Array.isArray(initialDynamicLinks) ? initialDynamicLinks : [],
-      siteSettings:
-        initialSiteSettings && typeof initialSiteSettings === "object"
-          ? initialSiteSettings
-          : DEFAULT_SITE_SETTINGS,
+      dynamicLinks: headerData.dynamicLinks,
+      siteSettings: headerData.siteSettings,
       ...authSnapshot,
     }),
-    [authLoading, authSnapshot, initialDynamicLinks, initialSiteSettings]
+    [authLoading, authSnapshot, headerData]
   );
 
   return <SiteRuntimeContext.Provider value={value}>{children}</SiteRuntimeContext.Provider>;

@@ -106,6 +106,32 @@ export function mapDeposit(row) {
     };
 }
 
+/**
+ * Maps one Orange Money SMS operation row into the admin shape.
+ *
+ * @param {Record<string, unknown>} row
+ * @returns {Record<string, unknown>}
+ */
+export function mapOrangeMoneyLog(row) {
+    return {
+        id: row.id,
+        amount: parseFloat(row.amount || 0),
+        createdAt: row.created_at,
+        errorMessage: row.error_message || '',
+        normalizedPhone: row.normalized_phone || '',
+        payerPhone: row.payer_phone || '',
+        referenceId: row.reference_id || '',
+        sender: row.sender || '',
+        smsText: row.sms_text || '',
+        status: row.status || 'received',
+        targetId: row.target_id || '',
+        targetType: row.target_type || '',
+        updatedAt: row.updated_at,
+        userId: row.user_id || '',
+        walletTransactionId: row.wallet_transaction_id || ''
+    };
+}
+
 export function buildItemsByOrder(rows = []) {
     return rows.reduce((itemsByOrder, item) => {
         const orderId = item.order_id;

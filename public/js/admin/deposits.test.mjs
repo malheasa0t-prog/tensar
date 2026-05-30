@@ -107,6 +107,16 @@ test("buildApprovedDepositNotification should create a deposit success notificat
   });
 });
 
+test("getDepositPayerPhone should read Orange Money phone metadata", () => {
+  const hooks = loadDepositHooks();
+
+  const result = hooks.getDepositPayerPhone({
+    metadata: { orange_money_payer_phone: "0771234567" },
+  });
+
+  assert.equal(result, "0771234567");
+});
+
 test("updateWalletNotificationReference should retarget the wallet notification when a transaction exists", async () => {
   const hooks = loadDepositHooks();
   const { client, calls } = createNotificationClient({

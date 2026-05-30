@@ -1,4 +1,4 @@
-﻿// ===== TechZone Admin Data Engine - Realtime =====
+// ===== TechZone Admin Data Engine - Realtime =====
 // Scoped realtime subscriptions with shared DB mutation helpers.
 
 import {
@@ -6,21 +6,23 @@ import {
     DATA_SCOPE,
     db,
     getDataScopeConfig,
+    mergeSettingsData,
     nowIso,
     realtimeState,
     supabase,
     updateHealthStatus
-} from './core.js?v=20260523-2';
+} from './core.js?v=20260530-2';
 import {
     mapAuditLog,
     mapContactMessage,
     mapCoupon,
     mapDeposit,
+    mapOrangeMoneyLog,
     mapOrder,
     mapRepairBooking,
     mapServiceOrder
-} from './orders.js?v=20260523-2';
-import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260523-2';
+} from './orders.js?v=20260530-2';
+import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260530-2';
 
 const CATEGORY_SORTER = (first, second) => (first.sortOrder || 0) - (second.sortOrder || 0);
 
@@ -67,6 +69,12 @@ const REALTIME_BINDINGS = {
         mapper: (row) => mapDeposit(row),
         prepend: true
     },
+    orange_money_logs: {
+        collectionKey: 'orangeMoneyLogs',
+        eventName: 'orange_money_logs',
+        mapper: (row) => mapOrangeMoneyLog(row),
+        prepend: true
+    },
     coupons: { collectionKey: 'coupons', eventName: 'coupons', mapper: (row) => mapCoupon(row) },
     settings: { eventName: 'settings', isSettings: true },
     audit_logs: { collectionKey: 'logs', eventName: 'logs', mapper: (row) => mapAuditLog(row), prepend: true }
@@ -96,7 +104,7 @@ function upsertRecord(collectionKey, mappedRecord, options = {}) {
 
 function applySettingsUpdate(payload) {
     if (payload.new?.data) {
-        db.settings = { ...db.settings, ...payload.new.data };
+        db.settings = mergeSettingsData(db.settings, payload.new.data);
     }
 }
 
@@ -136,6 +144,24 @@ export function fireDataUpdate(table) {
     window.dispatchEvent(new CustomEvent('tz-data-updated', { detail: { table } }));
 }
 
+export async function teardownRealtime() {
+    const channel = realtimeState.activeScopedChannel;
+    realtimeState.activeScopedChannel = null;
+    updateHealthStatus({ realtime: 'idle' });
+
+    if (!supabase || !channel) {
+        return false;
+    }
+
+    try {
+        await supabase.removeChannel(channel);
+        return true;
+    } catch (error) {
+        console.error('[DEN-302] Failed to teardown realtime channel.', error);
+        return false;
+    }
+}
+
 export function setupScopedRealtime() {
     assertAdminRuntimeAccess();
     if (!supabase || realtimeState.activeScopedChannel) return;
@@ -147,6 +173,10 @@ export function setupScopedRealtime() {
     realtimeState.activeScopedChannel = channel;
     realtimeTables.forEach((tableName) => subscribeTable(channel, tableName));
     channel.subscribe((status) => {
+        if (realtimeState.activeScopedChannel !== channel) {
+            return;
+        }
+
         const realtimeStatus = status === 'SUBSCRIBED'
             ? 'connected'
             : (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')
@@ -157,3 +187,4 @@ export function setupScopedRealtime() {
 }
 
 export const setupRealtime = setupScopedRealtime;
+export const stopRealtime = teardownRealtime;

@@ -1,3 +1,6 @@
+\echo 'DO NOT RUN: legacy snapshot. Use db/complete_database_setup.sql plus chronological migrations from db/README.md.'
+\q
+
 -- =====================================================
 -- منصة الخدمات الرقمية — سكربت إنشاء الجداول الجديدة
 -- المرحلة الأولى (النواة)

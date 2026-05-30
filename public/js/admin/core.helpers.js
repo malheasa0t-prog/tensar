@@ -22,6 +22,7 @@
         'support-chats',
         'notifications',
         'deposits',
+        'orange-money',
         'coupons',
         'settings',
         'logs',
@@ -30,14 +31,15 @@
         'refunds',
         'sellers',
         'provider-alerts',
-        'serva-catalog'
+        'serva-catalog',
+        'staff'
     ]);
 
     const SECTION_TITLES = {
         'service-orders': 'طلبات الخدمات',
         'accessory-orders': 'طلبات الإكسسوارات',
         'repair-orders': 'حجوزات الصيانة',
-        'serva-catalog': 'خدمات Serva-S',
+        'serva-catalog': 'استيراد خدمات Serva-S',
         dashboard: 'لوحة المعلومات',
         orders: 'إدارة الطلبات',
         'product-orders': 'طلبات المنتجات',
@@ -53,6 +55,7 @@
         'support-chats': 'دردشات الدعم',
         notifications: 'الإشعارات',
         deposits: 'طلبات الإيداع',
+        'orange-money': 'عمليات Orange Money',
         coupons: 'الكوبونات',
         settings: 'الإعدادات',
         logs: 'سجل العمليات',
@@ -60,7 +63,9 @@
         'platform-updates': 'تحديثات المنصة',
         'refunds': 'طلبات الاسترجاع',
         'sellers': 'إدارة البائعين',
-        'provider-alerts': 'تنبيهات المزود'
+        'provider-alerts': 'تنبيهات المزود',
+        products: 'إدارة المنتجات',
+        staff: 'الموظفون والصلاحيات'
     };
     const DELIVERY_LABELS = {
         delivery: 'توصيل للمنزل',
@@ -156,8 +161,55 @@
         }
     }
 
+    // Maps a sidebar view id to the granular permission key it belongs to.
+    const SECTION_PERMISSION_KEY = {
+        dashboard: 'dashboard',
+        orders: 'orders',
+        'product-orders': 'orders',
+        'service-orders': 'orders',
+        'accessory-orders': 'orders',
+        'repair-orders': 'orders',
+        products: 'products',
+        categories: 'categories',
+        'main-categories': 'categories',
+        subcategories: 'categories',
+        services: 'services',
+        'repair-services': 'services',
+        'serva-catalog': 'services',
+        customers: 'customers',
+        sellers: 'sellers',
+        messages: 'messages',
+        'contact-messages': 'messages',
+        chats: 'chats',
+        'support-chats': 'chats',
+        notifications: 'notifications',
+        deposits: 'deposits',
+        'orange-money': 'deposits',
+        coupons: 'coupons',
+        refunds: 'refunds',
+        settings: 'settings',
+        'platform-updates': 'settings',
+        'provider-alerts': 'settings',
+        logs: 'logs',
+        'audit-logs': 'logs',
+        staff: 'staff'
+    };
+
     function canAccessSection(currentUser, TZ, section) {
-        if (!currentUser || typeof TZ.canAccessSection !== 'function') return true;
+        if (!currentUser) return true;
+
+        // Granular staff (employee/technician): gate purely by granted permissions
+        // delivered from the session. Full admins fall through to the role-level
+        // check below. When the access context is unknown we do not over-restrict
+        // on the client — the server proxy still enforces every operation.
+        const access = window.__TZ_ADMIN_ACCESS;
+        if (access && access.isFullAdmin !== true) {
+            const key = SECTION_PERMISSION_KEY[section] || section;
+            const grant = access.permissions ? access.permissions[key] : null;
+            return Boolean(grant && grant.view);
+        }
+
+        if (typeof TZ.canAccessSection !== 'function') return true;
         return TZ.canAccessSection(currentUser, section);
     }
 

@@ -1,9 +1,9 @@
-﻿// ===== TechZone Admin Data Engine - Products =====
+// ===== TechZone Admin Data Engine - Products =====
 // Category and product mapping plus storefront catalog helpers.
 
 import {
     db
-} from './core.js?v=20260523-2';
+} from './core.js?v=20260530-2';
 
 export function mapCategory(row) {
     return {
@@ -38,6 +38,11 @@ export function mapProduct(row) {
         images: row.images || [],
         variants: row.variants || [],
         lowStockAlert: row.low_stock_alert,
+        sku: row.sku || '',
+        slug: row.slug || '',
+        icon: row.icon || '',
+        isFeatured: row.is_featured === true,
+        reviewCount: row.review_count || 0,
         createdAt: row.created_at,
         updatedAt: row.updated_at
     };

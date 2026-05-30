@@ -383,13 +383,18 @@
         var services = TZ.db.repairServices || [];
         var html = '<div class="admin-section-header"><div><h2><i class="fas fa-screwdriver-wrench"></i> خدمات الصيانة</h2><p>'
             + services.length
-            + ' خدمة</p></div><div class="admin-section-actions"><button class="btn btn-primary btn-sm" id="addSvcBtn"><i class="fas fa-plus"></i> إضافة خدمة</button></div></div>';
+            + ' خدمة صيانة محلية داخل الموقع</p></div><div class="admin-section-actions"><button class="btn btn-outline btn-sm" id="openServaCatalogBtn"><i class="fas fa-cloud-download-alt"></i> استيراد من Serva-S</button><button class="btn btn-primary btn-sm" id="addSvcBtn"><i class="fas fa-plus"></i> إضافة خدمة</button></div></div>';
+
+        html += '<div class="admin-panel" style="margin-bottom:16px;"><div class="panel-body" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">'
+            + '<div><strong style="display:block;margin-bottom:6px;">الخدمات الرقمية من Serva-S</strong><span style="color:var(--text-muted);font-size:0.9rem;">إذا أردت إضافة خدمات المزود إلى المتجر، افتح قسم الاستيراد واربط كل خدمة بالفئة المناسبة داخل موقعك.</span></div>'
+            + '<button class="btn btn-outline btn-sm" id="openServaCatalogInlineBtn"><i class="fas fa-arrow-left"></i> فتح قسم الاستيراد</button>'
+            + '</div></div>';
 
         html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
             + '<th>الصورة</th><th>الخدمة</th><th>الفئة</th><th>السعر</th><th>المدة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>';
 
         if (services.length === 0) {
-            html += '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-screwdriver-wrench"></i><p>لا توجد خدمات</p></div></td></tr>';
+            html += '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-screwdriver-wrench"></i><p>لا توجد خدمات صيانة بعد</p></div></td></tr>';
         } else {
             services.forEach(function (service) {
                 html += '<tr>'
@@ -411,6 +416,12 @@
 
         document.getElementById('addSvcBtn')?.addEventListener('click', function () {
             openServiceForm(null);
+        });
+        document.getElementById('openServaCatalogBtn')?.addEventListener('click', function () {
+            A.renderSection?.('serva-catalog');
+        });
+        document.getElementById('openServaCatalogInlineBtn')?.addEventListener('click', function () {
+            A.renderSection?.('serva-catalog');
         });
 
         document.querySelectorAll('.edit-svc-btn').forEach(function (button) {

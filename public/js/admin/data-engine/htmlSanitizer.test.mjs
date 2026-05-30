@@ -12,6 +12,7 @@ test("isSafeAdminHtmlUrl should allow relative and https URLs only", () => {
   assert.equal(isSafeAdminHtmlUrl("/images/service.jpg"), true);
   assert.equal(isSafeAdminHtmlUrl("https://example.com/image.jpg"), true);
   assert.equal(isSafeAdminHtmlUrl("javascript:alert(1)"), false);
+  assert.equal(isSafeAdminHtmlUrl("&#x6A;avascript:alert(1)"), false);
 });
 
 test("sanitizeAdminInlineStyle should strip dangerous inline style payloads", () => {
@@ -28,6 +29,15 @@ test("sanitizeAdminHtmlMarkup should strip scripts event handlers and unsafe URL
   assert.equal(result.includes("<script>"), false);
   assert.equal(result.includes('src="javascript:alert(1)"'), false);
   assert.equal(result.includes('href="/safe"'), true);
+});
+
+test("sanitizeAdminHtmlMarkup should strip slash-prefixed handlers and entity-encoded javascript URLs", () => {
+  const result = sanitizeAdminHtmlMarkup(
+    '<svg/onload=alert(1)><a href="&#x6A;avascript:alert(1)">x</a></svg>'
+  );
+
+  assert.equal(result.includes("onload"), false);
+  assert.equal(result.includes("javascript:"), false);
 });
 
 test("installSanitizedInnerHtmlGuard should sanitize future innerHTML assignments", () => {

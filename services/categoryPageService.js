@@ -1,5 +1,6 @@
 import { slugifyArabic } from '@/lib/categoryPageModel';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
+import { subscribeToTableChanges } from '@/lib/realtimeTableSubscription';
 
 const CATEGORY_PAGE_CACHE_TTL_MS = 60_000;
 const categoryPageSnapshotCache = new Map();
@@ -345,6 +346,36 @@ export async function loadCategoryPageSnapshot(routeValue) {
  */
 export function prefetchCategoryPageSnapshot(routeValue) {
   return loadCategoryPageSnapshot(routeValue).catch(() => null);
+}
+
+/**
+ * Clears every cached category snapshot so the next load re-reads from Supabase.
+ *
+ * @returns {void}
+ */
+export function invalidateCategoryPageCache() {
+  categoryPageSnapshotCache.clear();
+}
+
+/**
+ * Subscribes to the tables behind category pages (categories + the service
+ * catalogs) so the page refreshes within moments of an admin edit instead of
+ * waiting for the 60s cache TTL.
+ *
+ * @param {() => void} onChange
+ * @param {Record<string, unknown>} [client]
+ * @returns {() => void}
+ */
+export function subscribeToCategoryPage(onChange, client) {
+  return subscribeToTableChanges({
+    channel: 'storefront-category',
+    tables: ['categories', 'repair_services', 'services'],
+    client,
+    onChange: () => {
+      invalidateCategoryPageCache();
+      if (typeof onChange === 'function') onChange();
+    },
+  });
 }
 
 /**

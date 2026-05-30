@@ -93,27 +93,32 @@ export async function getRepairBookingAccountSnapshot(client) {
  * uses the service-role client so we don't have to loosen RLS.
  *
  * @param {{
- *   name?: string,
- *   phone?: string,
- *   serviceId?: string,
- *   description?: string,
- *   mode?: string,
- *   address?: string,
- *   preferredDate?: string,
- *   service_id?: string,
- *   preferred_date?: string,
- * }} form - Form payload as built by the UI.
+ *   client?: { auth: { getSession: () => Promise<{ data?: { session?: { access_token?: string } | null } }> | Promise<null> } },
+ *   form: {
+ *     address?: string,
+ *     description?: string,
+ *     mode?: string,
+ *     name?: string,
+ *     phone?: string,
+ *     preferredDate?: string,
+ *     preferred_date?: string,
+ *     serviceId?: string,
+ *     service_id?: string,
+ *   },
+ *   idempotencyKey?: string,
+ * }} input - Form payload and optional request dependencies.
  * @returns {Promise<{ data?: Record<string, unknown> | null, error?: { message: string } | null }>} Result envelope.
  */
-export async function createRepairBooking(form) {
+export async function createRepairBooking({ client, form, idempotencyKey = "" }) {
   try {
-    const supabase = await loadSupabaseClient();
+    const supabase = client || await loadSupabaseClient();
     const session = await supabase.auth.getSession().catch(() => null);
     const token = session?.data?.session?.access_token || "";
+    const requestIdempotencyKey = String(idempotencyKey || "").trim() || createIdempotencyKey();
 
     const headers = {
       "Content-Type": "application/json",
-      "Idempotency-Key": createIdempotencyKey(),
+      "Idempotency-Key": requestIdempotencyKey,
     };
     if (token) {
       headers.Authorization = `Bearer ${token}`;

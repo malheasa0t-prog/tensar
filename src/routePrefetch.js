@@ -18,6 +18,7 @@ const uncachedRouteModuleLoaders = Object.freeze({
   compare: () => import("@/app/compare/page"),
   "favorites-shared": () => import("@/app/favorites/shared/page"),
   deposit: () => import("@/app/deposit/page"),
+  track: () => import("@/app/track/page"),
   "auth-login": () => import("@/app/auth/login/page"),
   "auth-register": () => import("@/app/auth/register/page"),
   "auth-recover": () => import("@/app/auth/recover/page"),

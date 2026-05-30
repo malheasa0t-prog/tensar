@@ -890,3 +890,386 @@ body[data-theme] {
   background: var(--border-strong);
   background-clip: padding-box;
 }
+
+/* =====================================================================
+ * 12. Dashboard surfaces (stat cards + KPI grid)
+ * ===================================================================== */
+
+.admin-layout .dashboard-grid,
+.tz-dashboard-grid {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.admin-layout .stat-card,
+.admin-layout .dashboard-card,
+.tz-stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  isolation: isolate;
+  transition: var(--transition);
+}
+
+.admin-layout .stat-card::before,
+.admin-layout .dashboard-card::before,
+.tz-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--primary-rgb), 0.16) 0%,
+    rgba(var(--primary-rgb), 0) 60%
+  );
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.admin-layout .stat-card:hover,
+.admin-layout .dashboard-card:hover,
+.tz-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.admin-layout .stat-card:hover::before,
+.admin-layout .dashboard-card:hover::before,
+.tz-stat-card:hover::before {
+  opacity: 1;
+}
+
+.admin-layout .stat-card .stat-icon,
+.tz-stat-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--primary-light);
+  font-size: 1.2rem;
+  box-shadow: inset 0 0 0 1px var(--primary-soft-strong);
+}
+
+.admin-layout .stat-card .stat-label,
+.tz-stat-card__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.admin-layout .stat-card .stat-value,
+.tz-stat-card__value {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-layout .stat-card .stat-delta,
+.tz-stat-card__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.admin-layout .stat-card .stat-delta.is-negative,
+.tz-stat-card__delta.is-negative {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.admin-layout .stat-card .stat-footer,
+.tz-stat-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-light);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Section heading used at the top of dashboard groups */
+.admin-layout .section-heading,
+.tz-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin: var(--space-8) 0 var(--space-4);
+}
+
+.admin-layout .section-heading h2,
+.tz-section-heading__title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.admin-layout .section-heading .subtitle,
+.tz-section-heading__subtitle {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+/* =====================================================================
+ * 13. Top bar polish (search, breadcrumb, user chip)
+ * ===================================================================== */
+
+.admin-layout .admin-breadcrumbs,
+.admin-layout .breadcrumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.admin-layout .admin-breadcrumbs a,
+.admin-layout .breadcrumbs a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.admin-layout .admin-breadcrumbs a:hover,
+.admin-layout .breadcrumbs a:hover {
+  color: var(--primary-light);
+}
+
+.admin-layout .admin-search-shortcut,
+.admin-layout .admin-search-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-layout .admin-search-input-wrap {
+  position: relative;
+  min-width: min(360px, 100%);
+  padding: 0 var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  transition: var(--transition);
+}
+
+.admin-layout .admin-search-input-wrap:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.admin-layout .admin-search-input-wrap input {
+  flex: 1;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.admin-layout .admin-search-input-wrap input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.admin-layout .admin-search-input-wrap .fa-terminal,
+.admin-layout .admin-search-input-wrap .fa-search {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.admin-layout .admin-search-shortcut {
+  padding: 2px var(--space-2);
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.admin-layout .user-chip,
+.tz-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  transition: var(--transition);
+}
+
+.admin-layout .user-chip:hover,
+.tz-user-chip:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.admin-layout .user-chip .avatar,
+.tz-user-chip__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: var(--text-on-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+/* =====================================================================
+ * 14. Sidebar collapse (desktop)
+ * ===================================================================== */
+
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar {
+  width: var(--sidebar-width-collapsed);
+}
+
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .sidebar-link span,
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .sidebar-group-label span,
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .sidebar-group-chevron,
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .sidebar-badge,
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .logo span {
+  display: none;
+}
+
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .sidebar-link,
+.admin-layout[data-sidebar="collapsed"] .admin-sidebar .sidebar-group-toggle {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.admin-layout[data-sidebar="collapsed"] .admin-content,
+.admin-layout[data-sidebar="collapsed"] .admin-main {
+  margin-inline-start: var(--sidebar-width-collapsed);
+}
+
+/* =====================================================================
+ * 15. Toast / notification stack (RTL-aware)
+ * ===================================================================== */
+
+.admin-layout .toast-stack,
+.tz-toast-stack {
+  position: fixed;
+  inset-block-end: var(--space-6);
+  inset-inline-end: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  z-index: 200;
+  pointer-events: none;
+}
+
+.admin-layout .toast,
+.tz-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 280px;
+  max-width: 360px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-inline-start: 4px solid var(--primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  animation: tz-toast-in var(--duration-base) var(--ease-emphasized);
+}
+
+.admin-layout .toast.success,
+.tz-toast--success { border-inline-start-color: var(--success); }
+
+.admin-layout .toast.warning,
+.tz-toast--warning { border-inline-start-color: var(--warning); }
+
+.admin-layout .toast.error,
+.tz-toast--danger { border-inline-start-color: var(--danger); }
+
+@keyframes tz-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================================================================
+ * 16. Tabs (used by orders/services/customers)
+ * ===================================================================== */
+
+.admin-layout .tabs,
+.admin-layout .tab-bar,
+.tz-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-xs);
+}
+
+.admin-layout .tabs button,
+.admin-layout .tab-bar button,
+.tz-tabs button {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.admin-layout .tabs button:hover,
+.admin-layout .tab-bar button:hover,
+.tz-tabs button:hover {
+  color: var(--text-primary);
+  background: var(--primary-soft);
+}
+
+.admin-layout .tabs button.is-active,
+.admin-layout .tabs button[aria-selected="true"],
+.admin-layout .tab-bar button.is-active,
+.tz-tabs button.is-active,
+.tz-tabs button[aria-selected="true"] {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--text-on-primary);
+  box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.30);
+}

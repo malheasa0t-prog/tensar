@@ -15,6 +15,7 @@ import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import {
   AUTH_SOCIAL_PROVIDERS,
   LOGIN_EXPERIENCE_PANEL,
+  buildOAuthSignInOptions,
   mapLoginAuthError,
   mapOAuthProviderError,
   validateLoginForm,
@@ -66,25 +67,35 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const supabase = await loadSupabaseClient();
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = await loadSupabaseClient();
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      const nextError = mapLoginAuthError(authError);
+      if (authError) {
+        const nextError = mapLoginAuthError(authError);
+        setError(nextError);
+        showToast(withAuthCode('AUS-301', nextError), {
+          type: 'error',
+          title: 'تعذر تسجيل الدخول',
+        });
+        setLoading(false);
+        return;
+      }
+
+      await syncProfileFromAuthUser(authData?.user);
+      window.location.href = await getPostAuthDestination(authData?.user);
+    } catch (caughtError) {
+      const nextError = 'تعذّر الاتصال بالخادم. تحقّق من اتصالك وحاول مجدداً.';
       setError(nextError);
-      showToast(withAuthCode('AUS-301', nextError), {
+      showToast(withAuthCode('AUS-303', nextError), {
         type: 'error',
         title: 'تعذر تسجيل الدخول',
       });
       setLoading(false);
-      return;
     }
-
-    await syncProfileFromAuthUser(authData?.user);
-    window.location.href = await getPostAuthDestination(authData?.user);
   }
 
   /**
@@ -97,19 +108,33 @@ export default function LoginPage() {
     setActiveProvider(provider);
     setError('');
 
-    const supabase = await loadSupabaseClient();
-    const { error: providerError } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: buildAuthCallbackRedirectUrl() },
-    });
+    const providerLabel =
+      AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() ||
+      provider;
 
-    if (providerError) {
-      const providerLabel =
-        AUTH_SOCIAL_PROVIDERS.find((item) => item.provider === provider)?.label.split(' ').pop() ||
-        provider;
-      const nextError = mapOAuthProviderError({ provider: providerLabel, error: providerError });
+    try {
+      const supabase = await loadSupabaseClient();
+      const { error: providerError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: buildOAuthSignInOptions({
+          provider,
+          redirectTo: buildAuthCallbackRedirectUrl(),
+        }),
+      });
+
+      if (providerError) {
+        const nextError = mapOAuthProviderError({ provider: providerLabel, error: providerError });
+        setError(nextError);
+        showToast(withAuthCode('AUS-302', nextError), {
+          type: 'error',
+          title: 'تعذر المتابعة',
+        });
+        setActiveProvider('');
+      }
+    } catch (caughtError) {
+      const nextError = mapOAuthProviderError({ provider: providerLabel, error: caughtError });
       setError(nextError);
-      showToast(withAuthCode('AUS-302', nextError), {
+      showToast(withAuthCode('AUS-304', nextError), {
         type: 'error',
         title: 'تعذر المتابعة',
       });

@@ -5,7 +5,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getRepairBookingAccountSnapshot } from "./repairBookingService.js";
+import {
+  createRepairBooking,
+  getRepairBookingAccountSnapshot,
+} from "./repairBookingService.js";
+
+const ORIGINAL_FETCH = globalThis.fetch;
+
+test.afterEach(() => {
+  globalThis.fetch = ORIGINAL_FETCH;
+});
 
 /**
  * Creates a fake Supabase client for account snapshot tests.
@@ -62,6 +71,28 @@ function createRepairBookingClient({
   };
 }
 
+/**
+ * Creates a minimal booking-session client stub.
+ *
+ * @param {{ accessToken?: string }} [options={}] - Session options.
+ * @returns {{ auth: { getSession: () => Promise<{ data: { session: { access_token: string } | null } }> } }}
+ */
+function createBookingSessionClient(options = {}) {
+  const accessToken = String(options.accessToken || "");
+
+  return {
+    auth: {
+      async getSession() {
+        return {
+          data: {
+            session: accessToken ? { access_token: accessToken } : null,
+          },
+        };
+      },
+    },
+  };
+}
+
 test("getRepairBookingAccountSnapshot should treat missing auth sessions as guests", async () => {
   const { client, profileLookupCount } = createRepairBookingClient({
     authError: {
@@ -97,5 +128,75 @@ test("getRepairBookingAccountSnapshot should prefill profile data for signed-in 
     name: "Ahmad",
     phone: "0790000000",
     isAccountPrefilled: true,
+  });
+});
+
+test("createRepairBooking should post the supplied idempotency key and auth token", async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, "/api/repair-booking");
+    assert.equal(options.method, "POST");
+    assert.equal(options.headers.Authorization, "Bearer token-1");
+    assert.equal(options.headers["Content-Type"], "application/json");
+    assert.equal(options.headers["Idempotency-Key"], "repair-key-123");
+    assert.deepEqual(JSON.parse(String(options.body)), {
+      name: "Ahmad",
+      phone: "0790000000",
+      serviceId: "repair-1",
+      description: "Broken fan",
+      mode: "delivery",
+      address: "Amman",
+      preferredDate: "2026-06-01",
+    });
+
+    return Response.json({
+      success: true,
+      data: { id: "bk-1", display_number: 2001 },
+    }, { status: 201 });
+  };
+
+  const result = await createRepairBooking({
+    client: createBookingSessionClient({ accessToken: "token-1" }),
+    form: {
+      name: "Ahmad",
+      phone: "0790000000",
+      serviceId: "repair-1",
+      description: "Broken fan",
+      mode: "delivery",
+      address: "Amman",
+      preferredDate: "2026-06-01",
+    },
+    idempotencyKey: "repair-key-123",
+  });
+
+  assert.deepEqual(result, {
+    data: { id: "bk-1", display_number: 2001 },
+    error: null,
+  });
+});
+
+test("createRepairBooking should generate an idempotency key when one is not supplied", async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, "/api/repair-booking");
+    assert.match(String(options.headers["Idempotency-Key"] || ""), /^[A-Za-z0-9_-]{8,128}$/u);
+
+    return Response.json({
+      success: false,
+      error: "[RBK-301] Failed to save booking",
+    }, { status: 500 });
+  };
+
+  const result = await createRepairBooking({
+    client: createBookingSessionClient(),
+    form: {
+      name: "Sara",
+      phone: "0780000000",
+      serviceId: "repair-2",
+      description: "No power",
+      mode: "pickup",
+    },
+  });
+
+  assert.deepEqual(result, {
+    error: { message: "[RBK-301] Failed to save booking" },
   });
 });

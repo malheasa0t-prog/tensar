@@ -1,11 +1,11 @@
-﻿// ===== TechZone Admin Data Engine - Core =====
+// ===== TechZone Admin Data Engine - Core =====
 // Shared state, Supabase bootstrap, utilities, auth/session helpers, and catalog constants.
 
 import {
     installSanitizedInnerHtmlGuard,
     sanitizeAdminHtmlMarkup
 } from './htmlSanitizer.js';
-import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260523-2';
+import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260530-2';
 
 const SUPABASE_URL = window.__TZ_SUPABASE_URL || '';
 const SUPABASE_PUBLISHABLE_KEY = window.__TZ_SUPABASE_PUBLISHABLE_KEY || '';
@@ -66,6 +66,8 @@ export const ROLES = {
 export const ADMIN_SECTIONS = [
     { id: 'dashboard', minLevel: 3, icon: 'fa-chart-pie', label: 'لوحة المعلومات' },
     { id: 'orders', minLevel: 3, icon: 'fa-shopping-bag', label: 'الطلبات' },
+    { id: 'products', minLevel: 8, icon: 'fa-box', label: 'المنتجات' },
+    { id: 'staff', minLevel: 8, icon: 'fa-user-shield', label: 'الموظفون والصلاحيات' },
     { id: 'product-orders', minLevel: 3, icon: 'fa-box', label: 'طلبات المنتجات' },
     { id: 'service-orders', minLevel: 3, icon: 'fa-bolt', label: 'طلبات الخدمات' },
     { id: 'accessory-orders', minLevel: 3, icon: 'fa-headphones', label: 'طلبات الإكسسوارات' },
@@ -73,6 +75,7 @@ export const ADMIN_SECTIONS = [
     { id: 'categories', minLevel: 8, icon: 'fa-tags', label: 'الفئات' },
     { id: 'services', minLevel: 8, icon: 'fa-bolt', label: 'الخدمات' },
     { id: 'deposits', minLevel: 8, icon: 'fa-money-check-alt', label: 'طلبات الإيداع' },
+    { id: 'orange-money', minLevel: 8, icon: 'fa-mobile-screen-button', label: 'عمليات Orange Money' },
     { id: 'customers', minLevel: 3, icon: 'fa-users', label: 'العملاء' },
     { id: 'sellers', minLevel: 8, icon: 'fa-user-tag', label: 'البائعين' },
     { id: 'coupons', minLevel: 8, icon: 'fa-ticket-alt', label: 'الكوبونات' },
@@ -82,7 +85,7 @@ export const ADMIN_SECTIONS = [
     { id: 'messages', minLevel: 3, icon: 'fa-envelope', label: 'رسائل التواصل' },
     { id: 'platform-updates', minLevel: 10, icon: 'fa-bullhorn', label: 'تحديثات المنصة' },
     { id: 'provider-alerts', minLevel: 10, icon: 'fa-satellite-dish', label: 'تنبيهات المزود' },
-    { id: 'serva-catalog', minLevel: 8, icon: 'fa-cube', label: 'كتالوج المزود' },
+    { id: 'serva-catalog', minLevel: 8, icon: 'fa-cube', label: 'استيراد خدمات Serva-S' },
     { id: 'settings', minLevel: 10, icon: 'fa-cog', label: 'الإعدادات' },
     { id: 'logs', minLevel: 10, icon: 'fa-history', label: 'سجل العمليات' }
 ];
@@ -115,6 +118,7 @@ export const db = {
     orders: [],
     serviceOrders: [],
     deposits: [],
+    orangeMoneyLogs: [],
     coupons: [],
     settings: clone(DEFAULT_SETTINGS),
     repairServices: [],
@@ -131,6 +135,7 @@ const ADMIN_DB_FALLBACK = Object.freeze({
     orders: Object.freeze([]),
     serviceOrders: Object.freeze([]),
     deposits: Object.freeze([]),
+    orangeMoneyLogs: Object.freeze([]),
     coupons: Object.freeze([]),
     settings: Object.freeze(clone(DEFAULT_SETTINGS)),
     repairServices: Object.freeze([]),
@@ -181,6 +186,29 @@ export function saveDbLocal() {
 
 export function clone(value) {
     return JSON.parse(JSON.stringify(value));
+}
+
+/**
+ * Deep-merges a settings patch one level into the current settings object.
+ *
+ * Nested groups (company, payments, shipping, ...) are merged key-by-key so a
+ * partial save never wipes sibling keys it did not include. Arrays and scalars
+ * are replaced wholesale.
+ *
+ * @param {Record<string, unknown>} current
+ * @param {Record<string, unknown>} incoming
+ * @returns {Record<string, unknown>}
+ */
+export function mergeSettingsData(current, incoming) {
+    const base = current && typeof current === 'object' ? current : {};
+    const patch = incoming && typeof incoming === 'object' ? incoming : {};
+    const merged = { ...base };
+    for (const [key, value] of Object.entries(patch)) {
+        const isPlainObject = value && typeof value === 'object' && !Array.isArray(value);
+        const baseIsPlainObject = base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]);
+        merged[key] = isPlainObject && baseIsPlainObject ? { ...base[key], ...value } : value;
+    }
+    return merged;
 }
 
 export function generateId(prefix = '') {
@@ -242,12 +270,12 @@ const DATA_SCOPE_CONFIG = {
         queries: [
             'profiles', 'legacyUsers', 'categories', 'products',
             'orders', 'orderItems', 'serviceOrders', 'settings', 'coupons', 'repairServices',
-            'repairBookings', 'messages', 'logs', 'deposits'
+            'repairBookings', 'messages', 'logs', 'deposits', 'orangeMoneyLogs'
         ],
         realtime: [
             'products', 'categories', 'orders', 'service_orders',
             'repair_services', 'repair_bookings', 'contact_messages', 'deposits',
-            'coupons', 'settings'
+            'orange_money_logs', 'coupons', 'settings', 'audit_logs'
         ]
     },
     storefront: {

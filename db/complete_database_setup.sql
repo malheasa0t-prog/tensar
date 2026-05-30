@@ -33,8 +33,12 @@ create or replace function public.is_admin_role(p_role text)
 returns boolean
 language sql
 immutable
+set search_path = public
 as $$
-  select lower(coalesce(p_role, '')) in ('super_admin', 'admin', 'technician', 'employee');
+  -- Only true admins get blanket RLS access. technician/employee are panel
+  -- *staff* (see is_panel_staff + staff_permissions) and must NOT bypass RLS.
+  -- Keep in sync with db/2026-05-30-05-staff-permissions.sql.
+  select lower(coalesce(p_role, '')) in ('super_admin', 'admin');
 $$;
 
 -- ============================================================
@@ -2285,6 +2289,10 @@ exception
 end;
 $$;
 
+-- Internal helper only: never reachable by clients (matches 2026-05-29-03).
+revoke execute on function public.enable_realtime_for_table(regclass) from public, anon, authenticated;
+grant execute on function public.enable_realtime_for_table(regclass) to service_role;
+
 select public.enable_realtime_for_table('public.categories'::regclass);
 select public.enable_realtime_for_table('public.products'::regclass);
 select public.enable_realtime_for_table('public.services'::regclass);
@@ -2512,7 +2520,11 @@ drop policy if exists refund_requests_insert_own on public.refund_requests;
 create policy refund_requests_insert_own
 on public.refund_requests for insert
 to authenticated
-with check (auth.uid() = user_id or public.is_current_admin());
+with check (
+  auth.uid() = user_id
+  and coalesce(status, 'pending') = 'pending'
+  and amount > 0
+);
 
 drop policy if exists refund_requests_update_admin on public.refund_requests;
 create policy refund_requests_update_admin
@@ -3012,6 +3024,8 @@ security definer
 set search_path = public, auth, pg_temp
 as $$
 declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
   v_order public.service_orders%rowtype;
   v_wallet public.wallets%rowtype;
   v_normalized_status text := lower(trim(coalesce(p_new_status, '')));
@@ -3020,6 +3034,11 @@ declare
   v_effective_remains integer := case when p_remains is null then null else greatest(p_remains, 0) end;
   v_balance_after numeric;
 begin
+  if v_actor_role <> 'service_role'
+     and not public.is_admin_user(v_actor_user_id) then
+    raise exception 'Not authorized';
+  end if;
+
   select * into v_order
   from public.service_orders
   where id = p_order_id
@@ -3144,14 +3163,21 @@ create or replace function public.release_service_order_wallet(
 returns table(released boolean, refunded_amount numeric, new_balance numeric)
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, auth, pg_temp
 as $$
 declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
   v_order public.service_orders%rowtype;
   v_wallet public.wallets%rowtype;
   v_refund numeric := 0;
   v_new_balance numeric := 0;
 begin
+  if v_actor_role <> 'service_role'
+     and not public.is_admin_user(v_actor_user_id) then
+    raise exception 'Not authorized';
+  end if;
+
   select * into v_order
   from public.service_orders
   where id = p_order_id
@@ -3244,9 +3270,17 @@ create or replace function public.merge_service_order_metadata(
 returns void
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, auth, pg_temp
 as $$
+declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
 begin
+  if v_actor_role <> 'service_role'
+     and not public.is_admin_user(v_actor_user_id) then
+    raise exception 'Not authorized';
+  end if;
+
   if p_metadata is null or jsonb_typeof(p_metadata) <> 'object' then
     return;
   end if;
@@ -3268,12 +3302,19 @@ create or replace function public.admin_set_order_status(
 returns table(applied boolean, previous_status text, current_status text)
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, auth, pg_temp
 as $$
 declare
+  v_actor_user_id uuid := auth.uid();
+  v_actor_role text := coalesce(current_setting('request.jwt.claim.role', true), '');
   v_prev_status text;
   v_new_status text := lower(trim(p_new_status));
 begin
+  if v_actor_role <> 'service_role'
+     and not public.is_admin_user(v_actor_user_id) then
+    raise exception 'Not authorized';
+  end if;
+
   if v_new_status not in ('pending', 'processing', 'delivered', 'cancelled') then
     raise exception 'INVALID_STATUS:%', v_new_status using errcode = '22023';
   end if;

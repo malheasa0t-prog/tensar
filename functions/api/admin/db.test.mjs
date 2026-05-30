@@ -418,6 +418,187 @@ test("onRequestPost should reject unsafe app_users column requests", async () =>
   assert.equal(payload.code, "ADB-113");
 });
 
+test("onRequestPost should execute the admin_approve_refund RPC", async () => {
+  const rpcCalls = [];
+  const handlers = createAdminDbHandlers({
+    requireAdminAccess: async () => ({
+      user: { id: "admin-1", email: "admin@example.com" },
+      errorResponse: null,
+    }),
+    createSupabaseAdmin: () => ({
+      rpc(functionName, args) {
+        rpcCalls.push({ functionName, args });
+        return Promise.resolve({ data: { request_id: "ref-1", new_balance: 12.5 }, error: null });
+      },
+    }),
+  });
+
+  const response = await handlers.onRequestPost(createContext(new Request(
+    "https://tensr.systems/api/admin/db",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "rpc",
+        functionName: "admin_approve_refund",
+        args: { p_admin_user_id: "admin-1", p_request_id: "ref-1" },
+      }),
+      headers: { "Content-Type": "application/json" },
+    },
+  )));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.deepEqual(rpcCalls, [{
+    functionName: "admin_approve_refund",
+    args: { p_admin_user_id: "admin-1", p_request_id: "ref-1" },
+  }]);
+});
+
+test("onRequestPost should execute the admin_set_seller_role RPC", async () => {
+  const rpcCalls = [];
+  const handlers = createAdminDbHandlers({
+    requireAdminAccess: async () => ({
+      user: { id: "admin-1", email: "admin@example.com" },
+      errorResponse: null,
+    }),
+    createSupabaseAdmin: () => ({
+      rpc(functionName, args) {
+        rpcCalls.push({ functionName, args });
+        return Promise.resolve({ data: { app_user_id: "app-1", role: "seller" }, error: null });
+      },
+    }),
+  });
+
+  const response = await handlers.onRequestPost(createContext(new Request(
+    "https://tensr.systems/api/admin/db",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "rpc",
+        functionName: "admin_set_seller_role",
+        args: { p_admin_user_id: "admin-1", p_target_app_user_id: "app-1", p_make_seller: true },
+      }),
+      headers: { "Content-Type": "application/json" },
+    },
+  )));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.deepEqual(rpcCalls, [{
+    functionName: "admin_set_seller_role",
+    args: { p_admin_user_id: "admin-1", p_target_app_user_id: "app-1", p_make_seller: true },
+  }]);
+});
+
+test("onRequestPost should allow refund_requests reads", async () => {
+  const query = createQueryStub([{ id: "ref-1", status: "pending" }]);
+  const handlers = createAdminDbHandlers({
+    requireAdminAccess: async () => ({
+      user: { id: "admin-1", email: "admin@example.com" },
+      errorResponse: null,
+    }),
+    createSupabaseAdmin: () => ({
+      from(table) {
+        assert.equal(table, "refund_requests");
+        return query.builder;
+      },
+    }),
+  });
+
+  const response = await handlers.onRequestPost(createContext(new Request(
+    "https://tensr.systems/api/admin/db",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "read",
+        table: "refund_requests",
+        columns: "*",
+        orders: [{ column: "created_at", ascending: false }],
+        limit: 100,
+      }),
+      headers: { "Content-Type": "application/json" },
+    },
+  )));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+});
+
+test("onRequestPost should allow refund_requests reject mutations", async () => {
+  const query = createQueryStub({ data: { id: "ref-1", status: "rejected" } });
+  const handlers = createAdminDbHandlers({
+    requireAdminAccess: async () => ({
+      user: { id: "admin-1", email: "admin@example.com" },
+      errorResponse: null,
+    }),
+    createSupabaseAdmin: () => ({
+      from(table) {
+        assert.equal(table, "refund_requests");
+        return query.builder;
+      },
+    }),
+  });
+
+  const response = await handlers.onRequestPost(createContext(new Request(
+    "https://tensr.systems/api/admin/db",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "mutation",
+        table: "refund_requests",
+        action: "update",
+        values: { status: "rejected" },
+        filters: [
+          { type: "eq", column: "id", value: "ref-1" },
+          { type: "eq", column: "status", value: "pending" },
+        ],
+      }),
+      headers: { "Content-Type": "application/json" },
+    },
+  )));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+});
+
+test("onRequestPost should allow seller_category_discounts mutations", async () => {
+  const query = createQueryStub({ data: null });
+  const handlers = createAdminDbHandlers({
+    requireAdminAccess: async () => ({
+      user: { id: "admin-1", email: "admin@example.com" },
+      errorResponse: null,
+    }),
+    createSupabaseAdmin: () => ({
+      from(table) {
+        assert.equal(table, "seller_category_discounts");
+        return query.builder;
+      },
+    }),
+  });
+
+  const response = await handlers.onRequestPost(createContext(new Request(
+    "https://tensr.systems/api/admin/db",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        type: "mutation",
+        table: "seller_category_discounts",
+        action: "delete",
+        filters: [{ type: "eq", column: "user_id", value: "app-1" }],
+      }),
+      headers: { "Content-Type": "application/json" },
+    },
+  )));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+});
+
 test("onRequestPost should reject disallowed admin tables", async () => {
   const handlers = createAdminDbHandlers({
     requireAdminAccess: async () => ({

@@ -8,6 +8,7 @@
 
 import { createSupabaseAdmin, errorResponse, successResponse } from "../../_lib/supabase.js";
 import { checkProviderOrderStatus } from "../../_lib/providerApi.js";
+import { timingSafeEqualStrings } from "../../_lib/timingSafeEqual.js";
 
 /* ─── Constants ─── */
 
@@ -90,7 +91,7 @@ function validateCronSecret(request, env) {
   }
 
   const providedSecret = String(request.headers.get("x-cron-secret") || "").trim();
-  if (providedSecret !== expectedSecret) {
+  if (!timingSafeEqualStrings(providedSecret, expectedSecret)) {
     return { authorized: false, error: "Unauthorized sync trigger." };
   }
 

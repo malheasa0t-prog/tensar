@@ -4,6 +4,12 @@
 
 import { canAccessAdminRecord, canAccessAdminRole } from "../../lib/adminRoles.js";
 import {
+  buildFullAdminContext,
+  buildPermissionMap,
+  isFullAdminRole,
+  isPanelStaffRole,
+} from "../../lib/adminPermissions.js";
+import {
   createSupabaseAdmin,
   createSupabaseClient,
   errorResponse,
@@ -107,6 +113,26 @@ export function hasAdminMetadataAccess(user) {
 }
 
 /**
+ * Returns whether a legacy `app_users` record actually belongs to the requester.
+ *
+ * The legacy lookup matches with `ilike`, where `%` and `_` are SQL wildcards.
+ * Without this guard, a user who can register a wildcard-shaped address (e.g.
+ * `_dmin@store.com`, where `_` matches any single character) would match a
+ * *different* admin's row and be granted admin access. Requiring an exact,
+ * case-insensitive email match closes that escalation path. See
+ * SECURITY-AUDIT-2026-05-23 (CRIT-001) for the related metadata hardening.
+ *
+ * @param {{ email?: string | null } | null | undefined} record - Legacy row.
+ * @param {string} email - Requester's authenticated email.
+ * @returns {boolean} True when the record's email equals the requester's.
+ */
+export function legacyAdminRecordMatchesEmail(record, email) {
+  const recordEmail = String(record?.email ?? "").trim().toLowerCase();
+  const requesterEmail = String(email ?? "").trim().toLowerCase();
+  return Boolean(recordEmail) && recordEmail === requesterEmail;
+}
+
+/**
  * Loads an active admin-capable profile or legacy record for a user.
  *
  * @param {import("@supabase/supabase-js").SupabaseClient} adminClient - Privileged Supabase client.
@@ -119,25 +145,106 @@ export async function hasStoredAdminAccess(adminClient, user) {
   const [profileResult, legacyResult] = await Promise.all([
     adminClient.from("user_profiles").select("role, status").eq("user_id", userId).maybeSingle(),
     email
-      ? adminClient.from("app_users").select("role, status").ilike("email", email).maybeSingle()
+      ? adminClient.from("app_users").select("email, role, status").ilike("email", email).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
-  return canAccessAdminRecord(profileResult.data) || canAccessAdminRecord(legacyResult.data);
+  const legacyRecord = legacyAdminRecordMatchesEmail(legacyResult.data, email)
+    ? legacyResult.data
+    : null;
+  return canAccessAdminRecord(profileResult.data) || canAccessAdminRecord(legacyRecord);
 }
 
 /**
- * Validates that the request belongs to an authenticated admin user.
+ * Returns a record's role only when the record is active.
+ *
+ * @param {{ role?: string | null, status?: string | null } | null | undefined} record
+ * @returns {string} Lowercased role, or empty string when missing/inactive.
+ */
+function activeRecordRole(record) {
+  if (!record) return "";
+  const status = String(record.status || "active").trim().toLowerCase();
+  if (status && status !== "active") return "";
+  return String(record.role || "").trim().toLowerCase();
+}
+
+/**
+ * Picks the highest-privilege role among the candidate sources.
+ *
+ * @param {Array<string | null | undefined>} roles
+ * @returns {string} The effective role, or empty string when none apply.
+ */
+function pickEffectiveRole(roles) {
+  const normalized = roles.map((role) => String(role || "").trim().toLowerCase()).filter(Boolean);
+  const priority = ["super_admin", "admin", "technician", "employee"];
+  for (const candidate of priority) {
+    if (normalized.includes(candidate)) return candidate;
+  }
+  return normalized[0] || "";
+}
+
+/**
+ * Resolves the full admin permission context for an authenticated user from
+ * stored roles + granular staff grants. Returns null when the user may not
+ * enter the admin panel at all.
+ *
+ * @param {import("@supabase/supabase-js").SupabaseClient} adminClient - Privileged Supabase client.
+ * @param {{ app_metadata?: { role?: string }, email?: string | null, id?: string | null }} user - Authenticated user.
+ * @returns {Promise<{ isFullAdmin: boolean, role: string, permissions: Record<string, { view: boolean, manage: boolean }> } | null>}
+ */
+export async function resolveStoredAdminContext(adminClient, user) {
+  const userId = String(user?.id ?? "").trim();
+  const email = String(user?.email ?? "").trim();
+  const [profileResult, legacyResult] = await Promise.all([
+    adminClient.from("user_profiles").select("role, status").eq("user_id", userId).maybeSingle(),
+    email
+      ? adminClient.from("app_users").select("email, role, status").ilike("email", email).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const legacyRecord = legacyAdminRecordMatchesEmail(legacyResult.data, email) ? legacyResult.data : null;
+  const role = pickEffectiveRole([
+    activeRecordRole(profileResult.data),
+    activeRecordRole(legacyRecord),
+    user?.app_metadata?.role,
+  ]);
+
+  if (!role || !isPanelStaffRole(role)) {
+    return null;
+  }
+
+  if (isFullAdminRole(role)) {
+    return buildFullAdminContext(role);
+  }
+
+  let permissionRows = [];
+  try {
+    const permissionResult = await adminClient
+      .from("staff_permissions")
+      .select("section, can_view, can_manage")
+      .eq("user_id", userId);
+    permissionRows = Array.isArray(permissionResult?.data) ? permissionResult.data : [];
+  } catch (permissionError) {
+    console.warn("[ADM-205] Failed to load staff permissions.", permissionError);
+    permissionRows = [];
+  }
+
+  return { isFullAdmin: false, role, permissions: buildPermissionMap(permissionRows) };
+}
+
+/**
+ * Validates that the request belongs to an authenticated admin or staff user
+ * and resolves their permission context.
  *
  * @param {Request} request - Incoming request object.
  * @param {Record<string, string | undefined>} env - Environment bindings.
  * @param {{ adminClient?: import("@supabase/supabase-js").SupabaseClient, publicClient?: import("@supabase/supabase-js").SupabaseClient }} [options={}] - Optional injected clients for tests.
- * @returns {Promise<{ user: Record<string, unknown> | null, errorResponse: Response | null }>} Auth result.
+ * @returns {Promise<{ user: Record<string, unknown> | null, errorResponse: Response | null, context: { isFullAdmin: boolean, role: string, permissions: Record<string, { view: boolean, manage: boolean }> } | null }>} Auth result.
  */
 export async function requireAdminAccess(request, env, options = {}) {
   const token = extractBearerToken(request);
   if (!token) {
-    return { user: null, errorResponse: errorResponse(ADMIN_LOGIN_REQUIRED_MESSAGE, 401) };
+    return { user: null, errorResponse: errorResponse(ADMIN_LOGIN_REQUIRED_MESSAGE, 401), context: null };
   }
 
   const publicClient = options.publicClient ?? createSupabaseClient(env);
@@ -147,24 +254,26 @@ export async function requireAdminAccess(request, env, options = {}) {
   } = await publicClient.auth.getUser(token);
 
   if (error || !user) {
-    return { user: null, errorResponse: errorResponse(ADMIN_INVALID_SESSION_MESSAGE, 401) };
+    return { user: null, errorResponse: errorResponse(ADMIN_INVALID_SESSION_MESSAGE, 401), context: null };
   }
 
   if (isAdminBypassEnabled(env, request)) {
     const adminClient = options.adminClient ?? createSupabaseAdmin(env);
     await recordAdminBypassUsage(adminClient, user, request);
-    return { user, errorResponse: null };
+    return { user, errorResponse: null, context: buildFullAdminContext("super_admin") };
   }
 
-  if (hasAdminMetadataAccess(user)) {
-    return { user, errorResponse: null };
+  // Full admins identified by server-controlled metadata are granted without a
+  // database round trip. Granular staff roles must be resolved from the DB.
+  if (isFullAdminRole(user?.app_metadata?.role)) {
+    return { user, errorResponse: null, context: buildFullAdminContext(user.app_metadata.role) };
   }
 
   const adminClient = options.adminClient ?? createSupabaseAdmin(env);
-  const hasAccess = await hasStoredAdminAccess(adminClient, user);
-  if (!hasAccess) {
-    return { user, errorResponse: errorResponse(ADMIN_FORBIDDEN_MESSAGE, 403) };
+  const context = await resolveStoredAdminContext(adminClient, user);
+  if (!context) {
+    return { user, errorResponse: errorResponse(ADMIN_FORBIDDEN_MESSAGE, 403), context: null };
   }
 
-  return { user, errorResponse: null };
+  return { user, errorResponse: null, context };
 }

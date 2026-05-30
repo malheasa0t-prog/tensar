@@ -3,11 +3,53 @@
 
 const BLOCKED_CONTENT_TAG_PATTERN = /<\s*(script|iframe|object|embed|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi;
 const BLOCKED_SINGLE_TAG_PATTERN = /<\s*(script|iframe|object|embed|style|link|meta|base)\b[^>]*\/?\s*>/gi;
-const EVENT_HANDLER_ATTR_PATTERN = /\s+on[a-z-]+\s*=\s*(?:"[\s\S]*?"|'[\s\S]*?'|[^\s>]+)/gi;
+const EVENT_HANDLER_ATTR_PATTERN = /[\s/]+on[a-z-]+\s*=\s*(?:"[\s\S]*?"|'[\s\S]*?'|[^\s>]+)/gi;
 const SRCDOC_ATTR_PATTERN = /\s+srcdoc\s*=\s*(?:"[\s\S]*?"|'[\s\S]*?'|[^\s>]+)/gi;
 const URL_ATTR_PATTERN =
     /\s+(href|src|action|formaction|xlink:href)\s*=\s*(?:"([\s\S]*?)"|'([\s\S]*?)'|([^\s>]+))/gi;
 const STYLE_ATTR_PATTERN = /\s+style\s*=\s*(?:"([\s\S]*?)"|'([\s\S]*?)')/gi;
+const HTML_ENTITY_PATTERN = /&(#x?[0-9a-f]+|[a-z]+);?/gi;
+const HTML_ENTITY_MAP = Object.freeze({
+    amp: '&',
+    apos: "'",
+    gt: '>',
+    lt: '<',
+    nbsp: ' ',
+    quot: '"'
+});
+
+/**
+ * Decodes a minimal set of HTML entities before security checks.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function decodeAdminHtmlEntities(value) {
+    return String(value || '').replace(HTML_ENTITY_PATTERN, (match, entity) => {
+        const normalizedEntity = String(entity || '').trim().toLowerCase();
+        if (!normalizedEntity) return match;
+        if (normalizedEntity.startsWith('#x')) {
+            const codePoint = parseInt(normalizedEntity.slice(2), 16);
+            return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match;
+        }
+        if (normalizedEntity.startsWith('#')) {
+            const codePoint = parseInt(normalizedEntity.slice(1), 10);
+            return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match;
+        }
+
+        return HTML_ENTITY_MAP[normalizedEntity] || match;
+    });
+}
+
+/**
+ * Removes control characters and decoded spacing tricks from URL-like input.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function normalizeAdminHtmlUrlCandidate(value) {
+    return decodeAdminHtmlEntities(value).replace(/[\u0000-\u001F\u007F\s]+/g, '').trim();
+}
 
 /**
  * Checks whether a URL-like attribute value is safe for legacy admin HTML.
@@ -16,9 +58,9 @@ const STYLE_ATTR_PATTERN = /\s+style\s*=\s*(?:"([\s\S]*?)"|'([\s\S]*?)')/gi;
  * @returns {boolean}
  */
 export function isSafeAdminHtmlUrl(value) {
-    const candidate = String(value || '').trim();
+    const candidate = normalizeAdminHtmlUrlCandidate(value);
     if (!candidate) return false;
-    if (/^(#|\/|\.\/|\.\.\/|\?|\/\/)/.test(candidate)) return true;
+    if (/^(#|\/|\.\/|\.\.\/|\?)/.test(candidate) || candidate.startsWith('//')) return true;
     if (/^data:image\/(?:png|jpe?g|gif|webp);base64,/i.test(candidate)) return true;
 
     const protocolMatch = candidate.match(/^([a-z][a-z0-9+.-]*):/i);
@@ -36,7 +78,8 @@ export function isSafeAdminHtmlUrl(value) {
 export function sanitizeAdminInlineStyle(value) {
     const styleValue = String(value || '').trim();
     if (!styleValue) return '';
-    return /expression|javascript:|url\s*\(/i.test(styleValue) ? '' : styleValue;
+    const normalizedStyleValue = normalizeAdminHtmlUrlCandidate(styleValue);
+    return /expression|javascript:|url\(/i.test(normalizedStyleValue) ? '' : styleValue;
 }
 
 /**

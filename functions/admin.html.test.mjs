@@ -62,7 +62,7 @@ test("buildAdminGateHtml should embed config as JSON and load gate script extern
   // Config blob is embedded as application/json.
   assert.match(html, /<script id="tzAdminGateConfig" type="application\/json" nonce="test-nonce-12345">/);
   assert.match(html, /\\u003cscript|panelPath|sessionRoute|supabaseAnonKey/);
-  assert.match(html, /"panelPath":"\/tz-panel\.html\?v=20260525-1"/);
+  assert.match(html, /"panelPath":"\/tz-panel\.html\?v=20260530-2"/);
   assert.doesNotMatch(html, MOJIBAKE_TRIGGER_PATTERN);
   assert.doesNotMatch(html, /user_profiles/);
   assert.doesNotMatch(html, /app_users/);

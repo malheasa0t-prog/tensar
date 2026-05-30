@@ -3,6 +3,33 @@
  */
 
 import { hydrateDepositProofUrls } from "./depositProofUrls.js";
+import {
+  RPC_ACTOR_ARG_KEYS,
+  hasSectionAccess,
+  requirementForRpc,
+  sectionForTable,
+} from "../../../lib/adminPermissions.js";
+
+const PERMISSION_DENIED_MESSAGE = "[ADB-403] لا تملك صلاحية للوصول إلى هذا القسم.";
+
+/**
+ * Asserts the caller's permission context grants the requested section + level.
+ *
+ * A null/undefined context means "no enforcement" — this only happens on the
+ * legacy/test path; the real admin proxy always supplies a resolved context.
+ *
+ * @param {{ isFullAdmin?: boolean, permissions?: Record<string, unknown> } | null | undefined} context
+ * @param {string | null} section
+ * @param {"view" | "manage"} level
+ * @returns {void}
+ * @throws {Error}
+ */
+function assertSectionAccess(context, section, level) {
+  if (!context) return;
+  if (!section || !hasSectionAccess(context, section, level)) {
+    throw createRouteError(PERMISSION_DENIED_MESSAGE, 403);
+  }
+}
 
 const ALLOWED_FILTER_TYPES = new Set(["eq", "ilike", "in"]);
 const ALLOWED_MUTATION_ACTIONS = new Set(["delete", "insert", "update", "upsert"]);
@@ -27,13 +54,17 @@ const ALLOWED_ADMIN_READ_TABLES = new Set([
   "deposits",
   "notifications",
   "order_items",
+  "orange_money_logs",
   "orders",
   "products",
+  "refund_requests",
   "repair_bookings",
   "repair_services",
+  "seller_category_discounts",
   "service_orders",
   "services",
   "settings",
+  "staff_permissions",
   "support_chat_messages",
   "support_conversations",
   "user_profiles",
@@ -50,8 +81,10 @@ const ALLOWED_ADMIN_MUTATION_TABLES = new Set([
   "order_items",
   "orders",
   "products",
+  "refund_requests",
   "repair_bookings",
   "repair_services",
+  "seller_category_discounts",
   "service_orders",
   "services",
   "settings",
@@ -61,7 +94,11 @@ const ALLOWED_ADMIN_MUTATION_TABLES = new Set([
 const ALLOWED_RPC_FUNCTIONS = new Set([
   "admin_adjust_wallet_balance",
   "admin_approve_deposit",
+  "admin_approve_refund",
   "admin_set_order_status",
+  "admin_set_seller_role",
+  "admin_set_staff_permission",
+  "admin_set_staff_role",
   "admin_toggle_customer_status",
 ]);
 /**
@@ -275,9 +312,10 @@ function validateMutation(operation) {
  * @param {Record<string, unknown>} operation
  * @returns {Promise<{ count: number | null, data: unknown, error: { message: string } | null }>}
  */
-async function executeReadOperation(client, operation) {
+async function executeReadOperation(client, operation, context) {
   const table = String(operation?.table || "").trim();
   validateAllowedReadTable(table);
+  assertSectionAccess(context, sectionForTable(table), "view");
 
   const columns = resolveReadColumns({ columns: operation?.columns, table });
   let query = client.from(table).select(columns);
@@ -306,11 +344,19 @@ async function executeReadOperation(client, operation) {
  * @param {Record<string, unknown>} operation
  * @returns {Promise<{ count: number | null, data: unknown, error: { message: string } | null }>}
  */
-async function executeMutationOperation(client, operation) {
+async function executeMutationOperation(client, operation, context) {
   validateMutation(operation);
 
   const action = String(operation.action);
   const table = String(operation.table);
+
+  // audit_logs inserts are a logging side effect of other actions — any panel
+  // user that reached this point may write them. Every other mutation requires
+  // `manage` on the table's governing section.
+  const isAuditLogSideEffect = table === "audit_logs" && action === "insert";
+  if (!isAuditLogSideEffect) {
+    assertSectionAccess(context, sectionForTable(table), "manage");
+  }
   const values = operation.values ?? null;
   const options = operation.options && typeof operation.options === "object" ? operation.options : undefined;
   let query = client.from(table);
@@ -357,13 +403,26 @@ async function executeMutationOperation(client, operation) {
  * @returns {Promise<{ count: number | null, data: unknown, error: { message: string } | null }>}
  * @throws {Error}
  */
-async function executeRpcOperation(client, operation) {
+async function executeRpcOperation(client, operation, context) {
   const functionName = String(operation?.functionName || "").trim();
   if (!ALLOWED_RPC_FUNCTIONS.has(functionName)) {
     throw createRouteError("[ADB-106] دالة الإدارة المطلوبة غير مسموح بها.", 403);
   }
 
-  const args = operation?.args && typeof operation.args === "object" ? operation.args : {};
+  const requirement = requirementForRpc(functionName);
+  assertSectionAccess(context, requirement?.section || null, requirement?.level || "manage");
+
+  const args = { ...(operation?.args && typeof operation.args === "object" ? operation.args : {}) };
+  // Bind the verified caller id to the audited actor argument so attribution
+  // cannot be spoofed by a crafted request body (SECURITY-AUDIT follow-up).
+  const actorId = String(context?.userId || "").trim();
+  if (actorId) {
+    for (const key of RPC_ACTOR_ARG_KEYS) {
+      if (key in args) {
+        args[key] = actorId;
+      }
+    }
+  }
   const result = await client.rpc(functionName, args);
   if (result?.error) {
     console.error("[ADB-107] Admin RPC failed.", { functionName, error: result.error });
@@ -385,19 +444,19 @@ async function executeRpcOperation(client, operation) {
  * @returns {Promise<{ count: number | null, data: unknown, error: { message: string } | null }>}
  * @throws {Error}
  */
-export async function executeAdminOperation(client, operation) {
+export async function executeAdminOperation(client, operation, context) {
   const operationType = String(operation?.type || "").trim();
   if (operationType === "read") {
-    return executeReadOperation(client, operation);
+    return executeReadOperation(client, operation, context);
   }
 
   if (operationType === "rpc") {
-    return executeRpcOperation(client, operation);
+    return executeRpcOperation(client, operation, context);
   }
 
   if (operationType !== "mutation") {
     throw createRouteError("[ADB-100] نوع طلب الإدارة غير معروف.", 400);
   }
 
-  return executeMutationOperation(client, operation);
+  return executeMutationOperation(client, operation, context);
 }

@@ -36,6 +36,12 @@
         try {
             const adminSession = await TZ.getAdminSessionUser({ baseClient: TZ.supabase });
             if (adminSession.user && TZ.canAccessAdmin(adminSession.user)) {
+                A.access = {
+                    isFullAdmin: adminSession.isFullAdmin === true,
+                    permissions: adminSession.permissions || {},
+                    sections: adminSession.sections || []
+                };
+                window.__TZ_ADMIN_ACCESS = A.access;
                 helpers.requestAdminRuntimeAccess(true);
                 await TZ.refreshData();
                 TZ.startRealtime?.();
@@ -51,6 +57,7 @@
 
     function showLogin() {
         A.currentUser = null;
+        void TZ.stopRealtime?.();
         helpers.requestAdminRuntimeAccess(false);
         TZ.clearSession();
         window.location.href = '/';
@@ -150,6 +157,11 @@
         initialized = true;
 
         logoutBtn.addEventListener('click', async function () {
+            try {
+                await TZ.stopRealtime?.();
+            } catch (error) {
+                console.error('[COR-502] Failed to stop realtime before logout.', error);
+            }
             helpers.requestAdminRuntimeAccess(false);
             await TZ.supabaseSignOut();
             window.location.href = '/';
@@ -171,30 +183,20 @@
 
     scheduleAdminInitialization();
 
-    window.addEventListener('tz-data-updated', (event) => {
-        const table = event.detail ? event.detail.table : 'all';
+    window.addEventListener('tz-data-updated', () => {
+        // Realtime/refresh has already mutated TZ.db; re-render whichever section
+        // is currently open by re-invoking its registered renderer. This covers
+        // every section uniformly (previously a hardcoded allow-list silently
+        // skipped sellers, chats, serva-catalog, provider-alerts, and others).
         const section = A.currentSection;
-        if (section === 'dashboard' && A.sections.dashboard) A.sections.dashboard();
-        if (section === 'analytics' && A.sections.analytics) A.sections.analytics();
-        if (section === 'orders' && ['orders', 'service_orders', 'repair_bookings', 'products', 'all'].includes(table) && A.sections.orders) A.sections.orders();
-        if (section === 'product-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['product-orders']) A.sections['product-orders']();
-        if (section === 'service-orders' && ['service_orders', 'all'].includes(table) && A.sections['service-orders']) A.sections['service-orders']();
-        if (section === 'accessory-orders' && ['orders', 'products', 'all'].includes(table) && A.sections['accessory-orders']) A.sections['accessory-orders']();
-        if (section === 'repair-orders' && ['repair_bookings', 'all'].includes(table) && A.sections['repair-orders']) A.sections['repair-orders']();
-        if (section === 'products' && ['products', 'all'].includes(table) && A.sections.products) A.sections.products();
-        if (section === 'categories' && ['categories', 'all'].includes(table) && A.sections.categories) A.sections.categories();
-        if (section === 'main-categories' && ['categories', 'all'].includes(table) && A.sections['main-categories']) A.sections['main-categories']();
-        if (section === 'subcategories' && ['categories', 'all'].includes(table) && A.sections.subcategories) A.sections.subcategories();
-        if (section === 'services' && ['services', 'categories', 'all'].includes(table) && A.sections.services) A.sections.services();
-        if (section === 'messages' && ['contact_messages', 'all'].includes(table) && A.sections.messages) A.sections.messages();
-        if (section === 'deposits' && ['deposits', 'all'].includes(table) && A.sections.deposits) A.sections.deposits();
-        if (section === 'refunds' && A.sections.refunds) A.sections.refunds();
-        if (section === 'coupons' && ['coupons', 'all'].includes(table) && A.sections.coupons) A.sections.coupons();
-        if (section === 'notifications' && A.sections.notifications) A.sections.notifications();
-        if (section === 'customers' && ['users', 'orders', 'all'].includes(table) && A.sections.customers) A.sections.customers();
-        if (section === 'settings' && ['settings', 'all'].includes(table) && A.sections.settings) A.sections.settings();
-        if (section === 'logs' && ['audit_logs', 'all'].includes(table) && A.sections.logs) A.sections.logs();
-        if (section === 'platform-updates' && ['platform_updates', 'all'].includes(table) && A.sections['platform-updates']) A.sections['platform-updates']();
+        const renderer = section && A.sections[section];
+        if (typeof renderer === 'function') {
+            try {
+                renderer();
+            } catch (error) {
+                console.error('[COR-510] Failed to refresh the active section on data update.', error);
+            }
+        }
         helpers.updateOrdersBadge(TZ);
     });
 

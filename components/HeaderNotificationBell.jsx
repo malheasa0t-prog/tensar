@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import AppIcon from '@/components/AppIcon';
 import HeaderNotificationBellItem from '@/components/HeaderNotificationBellItem';
+import { useModalAccessibility } from '@/hooks/useModalAccessibility';
 import {
   getHeaderNotificationHref,
   getHeaderNotificationsPreview,
@@ -30,6 +31,15 @@ export default function HeaderNotificationBell({ authLoading, user }) {
   const [notifications, setNotifications] = useState([]);
   const [shouldRing, setShouldRing] = useState(false);
   const previousUnreadRef = useRef(0);
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+
+  const { handleKeyDown: handleModalKeyDown } = useModalAccessibility({
+    containerRef: dialogRef,
+    initialFocusRef: closeButtonRef,
+    isOpen,
+    onClose: () => setIsOpen(false),
+  });
 
   const isAuthenticated = Boolean(user?.id);
   const unreadCount = notifications.filter((item) => !item.is_read).length;
@@ -240,11 +250,14 @@ export default function HeaderNotificationBell({ authLoading, user }) {
       {isOpen ? (
         <div className="header-notifications-overlay" onClick={() => setIsOpen(false)}>
           <div
+            ref={dialogRef}
             className="header-notifications-modal"
             onClick={(event) => event.stopPropagation()}
+            onKeyDown={handleModalKeyDown}
             role="dialog"
             aria-modal="true"
             aria-labelledby="header-notifications-title"
+            tabIndex={-1}
           >
             <div className="header-notifications-header">
               <div>
@@ -253,6 +266,7 @@ export default function HeaderNotificationBell({ authLoading, user }) {
               </div>
 
               <button
+                ref={closeButtonRef}
                 type="button"
                 className="header-notifications-close"
                 onClick={() => setIsOpen(false)}

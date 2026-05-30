@@ -58,7 +58,10 @@ export function createAdminDbHandlers(dependencies = {}) {
 
       try {
         const operation = await parseAdminDbBody(context.request);
-        const result = await executeAdminOperation(createAdminClient(context.env), operation);
+        const enforcement = access.context
+          ? { ...access.context, userId: String(access.user?.id || "") }
+          : null;
+        const result = await executeAdminOperation(createAdminClient(context.env), operation, enforcement);
         const status = result.error ? 400 : 200;
         const response = result.error
           ? respondWithError(result.error.message, status)

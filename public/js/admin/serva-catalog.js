@@ -1,5 +1,9 @@
-// ===== TechZone Admin - Serva-S Catalog =====
-// Allows importing digital services from Serva-S provider API into the local database.
+/**
+ * TechZone Admin - Serva-S catalog import section.
+ *
+ * Lets admins browse the provider catalog, map services into local categories,
+ * and import one or many services into the local `services` table.
+ */
 (function () {
     'use strict';
 
@@ -9,130 +13,18 @@
     const PROVIDER_CATALOG_API = '/api/provider/services';
     const LOCAL_SERVICES_TABLE = 'services';
     const CATEGORIES_TABLE = 'categories';
-
-    let catalogData = [];
-    let localCategories = [];
-    let selectedServices = new Set();
-    let filterCategory = '';
-    let searchQuery = '';
-
-    /**
-     * Gets the current auth token from TZ.supabase.
-     *
-     * @returns {Promise<string>}
-     */
-    async function getAuthToken() {
-        const { data } = await TZ.supabase.auth.getSession();
-        return data?.session?.access_token || '';
-    }
+    const MAX_SAFE_QUANTITY = 1000000;
+    const state = {
+        catalog: [],
+        categories: [],
+        existingIds: new Set(),
+        selectedIds: new Set(),
+        filterCategory: '',
+        searchQuery: ''
+    };
 
     /**
-     * Fetches the Serva-S service catalog from the server API.
-     *
-     * @returns {Promise<Array>}
-     */
-    async function fetchProviderCatalog() {
-        const token = await getAuthToken();
-        const apiPort = window.__TZ_API_PORT || '3000';
-        const currentPort = window.location.port;
-        const baseUrl = (currentPort !== apiPort && currentPort !== '') ? `http://localhost:${apiPort}` : '';
-        const response = await fetch(`${baseUrl}${PROVIDER_CATALOG_API}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            }
-        });
-        if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
-            throw new Error(body.error || `Failed to fetch catalog: ${response.status}`);
-        }
-        const data = await response.json();
-        return Array.isArray(data.services) ? data.services : (Array.isArray(data) ? data : []);
-    }
-
-    /**
-     * Fetches local categories from Supabase.
-     *
-     * @returns {Promise<Array>}
-     */
-    async function fetchLocalCategories() {
-        const { data, error } = await TZ.supabase
-            .from(CATEGORIES_TABLE)
-            .select('id, name, slug, parent_id')
-            .eq('status', 'active')
-            .order('sort_order', { ascending: true });
-
-        if (error) throw error;
-        return data || [];
-    }
-
-    /**
-     * Checks if a service already exists locally by provider_service_id.
-     *
-     * @param {string} providerServiceId
-     * @returns {Promise<boolean>}
-     */
-    async function serviceExistsLocally(providerServiceId) {
-        const { data } = await TZ.supabase
-            .from(LOCAL_SERVICES_TABLE)
-            .select('id')
-            .eq('provider_service_id', String(providerServiceId))
-            .limit(1)
-            .maybeSingle();
-
-        return Boolean(data);
-    }
-
-    /**
-     * Generates a unique ID with prefix.
-     *
-     * @param {string} prefix
-     * @returns {string}
-     */
-    function generateId(prefix) {
-        return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-    }
-
-    /**
-     * Generates a URL-safe slug.
-     *
-     * @param {string} text
-     * @returns {string}
-     */
-    function slugify(text) {
-        return (text || '').trim().toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^\u0600-\u06FFa-z0-9-]/g, '')
-            .replace(/-+/g, '-')
-            .slice(0, 60);
-    }
-
-    /**
-     * Strips HTML/script tags from an untrusted string to prevent stored XSS.
-     *
-     * @param {unknown} value
-     * @returns {string}
-     */
-    function sanitizeText(value) {
-        return String(value || '').replace(/<[^>]*>/g, '').trim().slice(0, 500);
-    }
-
-    /**
-     * Clamps a numeric value into a safe positive integer range.
-     *
-     * @param {unknown} value
-     * @param {number} fallback
-     * @param {number} max
-     * @returns {number}
-     */
-    function safePositiveInt(value, fallback, max) {
-        const n = Math.floor(Number(value));
-        if (!Number.isFinite(n) || n < 1) return fallback;
-        return Math.min(n, max);
-    }
-
-    /**
-     * Escapes dynamic text before placing it in the admin HTML.
+     * Escapes dynamic text before inserting it into admin HTML.
      *
      * @param {unknown} value
      * @returns {string}
@@ -151,7 +43,79 @@
     }
 
     /**
-     * Returns the stable API service identifier as a string.
+     * Returns a valid admin bearer token.
+     *
+     * @returns {Promise<string>}
+     */
+    async function getAuthToken() {
+        const { data } = await TZ.supabase.auth.getSession();
+        return data?.session?.access_token || '';
+    }
+
+    /**
+     * Resolves the local API base URL when the admin shell runs on a split port.
+     *
+     * @returns {string}
+     */
+    function getApiBaseUrl() {
+        const apiPort = window.__TZ_API_PORT || '3000';
+        const currentPort = window.location.port;
+        return currentPort && currentPort !== apiPort ? `http://localhost:${apiPort}` : '';
+    }
+
+    /**
+     * Sanitizes free-form provider text before storing it locally.
+     *
+     * @param {unknown} value
+     * @returns {string}
+     */
+    function sanitizeText(value) {
+        return String(value || '').replace(/<[^>]*>/g, '').trim().slice(0, 500);
+    }
+
+    /**
+     * Generates a URL-safe slug fragment.
+     *
+     * @param {string} text
+     * @returns {string}
+     */
+    function slugify(text) {
+        return String(text || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^\u0600-\u06FFa-z0-9-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 60);
+    }
+
+    /**
+     * Clamps one candidate quantity into a safe positive integer range.
+     *
+     * @param {unknown} value
+     * @param {number} fallback
+     * @param {number} max
+     * @returns {number}
+     */
+    function safePositiveInt(value, fallback, max) {
+        const parsed = Math.floor(Number(value));
+        if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+        return Math.min(parsed, max);
+    }
+
+    /**
+     * Generates a local id with a fixed prefix.
+     *
+     * @param {string} prefix
+     * @returns {string}
+     */
+    function generateId(prefix) {
+        return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    /**
+     * Returns the stable provider service identifier as a string.
      *
      * @param {Record<string, unknown>} service
      * @returns {string}
@@ -161,17 +125,17 @@
     }
 
     /**
-     * Builds a DOM-safe status cell id for one provider service.
+     * Returns a safe DOM id for the status cell of one provider service.
      *
      * @param {string} serviceId
      * @returns {string}
      */
     function getServiceStatusCellId(serviceId) {
-        return 'servaStatus_' + String(serviceId || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+        return `servaStatus_${String(serviceId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     }
 
     /**
-     * Returns the best display name for one provider service.
+     * Returns the best Arabic-facing service name from the provider row.
      *
      * @param {Record<string, unknown>} service
      * @returns {string}
@@ -181,7 +145,7 @@
     }
 
     /**
-     * Returns the provider category name for filtering and display.
+     * Returns the provider category label for filtering and display.
      *
      * @param {Record<string, unknown>} service
      * @returns {string}
@@ -191,380 +155,384 @@
     }
 
     /**
-     * Adds a single digital service to the local database via Admin DB Proxy.
+     * Fetches the provider catalog through the secured server route.
      *
-     * @param {object} service - Serva-S service object
-     * @param {string} categoryId - Target local category ID
-     * @returns {Promise<void>}
+     * @returns {Promise<Array<Record<string, unknown>>>}
      */
-    async function addServiceToLocal(service, categoryId) {
-        const price = Math.max(0, parseFloat(service.rate) || 0);
-        const providerFields = Array.isArray(service.fields) ? service.fields : [];
-        const linkRequired = Boolean(service.link_required);
-        const rawName = sanitizeText(service.name_ar || service.name);
-        const rawDescription = sanitizeText(service.name_en || service.name_ar || service.name);
-        const providerId = String(service.service || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
-
-        if (!rawName || !providerId) {
-            throw new Error('بيانات الخدمة غير صالحة — الاسم أو المعرّف مفقود.');
-        }
-
-        const row = {
-            id: generateId('srv-'),
-            name: rawName,
-            slug: slugify(rawName) + '-' + providerId,
-            category_id: categoryId,
-            provider_service_id: providerId,
-            price: price,
-            cost_price: price,
-            min_qty: safePositiveInt(service.min, 1, 1000000),
-            max_qty: safePositiveInt(service.max, 1000, 1000000),
-            description: rawDescription,
-            status: 'active',
-            sort_order: 0,
-            image: sanitizeText(service.image || service.icon || '') || null,
-            metadata: {
-                link_required: linkRequired,
-                provider_fields: providerFields,
-                pricing_type: String(service.pricing_type || 'default').slice(0, 32),
-                has_quantity: Boolean(service.has_quantity),
-            },
-        };
-
+    async function fetchProviderCatalog() {
         const token = await getAuthToken();
-        if (!token) throw new Error('انتهت الجلسة. أعد تسجيل الدخول.');
-
-        const response = await fetch('/api/admin/db', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                type: 'mutation',
-                action: 'insert',
-                table: LOCAL_SERVICES_TABLE,
-                values: [row],
-            }),
+        const response = await fetch(`${getApiBaseUrl()}${PROVIDER_CATALOG_API}`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }
         });
-
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || result.error) {
-            throw new Error(result.error?.message || result.error || 'فشل إضافة الخدمة عبر الخادم الآمن.');
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.error || `تعذر تحميل كتالوج Serva-S (${response.status}).`);
         }
+
+        return Array.isArray(payload.services) ? payload.services : [];
     }
 
     /**
-     * Returns unique categories from the catalog.
+     * Loads active local categories for mapping provider services.
      *
-     * @returns {string[]}
+     * @returns {Promise<Array<Record<string, unknown>>>}
      */
-    function getCatalogCategories() {
-        return [...new Set(catalogData.map(getProviderCategory).filter(Boolean))].sort();
+    async function fetchLocalCategories() {
+        const result = await TZ.supabase
+            .from(CATEGORIES_TABLE)
+            .select('id, name, parent_id, sort_order')
+            .eq('status', 'active')
+            .order('sort_order', { ascending: true });
+
+        if (result.error) throw result.error;
+        return result.data || [];
     }
 
     /**
-     * Filters catalog based on current search & category filter.
+     * Loads the local provider-linked service ids already imported into the site.
      *
-     * @returns {Array}
+     * @returns {Promise<Set<string>>}
+     */
+    async function fetchExistingProviderIds() {
+        const result = await TZ.supabase
+            .from(LOCAL_SERVICES_TABLE)
+            .select('provider_service_id')
+            .not('provider_service_id', 'is', null);
+
+        if (result.error) throw result.error;
+        return new Set((result.data || []).map((row) => String(row.provider_service_id || '').trim()).filter(Boolean));
+    }
+
+    /**
+     * Returns the filtered provider catalog for the current search and category state.
+     *
+     * @returns {Array<Record<string, unknown>>}
      */
     function getFilteredCatalog() {
-        return catalogData.filter(service => {
+        const normalizedQuery = state.searchQuery.trim().toLowerCase();
+        return state.catalog.filter((service) => {
+            const serviceId = getProviderServiceId(service).toLowerCase();
             const name = getProviderServiceName(service).toLowerCase();
-            const cat = getProviderCategory(service);
-            const serviceId = getProviderServiceId(service);
-            const normalizedQuery = searchQuery.toLowerCase();
-            const matchesCategory = !filterCategory || cat === filterCategory;
-            const matchesSearch = !searchQuery || name.includes(normalizedQuery) || serviceId.toLowerCase().includes(normalizedQuery);
+            const category = getProviderCategory(service);
+            const matchesCategory = !state.filterCategory || category === state.filterCategory;
+            const matchesSearch = !normalizedQuery || name.includes(normalizedQuery) || serviceId.includes(normalizedQuery);
             return matchesCategory && matchesSearch;
         });
     }
 
     /**
-     * Builds a category select dropdown from local categories.
+     * Returns all unique provider categories sorted alphabetically.
+     *
+     * @returns {string[]}
+     */
+    function getCatalogCategories() {
+        return [...new Set(state.catalog.map(getProviderCategory).filter(Boolean))].sort((first, second) => first.localeCompare(second, 'ar'));
+    }
+
+    /**
+     * Builds category options for the local site category selector.
      *
      * @returns {string}
      */
     function buildCategoryOptions() {
-        const parents = localCategories.filter(c => !c.parent_id);
-        const children = localCategories.filter(c => c.parent_id);
-        let options = '<option value="">-- اختر الفئة --</option>';
+        const byId = new Map(state.categories.map((category) => [category.id, category]));
+        const options = state.categories.map((category) => {
+            const parent = category.parent_id ? byId.get(category.parent_id) : null;
+            const label = parent ? `${parent.name} / ${category.name}` : category.name;
+            return `<option value="${esc(category.id)}">${esc(label)}</option>`;
+        });
 
-        for (const parent of parents) {
-            options += `<optgroup label="${esc(parent.name)}">`;
-            const subs = children.filter(c => c.parent_id === parent.id);
-            for (const sub of subs) {
-                options += `<option value="${esc(sub.id)}">${esc(sub.name)}</option>`;
-            }
-            options += '</optgroup>';
-        }
-
-        return options;
+        return ['<option value="">اختر الفئة التي ستستقبل الخدمات</option>', ...options].join('');
     }
 
     /**
-     * Renders the full Serva-S catalog UI.
+     * Builds the local insert payload for one provider service row.
+     *
+     * @param {Record<string, unknown>} service
+     * @param {string} categoryId
+     * @returns {Record<string, unknown>}
+     */
+    function buildLocalServiceRow(service, categoryId) {
+        const name = sanitizeText(service.name_ar || service.name);
+        const providerId = String(service.service || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+        if (!name || !providerId) {
+            throw new Error('بيانات الخدمة غير صالحة لأن الاسم أو المعرّف مفقود.');
+        }
+
+        return {
+            id: generateId('srv-'),
+            name,
+            slug: `${slugify(name)}-${providerId}`.slice(0, 90),
+            category_id: categoryId,
+            provider_service_id: providerId,
+            price: Math.max(0, parseFloat(service.rate) || 0),
+            cost_price: Math.max(0, parseFloat(service.rate) || 0),
+            min_qty: safePositiveInt(service.min, 1, MAX_SAFE_QUANTITY),
+            max_qty: safePositiveInt(service.max, 1000, MAX_SAFE_QUANTITY),
+            description: sanitizeText(service.name_en || service.name_ar || service.name),
+            image: sanitizeText(service.image || service.icon || '') || null,
+            status: 'active',
+            sort_order: 0,
+            metadata: {
+                link_required: Boolean(service.link_required),
+                provider_fields: Array.isArray(service.fields) ? service.fields : [],
+                pricing_type: String(service.pricing_type || 'default').slice(0, 32),
+                has_quantity: Boolean(service.has_quantity),
+                provider_category: getProviderCategory(service)
+            }
+        };
+    }
+
+    /**
+     * Imports one provider service into the local services table.
+     *
+     * @param {Record<string, unknown>} service
+     * @param {string} categoryId
+     * @returns {Promise<void>}
+     */
+    async function importService(service, categoryId) {
+        const token = await getAuthToken();
+        if (!token) throw new Error('انتهت الجلسة. أعد تسجيل الدخول ثم حاول مرة أخرى.');
+
+        const response = await fetch('/api/admin/db', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: 'mutation',
+                action: 'insert',
+                table: LOCAL_SERVICES_TABLE,
+                values: [buildLocalServiceRow(service, categoryId)]
+            })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.error) {
+            throw new Error(payload.error?.message || payload.error || 'فشل حفظ الخدمة عبر المسار الإداري الآمن.');
+        }
+    }
+
+    /**
+     * Returns one safe count of selected services that are visible in the current filter.
+     *
+     * @param {Array<Record<string, unknown>>} filtered
+     * @returns {number}
+     */
+    function getVisibleSelectedCount(filtered) {
+        return filtered.reduce((count, service) => count + (state.selectedIds.has(getProviderServiceId(service)) ? 1 : 0), 0);
+    }
+
+    /**
+     * Renders the full Serva-S import experience.
      *
      * @returns {void}
      */
     function renderCatalog() {
-        const content = A.adminContent;
         const filtered = getFilteredCatalog();
         const categories = getCatalogCategories();
+        const importedCount = filtered.filter((service) => state.existingIds.has(getProviderServiceId(service))).length;
+        const visibleSelectedCount = getVisibleSelectedCount(filtered);
 
-        content.innerHTML = `
+        A.adminContent.innerHTML = `
             <div class="admin-section-header">
                 <div>
-                    <h2><i class="fas fa-cloud-download-alt"></i> كتالوج Serva-S</h2>
-                    <p>استعرض خدمات المزود وأضف ما تريده إلى موقعك يدوياً</p>
+                    <h2><i class="fas fa-cloud-download-alt"></i> استيراد خدمات Serva-S</h2>
+                    <p>أضف خدمات المزود إلى موقعك بأرقام المزود الأصلية، مع ربط كل خدمة بفئة محلية داخل المتجر.</p>
                 </div>
                 <div class="admin-section-actions">
-                    <button class="btn btn-outline btn-sm" id="servaCatalogRefresh">
-                        <i class="fas fa-sync-alt"></i> تحديث الكتالوج
-                    </button>
-                    <button class="btn btn-primary btn-sm" id="servaAddSelected" ${selectedServices.size === 0 ? 'disabled' : ''}>
-                        <i class="fas fa-plus"></i> إضافة المحدد (${selectedServices.size})
-                    </button>
+                    <button class="btn btn-outline btn-sm" id="servaRefreshBtn"><i class="fas fa-rotate"></i> تحديث الكتالوج</button>
+                    <button class="btn btn-outline btn-sm" id="servaGoToServicesBtn"><i class="fas fa-table-list"></i> إدارة الخدمات</button>
                 </div>
             </div>
-
-            <div class="admin-filters" style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap;">
-                <div class="admin-input-wrap" style="flex:1; min-width:200px;">
-                    <i class="fas fa-search"></i>
-                    <input type="search" id="servaCatalogSearch" placeholder="ابحث بالاسم أو رقم الخدمة..." value="${esc(searchQuery)}">
-                </div>
-                <div class="admin-input-wrap" style="min-width:200px;">
-                    <i class="fas fa-filter"></i>
-                    <select id="servaCatalogFilter">
-                        <option value="">كل الفئات (${catalogData.length})</option>
-                        ${categories.map(c => `<option value="${esc(c)}" ${filterCategory === c ? 'selected' : ''}>${esc(c)} (${catalogData.filter(s => getProviderCategory(s) === c).length})</option>`).join('')}
-                    </select>
-                </div>
-                <div class="admin-input-wrap" style="min-width:200px;">
-                    <i class="fas fa-folder-open"></i>
-                    <select id="servaCatalogTargetCategory">
-                        ${buildCategoryOptions()}
-                    </select>
-                </div>
+            <div class="admin-orders-summary">
+                <div class="admin-orders-stat"><span><i class="fas fa-layer-group"></i> إجمالي المزود</span><strong>${state.catalog.length}</strong></div>
+                <div class="admin-orders-stat"><span><i class="fas fa-filter"></i> ظاهر الآن</span><strong>${filtered.length}</strong></div>
+                <div class="admin-orders-stat"><span><i class="fas fa-check-circle"></i> مضاف محليًا</span><strong>${importedCount}</strong></div>
+                <div class="admin-orders-stat admin-orders-stat--highlight"><span><i class="fas fa-list-check"></i> محدد الآن</span><strong>${visibleSelectedCount}</strong></div>
             </div>
-
-            <div class="admin-info-bar" style="display:flex; gap:1rem; margin-bottom:1rem; align-items:center; padding:0.75rem 1rem; background:var(--admin-card-bg); border-radius:var(--radius-md); border:1px solid var(--admin-border);">
-                <span><i class="fas fa-info-circle" style="color:var(--admin-accent);"></i></span>
-                <span>إجمالي: <strong>${catalogData.length}</strong> خدمة | يظهر: <strong>${filtered.length}</strong> | محدد: <strong>${selectedServices.size}</strong></span>
-                ${selectedServices.size > 0 ? '<button class="btn btn-outline btn-sm" id="servaClearSelection" style="margin-right:auto;"><i class="fas fa-times"></i> إلغاء التحديد</button>' : ''}
+            <div class="filter-bar admin-orders-toolbar">
+                <input type="search" id="servaCatalogSearch" placeholder="ابحث باسم الخدمة أو رقم المزود..." value="${esc(state.searchQuery)}">
+                <select id="servaCatalogFilter"><option value="">كل فئات المزود</option>${categories.map((category) => `<option value="${esc(category)}"${state.filterCategory === category ? ' selected' : ''}>${esc(category)}</option>`).join('')}</select>
+                <select id="servaTargetCategory">${buildCategoryOptions()}</select>
+                <button class="btn btn-primary btn-sm" id="servaImportSelectedBtn"${state.selectedIds.size === 0 ? ' disabled' : ''}><i class="fas fa-plus"></i> استيراد المحدد (${state.selectedIds.size})</button>
             </div>
-
-            <div class="admin-table-wrap">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th style="width:40px;">
-                                <input type="checkbox" id="servaSelectAll" title="تحديد الكل" ${selectedServices.size === filtered.length && filtered.length > 0 ? 'checked' : ''}>
-                            </th>
-                            <th>رقم</th>
-                            <th>اسم الخدمة</th>
-                            <th>الفئة</th>
-                            <th>السعر ($)</th>
-                            <th>الحد الأدنى</th>
-                            <th>الحد الأقصى</th>
-                            <th>النوع</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filtered.length === 0 ? '<tr><td colspan="9" style="text-align:center; padding:2rem;">لا توجد خدمات مطابقة</td></tr>' : ''}
-                        ${filtered.map(service => {
-                            const serviceId = getProviderServiceId(service);
-                            const isSelected = selectedServices.has(serviceId);
-                            return `<tr class="${isSelected ? 'is-selected' : ''}" data-service-id="${esc(serviceId)}">
-                                <td><input type="checkbox" class="serva-service-check" data-service-id="${esc(serviceId)}" ${isSelected ? 'checked' : ''}></td>
-                                <td><code>${esc(serviceId)}</code></td>
-                                <td>${esc(getProviderServiceName(service))}</td>
-                                <td><span class="admin-badge">${esc(getProviderCategory(service) || '-')}</span></td>
-                                <td><strong>$${parseFloat(service.rate || 0).toFixed(2)}</strong></td>
-                                <td>${esc(service.min || 1)}</td>
-                                <td>${esc(service.max || '-')}</td>
-                                <td><span class="admin-badge admin-badge--info">${esc(service.type || '-')}</span></td>
-                                <td id="${esc(getServiceStatusCellId(serviceId))}">-</td>
-                            </tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>
+            <div class="admin-panel admin-orders-panel">
+                <div class="panel-body">
+                    <div class="table-wrap admin-orders-table-wrap">
+                        <table class="data-table admin-orders-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:46px;"><input type="checkbox" id="servaSelectAll"${filtered.length > 0 && visibleSelectedCount === filtered.length ? ' checked' : ''}></th>
+                                    <th>رقم المزود</th>
+                                    <th>اسم الخدمة</th>
+                                    <th>فئة المزود</th>
+                                    <th>السعر</th>
+                                    <th>الحدود</th>
+                                    <th>الحالة</th>
+                                    <th>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filtered.length === 0 ? '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد خدمات مطابقة لبحثك الحالي.</p></div></td></tr>' : filtered.map((service) => {
+                                    const serviceId = getProviderServiceId(service);
+                                    const isImported = state.existingIds.has(serviceId);
+                                    return `<tr data-service-id="${esc(serviceId)}">
+                                        <td><input type="checkbox" class="serva-check" data-service-id="${esc(serviceId)}"${state.selectedIds.has(serviceId) ? ' checked' : ''}></td>
+                                        <td><code>${esc(serviceId)}</code></td>
+                                        <td><strong>${esc(getProviderServiceName(service))}</strong></td>
+                                        <td>${esc(getProviderCategory(service) || '-')}</td>
+                                        <td><strong>$${(parseFloat(service.rate || 0) || 0).toFixed(2)}</strong></td>
+                                        <td>${esc(`${safePositiveInt(service.min, 1, MAX_SAFE_QUANTITY)} - ${safePositiveInt(service.max, 1000, MAX_SAFE_QUANTITY)}`)}</td>
+                                        <td id="${esc(getServiceStatusCellId(serviceId))}">${isImported ? '<span class="status-badge completed">مضاف</span>' : '<span class="status-badge pending">جاهز للاستيراد</span>'}</td>
+                                        <td class="actions-cell"><button class="btn btn-outline btn-sm serva-import-one-btn" data-service-id="${esc(serviceId)}"${isImported ? ' disabled' : ''}><i class="fas fa-plus"></i> ${isImported ? 'موجود' : 'استيراد'}</button></td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         `;
 
-        bindCatalogEvents();
-        checkExistingServices(filtered);
+        bindCatalogEvents(filtered);
     }
 
     /**
-     * Checks which services already exist locally and marks them.
+     * Imports one or many selected provider services into the local catalog.
      *
-     * @param {Array} services
+     * @param {string[]} serviceIds
      * @returns {Promise<void>}
      */
-    async function checkExistingServices(services) {
-        const ids = services.map(getProviderServiceId).filter(Boolean);
-        if (ids.length === 0) return;
+    async function importByIds(serviceIds) {
+        const targetCategoryId = String(document.getElementById('servaTargetCategory')?.value || '').trim();
+        if (!targetCategoryId) {
+            A.showErrorToast?.('SRV-101', 'اختر الفئة المحلية التي ستستقبل الخدمات أولًا.');
+            return;
+        }
 
-        const { data } = await TZ.supabase
-            .from(LOCAL_SERVICES_TABLE)
-            .select('provider_service_id')
-            .in('provider_service_id', ids);
+        let added = 0;
+        let skipped = 0;
+        let failed = 0;
 
-        const existing = new Set((data || []).map(d => d.provider_service_id));
-        for (const id of ids) {
-            const cell = document.getElementById(getServiceStatusCellId(id));
-            if (!cell) continue;
-            if (existing.has(id)) {
-                cell.innerHTML = '<span class="admin-badge admin-badge--success"><i class="fas fa-check"></i> مضافة</span>';
-            } else {
-                cell.innerHTML = '<span class="admin-badge admin-badge--warning">غير مضافة</span>';
+        for (const serviceId of serviceIds) {
+            const service = state.catalog.find((candidate) => getProviderServiceId(candidate) === serviceId);
+            if (!service) continue;
+            if (state.existingIds.has(serviceId)) {
+                skipped++;
+                continue;
+            }
+
+            try {
+                await importService(service, targetCategoryId);
+                state.existingIds.add(serviceId);
+                state.selectedIds.delete(serviceId);
+                added++;
+            } catch (error) {
+                console.error('[SVC-401] Failed to import provider service.', serviceId, error);
+                failed++;
             }
         }
+
+        A.showToast(`تمت إضافة ${added} خدمة، وتخطي ${skipped}، وفشل ${failed}.`);
+        await TZ.refreshData();
+        renderCatalog();
     }
 
     /**
-     * Binds click and change events for the catalog UI.
+     * Binds DOM events after rendering the catalog section.
      *
+     * @param {Array<Record<string, unknown>>} filtered
      * @returns {void}
      */
-    function bindCatalogEvents() {
+    function bindCatalogEvents(filtered) {
         document.getElementById('servaCatalogSearch')?.addEventListener('input', function () {
-            searchQuery = this.value;
+            state.searchQuery = this.value;
             renderCatalog();
         });
-
         document.getElementById('servaCatalogFilter')?.addEventListener('change', function () {
-            filterCategory = this.value;
+            state.filterCategory = this.value;
             renderCatalog();
         });
-
-        document.getElementById('servaCatalogRefresh')?.addEventListener('click', async function () {
+        document.getElementById('servaRefreshBtn')?.addEventListener('click', async function () {
             this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جار تحديث الكتالوج...';
             try {
-                catalogData = await fetchProviderCatalog();
-                A.showToast('تم تحديث الكتالوج بنجاح');
+                const [catalog, categories, existingIds] = await Promise.all([
+                    fetchProviderCatalog(),
+                    fetchLocalCategories(),
+                    fetchExistingProviderIds()
+                ]);
+                state.catalog = catalog;
+                state.categories = categories;
+                state.existingIds = existingIds;
+                A.showToast('تم تحديث كتالوج Serva-S بنجاح.');
             } catch (error) {
-                A.showToast('فشل تحديث الكتالوج: ' + error.message);
+                A.showErrorToast?.('SRV-301', error?.message || 'تعذر تحديث كتالوج المزود.');
             }
             renderCatalog();
         });
-
+        document.getElementById('servaGoToServicesBtn')?.addEventListener('click', function () {
+            A.renderSection?.('services');
+        });
         document.getElementById('servaSelectAll')?.addEventListener('change', function () {
-            const filtered = getFilteredCatalog();
-            if (this.checked) {
-                filtered.forEach(s => {
-                    const serviceId = getProviderServiceId(s);
-                    if (serviceId) selectedServices.add(serviceId);
-                });
-            } else {
-                filtered.forEach(s => selectedServices.delete(getProviderServiceId(s)));
-            }
+            filtered.forEach((service) => {
+                const serviceId = getProviderServiceId(service);
+                if (!serviceId || state.existingIds.has(serviceId)) return;
+                if (this.checked) state.selectedIds.add(serviceId);
+                else state.selectedIds.delete(serviceId);
+            });
             renderCatalog();
         });
-
-        document.getElementById('servaClearSelection')?.addEventListener('click', function () {
-            selectedServices.clear();
-            renderCatalog();
-        });
-
-        document.querySelectorAll('.serva-service-check').forEach(checkbox => {
+        document.querySelectorAll('.serva-check').forEach((checkbox) => {
             checkbox.addEventListener('change', function () {
-                const id = this.dataset.serviceId;
-                if (this.checked) {
-                    selectedServices.add(id);
-                } else {
-                    selectedServices.delete(id);
-                }
+                const serviceId = String(this.dataset.serviceId || '').trim();
+                if (!serviceId || state.existingIds.has(serviceId)) return;
+                if (this.checked) state.selectedIds.add(serviceId);
+                else state.selectedIds.delete(serviceId);
                 renderCatalog();
             });
         });
-
-        document.getElementById('servaAddSelected')?.addEventListener('click', async function () {
-            const targetCat = document.getElementById('servaCatalogTargetCategory')?.value;
-            if (!targetCat) {
-                A.showToast('الرجاء اختيار الفئة المستهدفة أولاً');
-                return;
-            }
-            if (selectedServices.size === 0) return;
-
-            const confirmed = await new Promise(resolve => {
-                A.showConfirmModal(
-                    `هل تريد إضافة ${selectedServices.size} خدمة إلى موقعك؟`,
-                    () => resolve(true),
-                    () => resolve(false)
-                );
-            });
-
-            if (!confirmed) return;
-
+        document.getElementById('servaImportSelectedBtn')?.addEventListener('click', async function () {
+            if (state.selectedIds.size === 0) return;
             this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإضافة...';
-
-            let added = 0;
-            let skipped = 0;
-            let failed = 0;
-
-            for (const serviceId of selectedServices) {
-                const service = catalogData.find(s => getProviderServiceId(s) === serviceId);
-                if (!service) continue;
-
-                try {
-                    const exists = await serviceExistsLocally(serviceId);
-                    if (exists) {
-                        skipped++;
-                        continue;
-                    }
-                    await addServiceToLocal(service, targetCat);
-                    added++;
-                } catch (error) {
-                    console.error('Failed to add service:', serviceId, error);
-                    failed++;
-                }
-            }
-
-            selectedServices.clear();
-            A.showToast(`تمت الإضافة: ${added} | تم تخطيها (موجودة): ${skipped} | فشل: ${failed}`);
-            await TZ.refreshData();
-            renderCatalog();
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جار الاستيراد...';
+            await importByIds([...state.selectedIds]);
+        });
+        document.querySelectorAll('.serva-import-one-btn').forEach((button) => {
+            button.addEventListener('click', async function () {
+                const serviceId = String(this.dataset.serviceId || '').trim();
+                if (!serviceId || this.disabled) return;
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                await importByIds([serviceId]);
+            });
         });
     }
 
     /**
-     * Main section renderer. Called by the admin framework.
+     * Entry point used by the legacy admin shell.
      *
-     * @returns {void}
+     * @returns {Promise<void>}
      */
     A.sections['serva-catalog'] = async function renderServaCatalogSection() {
-        const content = A.adminContent;
-        content.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i>
-                <p>جاري تحميل كتالوج Serva-S...</p>
-            </div>
-        `;
+        A.adminContent.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p>جار تحميل كتالوج Serva-S...</p></div>';
 
         try {
-            [catalogData, localCategories] = await Promise.all([
+            const [catalog, categories, existingIds] = await Promise.all([
                 fetchProviderCatalog(),
                 fetchLocalCategories(),
+                fetchExistingProviderIds()
             ]);
+            state.catalog = catalog;
+            state.categories = categories;
+            state.existingIds = existingIds;
             renderCatalog();
         } catch (error) {
-            content.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle" style="color:var(--admin-danger); font-size:2rem;"></i>
-                    <p>فشل تحميل كتالوج المزود</p>
-                    <p style="font-size:0.85rem; opacity:0.7;">${esc(error.message)}</p>
-                    <button class="btn btn-primary btn-sm" id="servaCatalogRetry">
-                        <i class="fas fa-redo"></i> إعادة المحاولة
-                    </button>
-                </div>
-            `;
-            document.getElementById('servaCatalogRetry')?.addEventListener('click', function () {
+            A.adminContent.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="font-size:2rem;color:var(--admin-danger);"></i><p>تعذر تحميل خدمات المزود.</p><p style="font-size:0.9rem;opacity:0.8;">${esc(error?.message || 'حدث خطأ غير متوقع.')}</p><button class="btn btn-primary btn-sm" id="servaRetryBtn"><i class="fas fa-rotate-right"></i> إعادة المحاولة</button></div>`;
+            document.getElementById('servaRetryBtn')?.addEventListener('click', function () {
                 A.sections['serva-catalog']();
             });
         }

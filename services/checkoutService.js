@@ -42,13 +42,19 @@ export async function fetchCheckoutOptions() {
 /**
  * Submits the checkout request to the API, forwarding the auth token when available.
  *
- * @param {{ items: Array<{ id: string, qty: number }>, form: Record<string, string> }} params
+ * @param {{
+ *   client?: { auth: { getSession: () => Promise<{ data?: { session?: { access_token?: string } | null } }> } },
+ *   form: Record<string, string>,
+ *   idempotencyKey?: string,
+ *   items: Array<{ id: string, qty: number }>,
+ * }} params
  * @returns {Promise<Record<string, unknown>>}
  */
-export async function submitCheckoutOrder({ items, form }) {
-  const supabase = await loadSupabaseClient();
+export async function submitCheckoutOrder({ client, items, form, idempotencyKey = '' }) {
+  const supabase = client || await loadSupabaseClient();
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
+  const requestIdempotencyKey = String(idempotencyKey || '').trim() || createIdempotencyKey();
 
   if (!token) {
     throw new Error('[CKP-201] يجب تسجيل الدخول أولاً لإتمام الطلب.');
@@ -58,7 +64,7 @@ export async function submitCheckoutOrder({ items, form }) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Idempotency-Key': createIdempotencyKey(),
+      'Idempotency-Key': requestIdempotencyKey,
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(buildCheckoutRequestPayload({ items, form })),

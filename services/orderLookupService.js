@@ -234,18 +234,18 @@ async function loadRepairBooking({ adminClient, contactSuffix, orderNumber }) {
   const displayNumber = getDisplayNumberValue(orderNumber);
   const query = adminClient
     .from("repair_bookings")
-    .select("id, display_number, service_name, mode, status, customer_phone, created_at, updated_at");
+    .select("id, display_number, service_name, mode, status, phone, created_at, updated_at");
   const response = displayNumber
     ? await query.eq("display_number", displayNumber).maybeSingle()
     : await query.eq("id", orderNumber).maybeSingle();
 
   const row = response.data || null;
   if (!row) return null;
-  if (!phoneSuffixMatches(row.customer_phone, contactSuffix)) {
+  if (!phoneSuffixMatches(row.phone, contactSuffix)) {
     return null;
   }
-  const { customer_phone, ...publicRow } = row;
-  void customer_phone;
+  const { phone, ...publicRow } = row;
+  void phone;
   return publicRow;
 }
 

@@ -39,7 +39,16 @@
     function renderCoupons() {
         var coupons = TZ.db.coupons || [];
 
-        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-percent"></i> الكوبونات والخصومات</h2><p>' + coupons.length + ' كوبون</p></div>'
+        var totalRedemptions = coupons.reduce(function (sum, c) { return sum + (Number(c.used_count || c.usedCount) || 0); }, 0);
+        var activeCount = coupons.filter(function (c) { return (c.status || 'active') === 'active'; }).length;
+        var exhaustedCount = coupons.filter(function (c) {
+            var maxU = Number(c.max_uses || c.maxUses);
+            return maxU > 0 && (Number(c.used_count || c.usedCount) || 0) >= maxU;
+        }).length;
+
+        var html = '<div class="admin-section-header"><div><h2><i class="fas fa-percent"></i> الكوبونات والخصومات</h2>'
+            + '<p>' + coupons.length + ' كوبون · ' + activeCount + ' نشط · ' + totalRedemptions + ' مرة استخدام'
+            + (exhaustedCount > 0 ? ' · ' + exhaustedCount + ' مستنفد' : '') + '</p></div>'
             + '<div class="admin-section-actions"><button class="btn btn-primary btn-sm" id="addCouponBtn"><i class="fas fa-plus"></i> إضافة كوبون</button></div></div>';
 
         html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
@@ -54,13 +63,21 @@
                 var statusBadge = '<span class="status-badge ' + (c.status || 'active') + '">' + (c.status === 'active' ? 'نشط' : c.status === 'expired' ? 'منتهي' : 'معطل') + '</span>';
                 var expiry = c.expires_at || c.expiresAt;
                 var expiryDate = expiry ? new Date(expiry).toLocaleDateString('ar-JO') : '-';
+                var usedCount = Number(c.used_count || c.usedCount) || 0;
+                var maxUses = Number(c.max_uses || c.maxUses) || 0;
+                var usagePct = maxUses > 0 ? Math.min(100, Math.round((usedCount / maxUses) * 100)) : 0;
+                var usageBarColor = usagePct >= 100 ? '#e74c3c' : usagePct >= 80 ? '#fdcb6e' : '#00b894';
+                var usageCell = '<div style="font-weight:600;margin-bottom:3px;">' + usedCount + ' / ' + (maxUses > 0 ? maxUses : '∞') + '</div>'
+                    + (maxUses > 0
+                        ? '<div style="height:5px;border-radius:3px;background:rgba(0,0,0,0.12);overflow:hidden;"><div style="height:100%;width:' + usagePct + '%;background:' + usageBarColor + ';"></div></div>'
+                        : '');
 
                 html += '<tr>'
                     + '<td><strong style="font-family:monospace;color:var(--primary-light);">' + esc(c.code) + '</strong></td>'
                     + '<td>' + typeLabel + '</td>'
                     + '<td style="font-weight:600;">' + valueLabel + '</td>'
                     + '<td>' + TZ.formatPrice(c.min_order || c.minOrder || 0) + '</td>'
-                    + '<td>' + (c.used_count || c.usedCount || 0) + ' / ' + (c.max_uses || c.maxUses || '∞') + '</td>'
+                    + '<td style="min-width:90px;">' + usageCell + '</td>'
                     + '<td>' + statusBadge + '</td>'
                     + '<td><small>' + expiryDate + '</small></td>'
                     + '<td class="actions-cell"><button class="action-btn danger del-cpn-btn" data-id="' + c.id + '" title="حذف"><i class="fas fa-trash"></i></button></td>'

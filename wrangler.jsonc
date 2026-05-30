@@ -8,5 +8,12 @@
   "pages_build_output_dir": "dist",
   "observability": {
     "enabled": true
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "TECHZONE_IDEMPOTENCY",
+      "id": "111fc0c2e1654ec8ab47029124dd4378",
+      "preview_id": "111fc0c2e1654ec8ab47029124dd4378"
+    }
+  ]
 }

@@ -2,7 +2,7 @@
  * Cloudflare Pages Function for validating the current admin session.
  */
 
-import { requireAdminAccess } from "../../_lib/adminAccess.js";
+import { legacyAdminRecordMatchesEmail, requireAdminAccess } from "../../_lib/adminAccess.js";
 import { handlePreflight, withCors } from "../../_lib/cors.js";
 import {
   createSupabaseAdmin,
@@ -11,6 +11,7 @@ import {
 } from "../../_lib/supabase.js";
 import { withSecurityHeaders } from "../../_lib/securityHeaders.js";
 import { getAdminDisplayName } from "../../../lib/adminRoles.js";
+import { PERMISSION_SECTIONS, buildFullAdminContext } from "../../../lib/adminPermissions.js";
 import {
   buildAdminShellSetCookieHeader,
   createAdminShellCookieValue,
@@ -84,8 +85,9 @@ async function loadAdminSessionRows(input) {
       : Promise.resolve({ data: null }),
   ]);
 
+  const legacyData = legacyResult?.data || null;
   return {
-    legacyUser: legacyResult?.data || null,
+    legacyUser: legacyAdminRecordMatchesEmail(legacyData, email) ? legacyData : null,
     profile: profileResult?.data || null,
   };
 }
@@ -151,10 +153,16 @@ export function createAdminSessionHandlers(dependencies = {}) {
         const sessionRows = await loadAdminSessionRows({ adminClient, user: access.user || {} });
         const payload = buildAdminSessionPayload({ ...sessionRows, user: access.user || {} });
 
+        const accessContext = access.context || buildFullAdminContext(payload.role);
         const response = await withAdminShellCookie({
           env: context.env,
           request: context.request,
-          response: respondWithSuccess({ user: payload }, 200),
+          response: respondWithSuccess({
+            user: payload,
+            isFullAdmin: accessContext.isFullAdmin === true,
+            permissions: accessContext.permissions || {},
+            sections: PERMISSION_SECTIONS,
+          }, 200),
           userId: payload.id,
         });
 

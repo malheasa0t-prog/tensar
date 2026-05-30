@@ -71,24 +71,51 @@
     }
 
     /**
+     * Toggles a user's seller role through the guarded admin_set_seller_role RPC.
+     *
+     * Role writes never go through the generic proxy (app_users is deliberately
+     * not mutable that way, to block privilege escalation). The RPC refuses to
+     * touch any account that is not already customer/user/seller and, on
+     * demotion, clears that seller's category discounts in the same transaction.
+     *
+     * @param {string} userId - The app_users id (text).
+     * @param {boolean} makeSeller
+     * @returns {Promise<boolean>}
+     */
+    async function setSellerRole(userId, makeSeller) {
+        var authUser = await TZ.getSupabaseUser();
+        if (!authUser) {
+            A.showErrorToast('SLR-300', 'انتهت الجلسة. أعد تسجيل الدخول.');
+            return false;
+        }
+
+        var res = await TZ.supabase.rpc('admin_set_seller_role', {
+            p_admin_user_id: authUser.id,
+            p_target_app_user_id: userId,
+            p_make_seller: makeSeller
+        });
+
+        if (res.error) {
+            A.showErrorToast(
+                makeSeller ? 'SLR-301' : 'SLR-302',
+                (makeSeller ? 'فشل ترقية المستخدم إلى بائع' : 'فشل إلغاء صلاحية البائع')
+                    + ': ' + String(res.error.message || '')
+            );
+            return false;
+        }
+
+        A.showToast(makeSeller ? 'تم ترقية المستخدم إلى بائع بنجاح' : 'تم إلغاء صلاحية البائع');
+        return true;
+    }
+
+    /**
      * Promotes a user to seller role.
      *
      * @param {string} userId
      * @returns {Promise<boolean>}
      */
-    async function promoteToSeller(userId) {
-        var res = await TZ.supabase
-            .from('app_users')
-            .update({ role: 'seller', updated_at: new Date().toISOString() })
-            .eq('id', userId);
-
-        if (res.error) {
-            A.showErrorToast('SLR-301', 'فشل ترقية المستخدم إلى بائع');
-            return false;
-        }
-
-        A.showToast('تم ترقية المستخدم إلى بائع بنجاح');
-        return true;
+    function promoteToSeller(userId) {
+        return setSellerRole(userId, true);
     }
 
     /**
@@ -97,20 +124,8 @@
      * @param {string} userId
      * @returns {Promise<boolean>}
      */
-    async function demoteSeller(userId) {
-        var roleRes = await TZ.supabase
-            .from('app_users')
-            .update({ role: 'customer', updated_at: new Date().toISOString() })
-            .eq('id', userId);
-
-        if (roleRes.error) {
-            A.showErrorToast('SLR-302', 'فشل إلغاء صلاحية البائع');
-            return false;
-        }
-
-        await TZ.supabase.from(DISCOUNTS_TABLE).delete().eq('user_id', userId);
-        A.showToast('تم إلغاء صلاحية البائع');
-        return true;
+    function demoteSeller(userId) {
+        return setSellerRole(userId, false);
     }
 
     /**

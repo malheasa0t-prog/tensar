@@ -70,5 +70,11 @@ export async function getAdminSessionUser(options = {}) {
     };
   }
 
-  return { error: null, user: payload.user };
+  return {
+    error: null,
+    user: payload.user,
+    isFullAdmin: payload.isFullAdmin === true,
+    permissions: payload.permissions && typeof payload.permissions === "object" ? payload.permissions : {},
+    sections: Array.isArray(payload.sections) ? payload.sections : [],
+  };
 }

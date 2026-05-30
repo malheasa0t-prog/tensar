@@ -1,53 +1,95 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Button from '@/components/Button';
-import { useToast } from '@/components/ToastProvider';
-import { hasDepositTransferDetails } from '@/lib/contactChannels/depositTransfer';
-import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
-import {
-  DEPOSIT_STATUS_MAP,
-  MAX_DEPOSIT_AMOUNT,
-  MISSING_DEPOSIT_TRANSFER_MESSAGE,
-  PRESET_DEPOSIT_AMOUNTS,
-  validateDepositAmount,
-} from '@/lib/depositPageModel';
-import { createDepositRequest, fetchDepositPageSnapshot } from '@/services/depositPageService';
+/**
+ * Orange Money customer deposit page.
+ */
 
-const cardStyle = {
-  background: 'var(--card-bg)',
-  border: '1px solid var(--border-color)',
-  borderRadius: '20px',
-  overflow: 'hidden',
-};
-const feedbackBaseStyle = {
-  borderRadius: '12px',
-  padding: '14px',
-  marginBottom: '16px',
-  textAlign: 'center',
-};
+import { useEffect, useRef, useState } from 'react';
+import DepositHistoryList from '@/components/deposit/DepositHistoryList';
+import DepositRequestForm from '@/components/deposit/DepositRequestForm';
+import { useToast } from '@/components/ToastProvider';
+import {
+  acquireSubmissionLock,
+  createSubmissionState,
+  releaseSubmissionLock,
+  resetSubmissionIdempotencyKey,
+  resolveSubmissionIdempotencyKey,
+} from '@/lib/idempotencyKey';
+import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
+import { validateDepositAmount } from '@/lib/depositPageModel';
+import {
+  buildOrangeMoneyDepositSuccessMessage,
+  createDepositRequest,
+  fetchDepositPageSnapshot,
+  validateDepositPayerPhone,
+  validateOrangeMoneyReferenceId,
+} from '@/services/depositPageService';
+
+const DEPOSIT_PAGE_SNAPSHOT_ERROR =
+  '[DPG-301] \u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0635\u0641\u062d\u0629 \u0627\u0644\u0625\u064a\u062f\u0627\u0639.';
+const DEPOSIT_PAGE_SUBMIT_ERROR =
+  '[DPG-302] \u062a\u0639\u0630\u0631 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0625\u064a\u062f\u0627\u0639.';
+const DEPOSIT_PAGE_WARNING_TITLE = '\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a';
+const DEPOSIT_PAGE_SUCCESS_TITLE = '\u062a\u0645 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0637\u0644\u0628';
+const DEPOSIT_PAGE_ERROR_TITLE = '\u062a\u0639\u0630\u0631 \u0627\u0644\u0625\u0631\u0633\u0627\u0644';
 
 /**
- * Renders the manual wallet-deposit page and keeps its history in sync.
+ * Prefixes deposit messages with a stable support code when needed.
+ *
+ * @param {string} code - Stable support code.
+ * @param {string} message - User-facing message.
+ * @returns {string} Message with a support code.
+ */
+function withDepositCode(code, message) {
+  return String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
+}
+
+/**
+ * Builds the initial deposit transfer state.
+ *
+ * @returns {{ bankName: string, accountHolder: string, iban: string, instructions: string }}
+ */
+function createInitialDepositTransfer() {
+  return {
+    bankName: '',
+    accountHolder: '',
+    iban: '',
+    instructions: '',
+  };
+}
+
+/**
+ * Renders the Orange Money wallet-deposit page and keeps its history in sync.
  *
  * @returns {JSX.Element}
  */
 export default function DepositPage() {
   const { showToast } = useToast();
-  const withDepositCode = (code, message) => String(message || '').startsWith('[') ? message : `[${code}] ${message}`;
   const [userId, setUserId] = useState('');
   const [amount, setAmount] = useState('');
-  const [proofFile, setProofFile] = useState(null);
+  const [payerPhone, setPayerPhone] = useState('');
+  const [referenceId, setReferenceId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
   const [deposits, setDeposits] = useState([]);
-  const [depositTransfer, setDepositTransfer] = useState({
-    bankName: '',
-    accountHolder: '',
-    iban: '',
-    instructions: '',
-  });
+  const [walletTransferNumber, setWalletTransferNumber] = useState('');
+  const [depositTransfer, setDepositTransfer] = useState(createInitialDepositTransfer);
+  const successTimerRef = useRef(0);
+  const submissionStateRef = useRef(createSubmissionState());
+
+  /**
+   * Applies a loaded deposit snapshot to state.
+   *
+   * @param {{ userId: string, deposits: unknown[], depositTransfer: Record<string, string>, walletTransferNumber: string }} snapshot - Loaded snapshot.
+   * @returns {void}
+   */
+  function applySnapshot(snapshot) {
+    setUserId(snapshot.userId);
+    setDeposits(snapshot.deposits);
+    setDepositTransfer(snapshot.depositTransfer);
+    setWalletTransferNumber(snapshot.walletTransferNumber || '');
+  }
 
   useEffect(() => {
     let active = true;
@@ -56,21 +98,19 @@ export default function DepositPage() {
     /**
      * Loads the latest deposit page snapshot into component state.
      *
-     * @param {Record<string, unknown>} [client]
-     * @returns {Promise<{ userId: string } | null>}
+     * @param {Record<string, unknown>} [client] - Optional Supabase client.
+     * @returns {Promise<{ userId: string } | null>} Loaded snapshot or null.
      */
     async function refreshSnapshot(client) {
       try {
         const supabase = client || await loadSupabaseClient();
         const snapshot = await fetchDepositPageSnapshot({ client: supabase });
         if (!active) return null;
-        setUserId(snapshot.userId);
-        setDeposits(snapshot.deposits);
-        setDepositTransfer(snapshot.depositTransfer);
+        applySnapshot(snapshot);
         return snapshot;
       } catch (snapshotError) {
         if (active) {
-          setError(snapshotError instanceof Error ? snapshotError.message : '[DPG-301] تعذر تحميل صفحة الإيداع.');
+          setError(snapshotError instanceof Error ? snapshotError.message : DEPOSIT_PAGE_SNAPSHOT_ERROR);
         }
         return null;
       }
@@ -88,13 +128,9 @@ export default function DepositPage() {
 
       const channel = supabase
         .channel(`deposit-page-${snapshot.userId}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'deposits', filter: `user_id=eq.${snapshot.userId}` },
-          () => {
-            void refreshSnapshot();
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits', filter: `user_id=eq.${snapshot.userId}` }, () => {
+          void refreshSnapshot();
+        })
         .subscribe();
 
       cleanup = () => {
@@ -106,264 +142,104 @@ export default function DepositPage() {
     return () => {
       active = false;
       cleanup();
+      clearTimeout(successTimerRef.current);
     };
   }, []);
 
   /**
-   * Submits a new manual deposit request after validating the amount locally.
+   * Submits a new Orange Money deposit request after local validation.
    *
-   * @param {React.FormEvent<HTMLFormElement>} event
+   * @param {React.FormEvent<HTMLFormElement>} event - Form submit event.
    * @returns {Promise<void>}
    */
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
-
-    const amountValidationError = validateDepositAmount(amount);
-    if (amountValidationError) {
-      setError(amountValidationError);
-      showToast(withDepositCode('DPG-101', amountValidationError), { type: 'warning', title: 'تحقق من المبلغ' });
+    if (!acquireSubmissionLock(submissionStateRef.current)) {
       return;
     }
 
-    if (!proofFile) {
-      setError('[DPG-110] يجب رفع صورة إثبات التحويل.');
-      showToast('يجب رفع صورة إثبات التحويل', { type: 'warning', title: 'صورة الإثبات مطلوبة' });
-      return;
-    }
+    let shouldResetIdempotencyKey = false;
 
-    setLoading(true);
     try {
+      setError('');
+      setSuccessMessage('');
+
+      const validationError =
+        validateDepositAmount(amount)
+        || validateDepositPayerPhone(payerPhone)
+        || validateOrangeMoneyReferenceId(referenceId);
+      if (validationError) {
+        setError(validationError);
+        showToast(withDepositCode('DPG-101', validationError), {
+          type: 'warning',
+          title: DEPOSIT_PAGE_WARNING_TITLE,
+        });
+        return;
+      }
+
+      setLoading(true);
       const supabase = await loadSupabaseClient();
-      const result = await createDepositRequest({ client: supabase, amount, proofFile });
-      const snapshot = await fetchDepositPageSnapshot({ client: supabase });
-      setUserId(result.userId);
-      setDeposits(snapshot.deposits);
-      setDepositTransfer(snapshot.depositTransfer);
-      setSuccess(true);
-      setAmount('');
-      setProofFile(null);
-      showToast('تم إرسال طلب الشحن بنجاح وسيتم مراجعته قريبًا.', {
-        type: 'success',
-        title: 'تم استلام الطلب',
+      const result = await createDepositRequest({
+        client: supabase,
+        amount,
+        payerPhone,
+        referenceId,
+        idempotencyKey: resolveSubmissionIdempotencyKey({
+          state: submissionStateRef.current,
+          fingerprint: JSON.stringify({
+            amount: String(amount || ''),
+            payerPhone: String(payerPhone || ''),
+            referenceId: String(referenceId || ''),
+          }),
+        }),
       });
-      setTimeout(() => setSuccess(false), 4000);
+      const snapshot = await fetchDepositPageSnapshot({ client: supabase });
+      applySnapshot({ ...snapshot, userId: result.userId });
+      const nextSuccessMessage = buildOrangeMoneyDepositSuccessMessage(result);
+      setSuccessMessage(nextSuccessMessage);
+      setAmount('');
+      setPayerPhone('');
+      setReferenceId('');
+      showToast(nextSuccessMessage, {
+        type: 'success',
+        title: DEPOSIT_PAGE_SUCCESS_TITLE,
+      });
+      clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setSuccessMessage(''), 5000);
+      shouldResetIdempotencyKey = true;
     } catch (submitError) {
-      const nextError = submitError instanceof Error ? submitError.message : 'تعذر إرسال طلب الإيداع.';
+      const nextError = submitError instanceof Error ? submitError.message : DEPOSIT_PAGE_SUBMIT_ERROR;
       setError(nextError);
-      showToast(withDepositCode('DPG-302', nextError), { type: 'error', title: 'تعذر الإرسال' });
+      showToast(withDepositCode('DPG-302', nextError), {
+        type: 'error',
+        title: DEPOSIT_PAGE_ERROR_TITLE,
+      });
     } finally {
+      if (shouldResetIdempotencyKey) {
+        resetSubmissionIdempotencyKey(submissionStateRef.current);
+      }
+      releaseSubmissionLock(submissionStateRef.current);
       setLoading(false);
     }
   }
 
-  const isTransferReady = hasDepositTransferDetails(depositTransfer);
-
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
-      <div style={cardStyle}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ fontSize: '1.1rem' }}>شحن الرصيد يدويًا</h3>
-        </div>
-        <div style={{ padding: '24px' }}>
-          <div
-            style={{
-              background: 'linear-gradient(135deg, rgba(108,92,231,0.08), rgba(0,210,255,0.06))',
-              borderRadius: '14px',
-              padding: '18px',
-              marginBottom: '20px',
-              border: '1px solid rgba(108,92,231,0.15)',
-            }}
-          >
-            <p style={{ fontWeight: '700', marginBottom: '10px', fontSize: '0.95rem' }}>معلومات التحويل:</p>
-            {isTransferReady ? (
-              <div style={{ fontSize: '0.9rem', lineHeight: '1.8' }}>
-                <div>
-                  البنك: <strong>{depositTransfer.bankName}</strong>
-                </div>
-                <div>
-                  اسم الحساب: <strong>{depositTransfer.accountHolder}</strong>
-                </div>
-                <div>
-                  رقم الحساب:{' '}
-                  <strong style={{ direction: 'ltr', display: 'inline-block' }}>{depositTransfer.iban}</strong>
-                </div>
-                {depositTransfer.instructions ? (
-                  <div style={{ marginTop: '10px', color: 'var(--text-muted)' }}>
-                    {depositTransfer.instructions}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.8' }}>
-                {MISSING_DEPOSIT_TRANSFER_MESSAGE}
-              </div>
-            )}
-          </div>
-
-          {success ? (
-            <div
-              style={{
-                ...feedbackBaseStyle,
-                background: 'rgba(46,204,113,0.1)',
-                border: '1px solid rgba(46,204,113,0.3)',
-                color: '#2ecc71',
-                fontWeight: '600',
-              }}
-            >
-              تم إرسال طلب الشحن بنجاح، وسيتم مراجعته قريبًا.
-            </div>
-          ) : null}
-          {error ? (
-            <div
-              style={{
-                ...feedbackBaseStyle,
-                background: 'rgba(231,76,60,0.1)',
-                border: '1px solid rgba(231,76,60,0.3)',
-                color: '#e74c3c',
-              }}
-            >
-              {error}
-            </div>
-          ) : null}
-
-          <form onSubmit={handleSubmit}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>المبلغ (د.أ)</label>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              {PRESET_DEPOSIT_AMOUNTS.map((presetAmount) => (
-                <button
-                  key={presetAmount}
-                  type="button"
-                  onClick={() => setAmount(String(presetAmount))}
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    border:
-                      amount === String(presetAmount)
-                        ? '2px solid var(--primary)'
-                        : '1px solid var(--border-color)',
-                    background:
-                      amount === String(presetAmount) ? 'var(--primary)' : 'var(--bg-lighter)',
-                    color: amount === String(presetAmount) ? '#fff' : 'var(--text-color)',
-                    fontWeight: '700',
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  {presetAmount} د.أ
-                </button>
-              ))}
-            </div>
-
-            <input
-              type="number"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              min="1"
-              max={String(MAX_DEPOSIT_AMOUNT)}
-              step="0.01"
-              required
-              placeholder="أو أدخل مبلغًا مخصصًا"
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-lighter)',
-                color: 'var(--text-color)',
-                fontSize: '1rem',
-                marginBottom: '12px',
-                outline: 'none',
-              }}
-            />
-            <div style={{ marginBottom: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              الحد الأقصى لطلب الإيداع الواحد هو {MAX_DEPOSIT_AMOUNT} د.أ.
-            </div>
-
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-              صورة إثبات التحويل <span style={{ color: '#e74c3c' }}>*</span>
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => setProofFile(event.target.files?.[0] || null)}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '12px',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-lighter)',
-                marginBottom: '20px',
-              }}
-            />
-
-            <Button
-              type="submit"
-              loading={loading}
-              loadingLabel="جاري الإرسال..."
-              fullWidth
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '12px',
-                fontWeight: '700',
-                fontSize: '1rem',
-              }}
-            >
-              إرسال طلب الشحن
-            </Button>
-          </form>
-        </div>
-      </div>
-
-      <div style={cardStyle}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ fontSize: '1.1rem' }}>طلبات الشحن السابقة</h3>
-        </div>
-        {deposits.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-            {userId ? 'لا توجد طلبات شحن سابقة' : 'سجل الدخول لعرض طلبات الإيداع السابقة'}
-          </div>
-        ) : (
-          <div>
-            {deposits.map((deposit) => (
-              <div
-                key={deposit.id}
-                style={{
-                  padding: '16px 24px',
-                  borderBottom: '1px solid var(--border-color)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '12px',
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: '700', fontSize: '1.1rem', color: 'var(--primary)' }}>
-                    {Number(deposit.amount || 0).toFixed(2)} د.أ
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {new Date(deposit.created_at).toLocaleDateString('ar-JO')}
-                  </div>
-                </div>
-                <span
-                  style={{
-                    padding: '4px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: '700',
-                    background: `${DEPOSIT_STATUS_MAP[deposit.status]?.color || '#999'}22`,
-                    color: DEPOSIT_STATUS_MAP[deposit.status]?.color || '#999',
-                  }}
-                >
-                  {DEPOSIT_STATUS_MAP[deposit.status]?.label || deposit.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
+      <DepositRequestForm
+        amount={amount}
+        depositTransfer={depositTransfer}
+        error={error}
+        loading={loading}
+        onAmountChange={setAmount}
+        onPayerPhoneChange={setPayerPhone}
+        onReferenceIdChange={setReferenceId}
+        onSubmit={handleSubmit}
+        payerPhone={payerPhone}
+        referenceId={referenceId}
+        successMessage={successMessage}
+        walletTransferNumber={walletTransferNumber}
+      />
+      <DepositHistoryList deposits={deposits} userId={userId} />
     </div>
   );
 }

@@ -42,6 +42,7 @@
     var activeTab = TYPE_ALL;
     var filterStatus = '';
     var searchQuery = '';
+    var sortMode = 'priority';
     var currentPage = 1;
     var pendingStatusOrderIds = new Set();
 
@@ -273,6 +274,71 @@
                 return String(value || '').toLowerCase().includes(query);
             });
             return matchesStatus && matchesSearch;
+        });
+    }
+
+    /**
+     * Converts one order timestamp into a sortable numeric value.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {number}
+     */
+    function getOrderTimestamp(order) {
+        var timestamp = new Date(getOrderDate(order)).getTime();
+        return Number.isFinite(timestamp) ? timestamp : 0;
+    }
+
+    /**
+     * Returns a sortable urgency rank for one order row.
+     *
+     * Lower values mean the order should appear earlier for admins.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {number}
+     */
+    function getOrderPriorityRank(order) {
+        var status = getOrderDisplayStatus(order, activeTab);
+        if (['pending', 'awaiting_delivery', 'confirmed', 'received', 'waiting_approval'].includes(status)) return 0;
+        if (['processing', 'in_progress', 'diagnosing', 'shipped', 'partial'].includes(status)) return 1;
+        if (['ready', 'delivered', 'completed', 'refunded'].includes(status)) return 2;
+        return 3;
+    }
+
+    /**
+     * Returns whether one order needs immediate admin attention.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {boolean}
+     */
+    function isUrgentOrder(order) {
+        return getOrderPriorityRank(order) <= 1;
+    }
+
+    /**
+     * Returns the numeric amount used for amount-based sorting.
+     *
+     * @param {Record<string, unknown>} order
+     * @returns {number}
+     */
+    function getOrderAmountValue(order) {
+        return Number(order?.total || 0) || 0;
+    }
+
+    /**
+     * Sorts the filtered order list according to the selected admin sort mode.
+     *
+     * @param {Array<Record<string, unknown>>} list
+     * @returns {Array<Record<string, unknown>>}
+     */
+    function sortOrdersList(list) {
+        return list.slice().sort(function (first, second) {
+            if (sortMode === 'oldest') return getOrderTimestamp(first) - getOrderTimestamp(second);
+            if (sortMode === 'amount') return getOrderAmountValue(second) - getOrderAmountValue(first);
+            if (sortMode === 'newest') return getOrderTimestamp(second) - getOrderTimestamp(first);
+
+            var priorityDifference = getOrderPriorityRank(first) - getOrderPriorityRank(second);
+            if (priorityDifference !== 0) return priorityDifference;
+            return getOrderTimestamp(second) - getOrderTimestamp(first);
         });
     }
 
@@ -757,7 +823,7 @@
         var date = A.formatDateTime ? A.formatDateTime(dateValue) : A.formatDate(dateValue);
         var orderType = getOrderType(order);
 
-        return '<tr class="admin-order-row admin-order-row--' + esc(orderType) + '" data-order-id="' + esc(order.id) + '" data-order-type="' + esc(orderType) + '">'
+        return '<tr class="admin-order-row admin-order-row--' + esc(orderType) + (isUrgentOrder(order) ? ' admin-order-row--urgent' : '') + '" data-order-id="' + esc(order.id) + '" data-order-type="' + esc(orderType) + '">'
             + buildOrderNumberCell(order)
             + buildCustomerCell(order)
             + buildDetailsCell(order)
@@ -799,16 +865,34 @@
         var completedCount = allOrders.filter(function (order) {
             return ['delivered', 'completed', 'ready'].includes(String(order.status || '').toLowerCase());
         }).length;
+        var urgentCount = allOrders.filter(isUrgentOrder).length;
 
         return '<div class="admin-orders-summary">'
             + '<div class="admin-orders-stat"><span><i class="fas fa-layer-group"></i> الإجمالي</span><strong>' + allOrders.length + '</strong></div>'
             + '<div class="admin-orders-stat"><span><i class="fas fa-filter"></i> بعد التصفية</span><strong>' + filteredOrders.length + '</strong></div>'
+            + '<div class="admin-orders-stat"><span><i class="fas fa-bolt"></i> تحتاج متابعة</span><strong>' + urgentCount + '</strong></div>'
             + '<div class="admin-orders-stat"><span><i class="fas fa-hourglass-half"></i> بانتظار الإجراء</span><strong>' + pendingCount + '</strong></div>'
             + '<div class="admin-orders-stat"><span><i class="fas fa-spinner"></i> قيد التنفيذ</span><strong>' + activeCount + '</strong></div>'
             + '<div class="admin-orders-stat"><span><i class="fas fa-check-circle"></i> منجزة</span><strong>' + completedCount + '</strong></div>'
             + '<div class="admin-orders-stat"><span><i class="fas fa-sack-dollar"></i> قيمة الطلبات</span><strong>' + esc(totalAmountLabel) + '</strong></div>'
             + '<div class="admin-orders-stat admin-orders-stat--highlight"><span><i class="fas fa-clock"></i> أحدث طلب</span><strong>' + esc(latestOrderLabel) + '</strong></div>'
             + '</div>';
+    }
+
+    /**
+     * Builds the sort-mode options shown in the toolbar.
+     *
+     * @returns {string}
+     */
+    function buildSortOptionsMarkup() {
+        return [
+            { value: 'priority', label: 'الأهم أولًا' },
+            { value: 'newest', label: 'الأحدث أولًا' },
+            { value: 'oldest', label: 'الأقدم أولًا' },
+            { value: 'amount', label: 'الأعلى قيمة' }
+        ].map(function (option) {
+            return '<option value="' + option.value + '"' + (sortMode === option.value ? ' selected' : '') + '>' + option.label + '</option>';
+        }).join('');
     }
 
     /**
@@ -837,9 +921,7 @@
     function renderOrders() {
         var allOrders = getOrders();
         var filtered = applyFilters(allOrders);
-        var sorted = filtered.sort(function (first, second) {
-            return new Date(getOrderDate(second)) - new Date(getOrderDate(first));
-        });
+        var sorted = sortOrdersList(filtered);
         var page = paginate(sorted);
         var activeTabMeta = TAB_CONFIG.find(function (tab) { return tab.key === activeTab; }) || TAB_CONFIG[0];
         var tabsHtml = TAB_CONFIG.map(function (tab) {
@@ -853,12 +935,12 @@
             return '<option value="' + status + '"' + (filterStatus === status ? ' selected' : '') + '>' + getStatusLabel(status, activeTab) + '</option>';
         }).join('');
 
-        A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-shopping-cart"></i> ' + esc(activeTabMeta.label) + '</h2><p>قراءة موحدة لكل الطلبات بأرقام سهلة مثل #2000 وبحسب النوع والحالة</p></div></div>'
+        A.adminContent.innerHTML = '<div class="admin-section-header"><div><h2><i class="fas fa-shopping-cart"></i> ' + esc(activeTabMeta.label) + '</h2><p>قراءة موحدة لكل الطلبات بأرقام سهلة مثل #2000 مع فرز واضح حسب الأولوية والحالة.</p></div></div>'
             + '<div class="admin-tabs">' + tabsHtml + '</div>'
             + buildSummaryMarkup(allOrders, filtered)
             + '<div class="filter-bar admin-orders-toolbar"><input type="search" id="ordersSearch" placeholder="ابحث برقم الطلب مثل #2000 أو باسم العميل أو الهاتف..." value="' + esc(searchQuery) + '"><select id="ordersStatusFilter"><option value="">كل الحالات</option>'
             + statusOptionsHtml
-            + '</select></div><div class="admin-panel admin-orders-panel"><div class="panel-body"><div class="table-wrap admin-orders-table-wrap"><table class="data-table admin-orders-table"><thead><tr>'
+            + '</select><select id="ordersSortMode">' + buildSortOptionsMarkup() + '</select></div><div class="admin-panel admin-orders-panel"><div class="panel-body"><div class="table-wrap admin-orders-table-wrap"><table class="data-table admin-orders-table"><thead><tr>'
             + '<th>رقم الطلب</th><th>العميل</th><th>تفاصيل الطلب</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>'
             + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>'
             + renderPagination(page)
@@ -891,6 +973,11 @@
 
         document.getElementById('ordersStatusFilter')?.addEventListener('change', function () {
             filterStatus = this.value;
+            currentPage = 1;
+            renderOrders();
+        });
+        document.getElementById('ordersSortMode')?.addEventListener('change', function () {
+            sortMode = this.value || 'priority';
             currentPage = 1;
             renderOrders();
         });
@@ -947,11 +1034,13 @@
             buildPhysicalStatusActionsMarkup: buildPhysicalStatusActionsMarkup,
             getOrderDisplayStatus: getOrderDisplayStatus,
             getOrdersForTab: getOrdersForTab,
+            getOrderPriorityRank: getOrderPriorityRank,
             getOrderType: getOrderType,
             getOrderTypeLabel: getOrderTypeLabel,
             getStatusLabel: getStatusLabel,
             getStatusOptionsForTab: getStatusOptionsForTab,
-            normalizePhysicalOrderStatus: normalizePhysicalOrderStatus
+            normalizePhysicalOrderStatus: normalizePhysicalOrderStatus,
+            sortOrdersList: sortOrdersList
         };
     }
 })();

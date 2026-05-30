@@ -12,6 +12,7 @@ import {
 import { createSupabaseAdmin, extractBearerToken, errorResponse, successResponse } from "../../_lib/supabase.js";
 
 const ORDER_MESSAGES = Object.freeze({
+  IDEMPOTENCY_CONFLICT: "[IDM-409] طلب مكرر بنفس مفتاح Idempotency لكن ببيانات مختلفة.",
   BANNED: "حسابك محظور. تواصل مع الإدارة.",
   INACTIVE_SERVICE: "هذه الخدمة غير متوفرة حاليًا",
   INSUFFICIENT_BALANCE: "رصيدك غير كافٍ. يرجى شحن المحفظة أولًا.",
@@ -76,6 +77,10 @@ function buildQuantityRangeMessage(minQuantity, maxQuantity) {
  * @returns {{ error: string, status: number }} Public-safe error details.
  */
 function mapTransactionError(message, service) {
+  if (message.includes("Idempotency key reused with different request body")) {
+    return { error: ORDER_MESSAGES.IDEMPOTENCY_CONFLICT, status: 409 };
+  }
+
   if (message.includes("Insufficient wallet balance")) {
     return { error: ORDER_MESSAGES.INSUFFICIENT_BALANCE, status: 400 };
   }
@@ -221,11 +226,13 @@ async function runServiceOrderPipeline({ env, rawBody, request }) {
       return errorResponse(buildQuantityRangeMessage(service.min_qty, service.max_qty), 400);
     }
 
+    const requestIdempotencyKey = String(request.headers.get("Idempotency-Key") || "").trim() || null;
     const { data: transactionResult, error: transactionError } = await admin.rpc("create_service_order_tx", {
       p_user_id: user.id,
       p_service_id: serviceId,
       p_quantity: normalizedQuantity,
       p_link: link || null,
+      p_idempotency_key: requestIdempotencyKey,
     });
 
     if (transactionError) {
@@ -237,6 +244,7 @@ async function runServiceOrderPipeline({ env, rawBody, request }) {
     const orderId = transactionData?.order_id;
     const total = Number(transactionData?.total || 0);
     const newBalance = Number(transactionData?.new_balance || 0);
+    const shouldDispatchProvider = transactionData?.provider_dispatch_required !== false;
 
     if (!orderId) {
       return errorResponse("فشل إنشاء الطلب", 500);
@@ -251,7 +259,7 @@ async function runServiceOrderPipeline({ env, rawBody, request }) {
 
     /* Notification is already created inside the create_service_order_tx RPC */
 
-    if (service.provider_service_id) {
+    if (service.provider_service_id && shouldDispatchProvider) {
       const providerResult = await createProviderOrder(env, {
         serviceId: service.provider_service_id,
         quantity: normalizedQuantity,
@@ -317,7 +325,7 @@ async function runServiceOrderPipeline({ env, rawBody, request }) {
         new_balance: newBalance,
         message: ORDER_MESSAGES.SUCCESS,
       },
-      201
+      shouldDispatchProvider ? 201 : 200
     );
   } catch (error) {
     console.error("Order creation error:", error);

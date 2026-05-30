@@ -21,6 +21,7 @@ const CheckoutPage = lazy(routeModuleLoaders.checkout);
 const ComparePage = lazy(routeModuleLoaders.compare);
 const SharedFavoritesPage = lazy(routeModuleLoaders["favorites-shared"]);
 const DepositPage = lazy(routeModuleLoaders.deposit);
+const TrackOrderPage = lazy(routeModuleLoaders.track);
 const NotFoundPage = lazy(() => import('@/app/not-found'));
 
 /* Auth Pages */
@@ -59,6 +60,7 @@ export default function AppRouter() {
         <Route path="compare" element={<ComparePage />} />
         <Route path="favorites/shared" element={<SharedFavoritesPage />} />
         <Route path="deposit" element={<DepositPage />} />
+        <Route path="track" element={<TrackOrderPage />} />
 
         <Route path="auth/login" element={<LoginPage />} />
         <Route path="auth/register" element={<RegisterPage />} />
