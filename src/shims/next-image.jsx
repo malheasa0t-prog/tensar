@@ -3,7 +3,7 @@
  */
 
 import { forwardRef } from 'react';
-import { optimizeImageSrc } from '@/lib/imageUtils';
+import { optimizeImageSrc, buildImageSrcSet } from '@/lib/imageUtils';
 
 /**
  * Extracts the most useful pixel width from a sizes string.
@@ -72,11 +72,16 @@ const Image = forwardRef(function Image(
     ? src || ''
     : optimizeImageSrc({ quality, src: src || '', width: resolvedWidth });
   const loadingAttr = priority ? 'eager' : loading || 'lazy';
+  // Serve right-sized variants on responsive layouts (transformable hosts only).
+  const srcSet = unoptimized ? '' : buildImageSrcSet({ quality, src: src || '' });
+  const resolvedSizes = srcSet ? sizes || (fill ? '100vw' : '(max-width: 768px) 100vw, 50vw') : sizes;
 
   return (
     <img
       ref={ref}
       src={optimizedSrc}
+      srcSet={srcSet || undefined}
+      sizes={resolvedSizes || undefined}
       alt={alt}
       width={width}
       height={height}
