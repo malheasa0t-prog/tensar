@@ -65,3 +65,15 @@ test("collectOrderActivity should keep product activity in reverse chronological
     ["ord-2", "ord-1"]
   );
 });
+
+test("matchesCustomer should match admin detail lookups against profile id fields", () => {
+  const hooks = loadHooks();
+
+  assert.equal(
+    hooks.matchesCustomer(
+      { id: "auth-user-1", authUserId: "auth-user-1" },
+      { id: "auth-user-1", authUserId: "auth-user-1", email: "user@example.com" }
+    ),
+    true
+  );
+});

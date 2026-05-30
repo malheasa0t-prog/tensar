@@ -20,8 +20,14 @@
             return uniqueValues([
                 normalizeText(userOrId.id),
                 normalizeText(userOrId.authUserId),
+                normalizeText(userOrId.auth_user_id),
                 normalizeText(userOrId.profileId),
-                normalizeText(userOrId.email)
+                normalizeText(userOrId.profile_id),
+                normalizeText(userOrId.userId),
+                normalizeText(userOrId.user_id),
+                normalizeText(userOrId.email),
+                normalizeText(userOrId.customerEmail),
+                normalizeText(userOrId.customer_email)
             ]);
         }
 
@@ -30,11 +36,10 @@
 
     function matchesCustomer(userOrId, record) {
         var keys = getCustomerKeys(userOrId);
-        var recordUserId = normalizeText(record?.userId || record?.user_id);
-        var recordEmail = normalizeText(record?.email || record?.customerEmail);
+        var recordKeys = getCustomerKeys(record);
 
         return keys.some(function (key) {
-            return key === recordUserId || key === recordEmail;
+            return recordKeys.includes(key);
         });
     }
 

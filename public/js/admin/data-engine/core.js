@@ -65,13 +65,9 @@ export const ROLES = {
 
 export const ADMIN_SECTIONS = [
     { id: 'dashboard', minLevel: 3, icon: 'fa-chart-pie', label: 'لوحة المعلومات' },
-    { id: 'orders', minLevel: 3, icon: 'fa-shopping-bag', label: 'الطلبات' },
+    { id: 'orders', minLevel: 3, icon: 'fa-shopping-bag', label: 'كل الطلبات' },
     { id: 'products', minLevel: 8, icon: 'fa-box', label: 'المنتجات' },
     { id: 'staff', minLevel: 8, icon: 'fa-user-shield', label: 'الموظفون والصلاحيات' },
-    { id: 'product-orders', minLevel: 3, icon: 'fa-box', label: 'طلبات المنتجات' },
-    { id: 'service-orders', minLevel: 3, icon: 'fa-bolt', label: 'طلبات الخدمات' },
-    { id: 'accessory-orders', minLevel: 3, icon: 'fa-headphones', label: 'طلبات الإكسسوارات' },
-    { id: 'repair-orders', minLevel: 3, icon: 'fa-screwdriver-wrench', label: 'حجوزات الصيانة' },
     { id: 'categories', minLevel: 8, icon: 'fa-tags', label: 'الفئات' },
     { id: 'services', minLevel: 8, icon: 'fa-bolt', label: 'الخدمات' },
     { id: 'deposits', minLevel: 8, icon: 'fa-money-check-alt', label: 'طلبات الإيداع' },
