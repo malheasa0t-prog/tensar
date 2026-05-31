@@ -14,7 +14,8 @@ import { loadCategoryPageSnapshot, subscribeToCategoryPage } from '@/services/ca
  *   mainCategory: Record<string, unknown> | null,
  *   subCategories: Array<Record<string, unknown>>,
  *   repairServices: Array<Record<string, unknown>>,
- *   subCategoryServiceCounts: Record<string, number>,
+  *   subCategoryServiceCounts: Record<string, number>,
+ *   subCategoryChildrenCount: Record<string, number>,
  * }}
  */
 export function useCategoryPage(routeValue) {
@@ -25,6 +26,7 @@ export function useCategoryPage(routeValue) {
   const [subCategories, setSubCategories] = useState([]);
   const [repairServices, setRepairServices] = useState([]);
   const [subCategoryServiceCounts, setSubCategoryServiceCounts] = useState({});
+  const [subCategoryChildrenCount, setSubCategoryChildrenCount] = useState({});
 
   useEffect(() => {
     if (!routeValue) {
@@ -56,6 +58,7 @@ export function useCategoryPage(routeValue) {
       setSubCategories(snapshot.subCategories);
       setRepairServices(snapshot.repairServices);
       setSubCategoryServiceCounts(snapshot.subCategoryServiceCounts);
+      setSubCategoryChildrenCount(snapshot.subCategoryChildrenCount || {});
       setError(snapshot.error);
       setLoading(false);
     }
@@ -79,5 +82,6 @@ export function useCategoryPage(routeValue) {
     subCategories,
     repairServices,
     subCategoryServiceCounts,
+    subCategoryChildrenCount,
   };
 }

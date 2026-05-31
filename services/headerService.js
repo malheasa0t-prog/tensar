@@ -3,6 +3,7 @@ import {
   buildHeaderCategoryLinks,
   resolveHeaderUserLabel,
 } from "../lib/headerSnapshotModel.js";
+import { buildCardsRootCategories } from "../lib/cardsCatalogModel.js";
 import { loadSupabaseClient } from "../lib/loadSupabaseClient.js";
 import { loadSiteSettingsClient } from "../lib/siteSettingsClient.js";
 import { subscribeToTableChanges } from "../lib/realtimeTableSubscription.js";
@@ -55,17 +56,30 @@ export async function fetchHeaderSnapshot(client) {
   const siteSettings = await loadSiteSettingsClient(resolvedClient).catch(() =>
     normalizeSiteSettings()
   );
-  const response = await resolvedClient
-    .from("categories")
-    .select("*")
-    .eq("status", "active")
-    .is("parent_id", null)
-    .order("sort_order", { ascending: true });
+  const [categoriesResponse, servicesResponse] = await Promise.all([
+    resolvedClient
+      .from("categories")
+      .select("*")
+      .eq("status", "active")
+      .is("parent_id", null)
+      .order("sort_order", { ascending: true }),
+    resolvedClient
+      .from("services")
+      .select("category_id,subcategory_id")
+      .eq("status", "active"),
+  ]);
 
-  const categories = response.error || !Array.isArray(response.data) ? [] : response.data;
+  const categories = categoriesResponse.error || !Array.isArray(categoriesResponse.data) ? [] : categoriesResponse.data;
+  const catalogServices = servicesResponse.error || !Array.isArray(servicesResponse.data) ? [] : servicesResponse.data;
+  const cardsRootIds = new Set(
+    buildCardsRootCategories({ categories, services: catalogServices }).map((category) => category.id)
+  );
   const snapshot = {
     siteSettings,
-    dynamicLinks: buildHeaderCategoryLinks({ categories, siteSettings }),
+    dynamicLinks: buildHeaderCategoryLinks({
+      categories: categories.filter((category) => !cardsRootIds.has(category.id)),
+      siteSettings,
+    }),
   };
 
   headerSnapshotCache = snapshot;

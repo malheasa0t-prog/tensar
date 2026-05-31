@@ -5,6 +5,7 @@ import { buildSitemapEntry, renderSitemapXml } from "../lib/sitemapModel.js";
 const CACHE_CONTROL_HEADER = "public, max-age=3600";
 const STATIC_PATHS = [
   { pathname: "/", changeFrequency: "daily", priority: 1 },
+  { pathname: "/cards", changeFrequency: "weekly", priority: 0.85 },
   { pathname: "/services", changeFrequency: "weekly", priority: 0.9 },
   { pathname: "/contact", changeFrequency: "monthly", priority: 0.6 },
 ];

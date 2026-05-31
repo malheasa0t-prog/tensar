@@ -296,7 +296,10 @@ export function useCheckoutPage() {
     }
   }
 
-  const hasDigitalItems = items.some((item) => String(item.id || '').startsWith('srv-'));
+  const hasDigitalItems = items.some((item) => (
+    Boolean(item.link_required)
+    || (Array.isArray(item.provider_fields) && item.provider_fields.length > 0)
+  ));
   const canSubmit =
     items.length > 0 &&
     Boolean(form.customer_name.trim()) &&

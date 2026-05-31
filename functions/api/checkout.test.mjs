@@ -26,12 +26,13 @@ function createContext(body, { env = {}, headers = {} } = {}) {
  *
  * @param {{
  *   orderId?: string,
+ *   categories?: Array<Record<string, unknown>>,
  *   products?: Array<Record<string, unknown>>,
  *   services?: Array<Record<string, unknown>>,
  * }} [options]
  * @returns {{ calls: { orderDeletes: Array<{ column: string, value: string }>, orderInserts: Array<Array<Record<string, unknown>>>, orderItemInserts: Array<Array<Record<string, unknown>>> }, client: { from: (table: string) => any } }}
  */
-function createCheckoutAdminClient({ orderId = 'ord-1', products = [], services = [] } = {}) {
+function createCheckoutAdminClient({ orderId = 'ord-1', categories = [], products = [], services = [] } = {}) {
   const calls = {
     orderDeletes: [],
     orderInserts: [],
@@ -110,6 +111,21 @@ function createCheckoutAdminClient({ orderId = 'ord-1', products = [], services 
                       return { data: services, error: null };
                     },
                   };
+                },
+              };
+            },
+          };
+        }
+
+        if (table === 'categories') {
+          return {
+            select(fields) {
+              assert.ok(fields.includes('parent_id'));
+              return {
+                eq(statusColumn, statusValue) {
+                  assert.equal(statusColumn, 'status');
+                  assert.equal(statusValue, 'active');
+                  return Promise.resolve({ data: categories, error: null });
                 },
               };
             },
@@ -419,6 +435,67 @@ test("createCheckoutHandler should require a dedicated digital contact when prov
 
   assert.equal(response.status, 400);
   assert.equal(payload.code, "CHK-112");
+});
+
+test("createCheckoutHandler should allow buyable leaf categories as digital catalog items", async () => {
+  const categories = [
+    {
+      id: 'cat-root',
+      parent_id: null,
+      name: 'البطاقات',
+      slug: null,
+      image: null,
+      description: null,
+      status: 'active',
+      metadata: {},
+      sort_order: 0,
+    },
+    {
+      id: 'cat-parent',
+      parent_id: 'cat-root',
+      name: 'steam',
+      slug: null,
+      image: null,
+      description: null,
+      status: 'active',
+      metadata: {},
+      sort_order: 0,
+    },
+    {
+      id: 'cat-leaf',
+      parent_id: 'cat-parent',
+      name: 'steam 5$',
+      slug: null,
+      image: null,
+      description: null,
+      status: 'active',
+      metadata: {},
+      sort_order: 0,
+    },
+  ];
+  const { client, calls } = createCheckoutAdminClient({ categories });
+  const handler = createCheckoutHandler({
+    createSupabaseAdmin: () => client,
+    resolveCheckoutUserId: async () => null,
+    buildInventoryAdjustments: () => [],
+    applyInventoryAdjustments: async () => [],
+  });
+
+  const response = await handler(createContext({
+    customer_name: 'Ali',
+    customer_phone: '+962790000000',
+    delivery_method: 'pickup',
+    payment_method: 'cod',
+    items: [{ id: 'cat-leaf', qty: 1 }],
+  }));
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.equal(calls.orderInserts.length, 1);
+  assert.equal(calls.orderItemInserts.length, 1);
+  assert.equal(calls.orderItemInserts[0][0].product_name, 'steam 5$');
+  assert.equal(calls.orderItemInserts[0][0].snapshot.product_type, 'digital');
 });
 
 test("createCheckoutHandler should block guest checkout requests when the guest limiter rejects them", async () => {

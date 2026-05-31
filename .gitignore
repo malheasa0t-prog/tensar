@@ -35,6 +35,7 @@ admin-static.out.log
 Thumbs.db
 
 # Temporary files
+tmp/
 tmp-*.png
 tmp-*.html
 homepage-*.png

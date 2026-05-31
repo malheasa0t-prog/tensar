@@ -3,7 +3,7 @@
 
 import {
     db
-} from './core.js?v=20260530-2';
+} from './core.js?v=20260531-2';
 
 export function mapCategory(row) {
     return {
@@ -60,6 +60,28 @@ export function mapRepairService(row) {
         image: row.image || '',
         status: row.status,
         createdAt: row.created_at
+    };
+}
+
+export function mapCatalogService(row) {
+    return {
+        id: row.id,
+        name: row.name,
+        categoryId: row.category_id || '',
+        subcategoryId: row.subcategory_id || '',
+        description: row.description || '',
+        price: parseFloat(row.price) || 0,
+        costPrice: parseFloat(row.cost_price) || 0,
+        image: row.image || '',
+        slug: row.slug || '',
+        status: row.status || 'draft',
+        sortOrder: Number(row.sort_order || 0),
+        minQty: Number(row.min_qty || 1),
+        maxQty: Number(row.max_qty || 9999),
+        providerServiceId: row.provider_service_id || '',
+        metadata: row.metadata || {},
+        createdAt: row.created_at || null,
+        updatedAt: row.updated_at || null
     };
 }
 
@@ -134,3 +156,8 @@ export function getBrands() {
 export function getActiveRepairServices() {
     return db.repairServices.filter((service) => service.status === 'active');
 }
+
+export function getActiveCatalogServices() {
+    return (db.catalogServices || []).filter((service) => service.status === 'active');
+}
+

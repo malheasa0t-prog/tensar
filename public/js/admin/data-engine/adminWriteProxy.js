@@ -4,8 +4,8 @@
 
 import {
   createAdminSupabaseClient,
-} from "./adminDbProxyCore.js";
-import { executeAdminDbOperation } from "./adminDbRequest.js?v=20260530-2";
+} from "./adminDbProxyCore.js?v=20260531-2";
+import { executeAdminDbOperation } from "./adminDbRequest.js?v=20260531-2";
 
 /**
  * Executes one secured admin write operation through the shared DB proxy.

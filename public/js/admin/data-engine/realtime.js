@@ -11,7 +11,7 @@ import {
     realtimeState,
     supabase,
     updateHealthStatus
-} from './core.js?v=20260530-2';
+} from './core.js?v=20260531-2';
 import {
     mapAuditLog,
     mapContactMessage,
@@ -21,13 +21,15 @@ import {
     mapOrder,
     mapRepairBooking,
     mapServiceOrder
-} from './orders.js?v=20260530-2';
-import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260530-2';
+} from './orders.js?v=20260531-2';
+import { mapCatalogService, mapCategory, mapProduct, mapRepairService } from './products.js?v=20260531-2';
 
 const CATEGORY_SORTER = (first, second) => (first.sortOrder || 0) - (second.sortOrder || 0);
+const SORT_ORDER_SORTER = (first, second) => (first.sortOrder || 0) - (second.sortOrder || 0);
 
 const REALTIME_BINDINGS = {
     products: { collectionKey: 'products', eventName: 'products', mapper: (row) => mapProduct(row) },
+    services: { collectionKey: 'catalogServices', eventName: 'services', mapper: (row) => mapCatalogService(row), sortRecords: SORT_ORDER_SORTER },
     categories: {
         collectionKey: 'categories',
         eventName: 'categories',
@@ -188,3 +190,4 @@ export function setupScopedRealtime() {
 
 export const setupRealtime = setupScopedRealtime;
 export const stopRealtime = teardownRealtime;
+

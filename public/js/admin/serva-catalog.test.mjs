@@ -57,3 +57,38 @@ test("safePositiveInt should clamp invalid or too-large values", () => {
   assert.equal(hooks.safePositiveInt("25", 1, 10), 10);
   assert.equal(hooks.safePositiveInt("5", 1, 10), 5);
 });
+
+test("buildLocalServiceRow should map a selected subcategory back to its root category", () => {
+  const hooks = loadServaCatalogHooks();
+  hooks.setCategoriesForTests([
+    { id: "cards", name: "البطاقات", parent_id: null },
+    { id: "itunes", name: "آيتونز", parent_id: "cards" },
+  ]);
+
+  const row = hooks.buildLocalServiceRow({
+    fields: [{ key: "email" }],
+    max: 50,
+    min: 1,
+    name_ar: "آيتونز 5$",
+    rate: "5.5",
+    service: "1001",
+  }, "itunes");
+
+  assert.equal(row.category_id, "cards");
+  assert.equal(row.subcategory_id, "itunes");
+  assert.equal(row.provider_service_id, "1001");
+});
+
+test("collectExistingProviderIds should ignore null and blank provider ids", () => {
+  const hooks = loadServaCatalogHooks();
+
+  const ids = hooks.collectExistingProviderIds([
+    { provider_service_id: "srv-1" },
+    { provider_service_id: null },
+    { provider_service_id: "  " },
+    {},
+    { provider_service_id: "1002" },
+  ]);
+
+  assert.deepEqual([...ids], ["srv-1", "1002"]);
+});

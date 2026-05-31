@@ -7,17 +7,24 @@ import { fetchCartProductSnapshots } from "./cartService.js";
  *
  * @param {{
  *   productsData?: Array<Record<string, unknown>>,
+ *   categoriesData?: Array<Record<string, unknown>>,
  *   productsError?: Record<string, unknown> | null,
  *   productsResponses?: Array<{ data: Array<Record<string, unknown>> | null, error: Record<string, unknown> | null }>,
+ *   categoriesError?: Record<string, unknown> | null,
+ *   categoriesResponses?: Array<{ data: Array<Record<string, unknown>> | null, error: Record<string, unknown> | null }>,
  *   onProductsIds?: (productIds: Array<string>) => void,
  * }} [options]
  * @returns {{ from: (table: string) => { select: (fields: string) => { in: (column: string, productIds: Array<string>) => Promise<{ data: Array<Record<string, unknown>>, error: Record<string, unknown> | null }> } } }}
  */
 function createCartClient({
   productsData = [],
+  categoriesData = [],
   productsError = null,
   productsResponses = null,
+  categoriesError = null,
+  categoriesResponses = null,
   onProductsIds = () => {},
+  onCategoriesQuery = () => {},
 } = {}) {
   return {
     from(table) {
@@ -33,6 +40,26 @@ function createCartClient({
                   return Promise.resolve(productsResponses.shift());
                 }
                 return Promise.resolve({ data: productsData, error: productsError });
+              },
+            };
+          },
+        };
+      }
+
+      if (table === "categories") {
+        return {
+          select(fields) {
+            assert.match(fields, /parent_id/);
+            return {
+              eq(column, value) {
+                assert.equal(column, "status");
+                assert.equal(value, "active");
+                onCategoriesQuery();
+                return Promise.resolve(
+                  Array.isArray(categoriesResponses) && categoriesResponses.length > 0
+                    ? categoriesResponses.shift()
+                    : { data: categoriesData, error: categoriesError }
+                );
               },
             };
           },
@@ -94,4 +121,26 @@ test("fetchCartProductSnapshots should throw a user-friendly error when the cata
     message:
       "[CRT-301] \u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0633\u0644\u0629 \u062d\u0627\u0644\u064a\u0627\u064b.",
   });
+});
+
+test("fetchCartProductSnapshots should include buyable leaf categories in the live cart snapshot", async () => {
+  const client = createCartClient({
+    categoriesData: [
+      { id: "cat-root", parent_id: null, name: "البطاقات", status: "active", metadata: {} },
+      { id: "cat-steam", parent_id: "cat-root", name: "steam", status: "active", metadata: {} },
+      { id: "cat-leaf", parent_id: "cat-steam", name: "steam 5$", status: "active", metadata: {} },
+    ],
+  });
+
+  const result = await fetchCartProductSnapshots({
+    productIds: ["cat-leaf"],
+    client,
+  });
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, "cat-leaf");
+  assert.equal(result[0].name, "steam 5$");
+  assert.equal(result[0].price, 5);
+  assert.equal(result[0].categoryLabel, "steam");
+  assert.equal(result[0].product_type, "digital");
 });

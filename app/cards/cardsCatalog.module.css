@@ -1,0 +1,113 @@
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card {
+  display: grid;
+  gap: 0.9rem;
+  min-height: 100%;
+  padding: 1rem;
+}
+
+.media {
+  position: relative;
+  min-height: 160px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mediaImage {
+  object-fit: cover;
+}
+
+.iconFallback {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-light);
+}
+
+.copy {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.description {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.metaChip,
+.tabButton {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.metaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.tabButton {
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.65rem 1rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tabButtonActive {
+  background: rgba(131, 56, 236, 0.18);
+  border-color: rgba(177, 92, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions :global(.btn) {
+    width: 100%;
+    justify-content: center;
+  }
+}

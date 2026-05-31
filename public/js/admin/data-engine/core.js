@@ -5,7 +5,7 @@ import {
     installSanitizedInnerHtmlGuard,
     sanitizeAdminHtmlMarkup
 } from './htmlSanitizer.js';
-import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260530-2';
+import { createAdminSupabaseClient } from './adminWriteProxy.js?v=20260531-2';
 
 const SUPABASE_URL = window.__TZ_SUPABASE_URL || '';
 const SUPABASE_PUBLISHABLE_KEY = window.__TZ_SUPABASE_PUBLISHABLE_KEY || '';
@@ -69,7 +69,8 @@ export const ADMIN_SECTIONS = [
     { id: 'products', minLevel: 8, icon: 'fa-box', label: 'المنتجات' },
     { id: 'staff', minLevel: 8, icon: 'fa-user-shield', label: 'الموظفون والصلاحيات' },
     { id: 'categories', minLevel: 8, icon: 'fa-tags', label: 'الفئات' },
-    { id: 'services', minLevel: 8, icon: 'fa-bolt', label: 'الخدمات' },
+    { id: 'services', minLevel: 8, icon: 'fa-bolt', label: 'خدمات الصيانة' },
+    { id: 'catalog', minLevel: 8, icon: 'fa-gift', label: 'البطاقات والكتالوج' },
     { id: 'deposits', minLevel: 8, icon: 'fa-money-check-alt', label: 'طلبات الإيداع' },
     { id: 'orange-money', minLevel: 8, icon: 'fa-mobile-screen-button', label: 'عمليات Orange Money' },
     { id: 'customers', minLevel: 3, icon: 'fa-users', label: 'العملاء' },
@@ -111,6 +112,7 @@ export const db = {
     users: [],
     categories: [],
     products: [],
+    catalogServices: [],
     orders: [],
     serviceOrders: [],
     deposits: [],
@@ -128,6 +130,7 @@ const ADMIN_DB_FALLBACK = Object.freeze({
     users: Object.freeze([]),
     categories: Object.freeze([]),
     products: Object.freeze([]),
+    catalogServices: Object.freeze([]),
     orders: Object.freeze([]),
     serviceOrders: Object.freeze([]),
     deposits: Object.freeze([]),
@@ -264,12 +267,12 @@ export const DATA_SCOPE = detectDataScope();
 const DATA_SCOPE_CONFIG = {
     admin: {
         queries: [
-            'profiles', 'legacyUsers', 'categories', 'products',
+            'profiles', 'legacyUsers', 'categories', 'products', 'catalogServices',
             'orders', 'orderItems', 'serviceOrders', 'settings', 'coupons', 'repairServices',
             'repairBookings', 'messages', 'logs', 'deposits', 'orangeMoneyLogs'
         ],
         realtime: [
-            'products', 'categories', 'orders', 'service_orders',
+            'products', 'categories', 'services', 'orders', 'service_orders',
             'repair_services', 'repair_bookings', 'contact_messages', 'deposits',
             'orange_money_logs', 'coupons', 'settings', 'audit_logs'
         ]
@@ -325,3 +328,4 @@ export function setSession(userId, role, name) {
 export function clearSession() {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
 }
+

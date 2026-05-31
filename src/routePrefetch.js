@@ -10,6 +10,8 @@ import {
 
 const uncachedRouteModuleLoaders = Object.freeze({
   home: () => import("@/app/page"),
+  cards: () => import("@/app/cards/page"),
+  "cards-category": () => import("@/app/cards/[categoryId]/page"),
   services: () => import("@/app/services/page"),
   "service-detail": () => import("@/app/services/[slug]/page"),
   category: () => import("@/app/category/[id]/page"),
@@ -114,6 +116,16 @@ function prefetchRouteData(input) {
  * @returns {Promise<unknown>}
  */
 async function loadRouteData(input) {
+  if (input.routeKey === "cards") {
+    const module = await import("@/services/cardsCatalogService");
+    return module.loadCardsCatalogSnapshot();
+  }
+
+  if (input.routeKey === "cards-category") {
+    const module = await import("@/services/cardsCatalogService");
+    return module.loadCardsCategorySnapshot(getLastPathSegment(input.href));
+  }
+
   if (input.routeKey === "category") {
     const module = await import("@/services/categoryPageService");
     return module.prefetchCategoryPageSnapshot(getLastPathSegment(input.href));

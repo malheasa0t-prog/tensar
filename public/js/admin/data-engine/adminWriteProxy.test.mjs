@@ -1,10 +1,17 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
   createAdminSupabaseClient,
   executeAdminWriteOperation,
 } from "./adminWriteProxy.js";
+
+test("adminWriteProxy should version-cache-bust the shared proxy core module", () => {
+  const source = fs.readFileSync(new URL("./adminWriteProxy.js", import.meta.url), "utf8");
+
+  assert.match(source, /adminDbProxyCore\.js\?v=\d{8}-\d+/);
+});
 
 test("executeAdminWriteOperation should return a Supabase-like error when no admin session token exists", async () => {
   const result = await executeAdminWriteOperation({

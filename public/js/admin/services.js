@@ -410,11 +410,11 @@
         var services = TZ.db.repairServices || [];
         var html = '<div class="admin-section-header"><div><h2><i class="fas fa-screwdriver-wrench"></i> خدمات الصيانة</h2><p>'
             + services.length
-            + ' خدمة صيانة محلية داخل الموقع</p></div><div class="admin-section-actions"><button class="btn btn-outline btn-sm" id="openServaCatalogBtn"><i class="fas fa-cloud-download-alt"></i> استيراد من Serva-S</button><button class="btn btn-primary btn-sm" id="addSvcBtn"><i class="fas fa-plus"></i> إضافة خدمة</button></div></div>';
+            + ' خدمة صيانة محلية داخل الموقع</p></div><div class="admin-section-actions"><button class="btn btn-outline btn-sm" id="openServaCatalogBtn"><i class="fas fa-table-list"></i> إدارة الكتالوج</button><button class="btn btn-primary btn-sm" id="addSvcBtn"><i class="fas fa-plus"></i> إضافة خدمة</button></div></div>';
 
         html += '<div class="admin-panel" style="margin-bottom:16px;"><div class="panel-body" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">'
-            + '<div><strong style="display:block;margin-bottom:6px;">الخدمات الرقمية من Serva-S</strong><span style="color:var(--text-muted);font-size:0.9rem;">إذا أردت إضافة خدمات المزود إلى المتجر، افتح قسم الاستيراد واربط كل خدمة بالفئة المناسبة داخل موقعك.</span></div>'
-            + '<button class="btn btn-outline btn-sm" id="openServaCatalogInlineBtn"><i class="fas fa-arrow-left"></i> فتح قسم الاستيراد</button>'
+            + '<div><strong style="display:block;margin-bottom:6px;">كتالوج البطاقات الرقمية</strong><span style="color:var(--text-muted);font-size:0.9rem;">يمكنك إدارة الخدمات الرقمية القابلة للشراء من قسم الكتالوج، أو استيرادها من Serva-S ثم تعديلها محلياً.</span></div>'
+            + '<button class="btn btn-outline btn-sm" id="openServaCatalogInlineBtn"><i class="fas fa-arrow-left"></i> فتح قسم الكتالوج</button>'
             + '</div></div>';
 
         html += '<div class="admin-panel"><div class="panel-body"><div class="table-wrap"><table class="data-table"><thead><tr>'
@@ -445,10 +445,10 @@
             openServiceForm(null);
         });
         document.getElementById('openServaCatalogBtn')?.addEventListener('click', function () {
-            A.renderSection?.('serva-catalog');
+            A.renderSection?.('catalog');
         });
         document.getElementById('openServaCatalogInlineBtn')?.addEventListener('click', function () {
-            A.renderSection?.('serva-catalog');
+            A.renderSection?.('catalog');
         });
 
         document.querySelectorAll('.edit-svc-btn').forEach(function (button) {

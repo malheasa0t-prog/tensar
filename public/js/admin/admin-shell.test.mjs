@@ -31,6 +31,16 @@ test("buildAdminBreadcrumbs should label the Serva catalog section clearly", () 
   );
 });
 
+test("buildAdminBreadcrumbs should label the cards catalog section clearly", () => {
+  const hooks = loadHooks();
+  const breadcrumbs = hooks.buildAdminBreadcrumbs("catalog");
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(breadcrumbs.map((item) => item.label))),
+    ["الرئيسية", "المتجر", "البطاقات والكتالوج"]
+  );
+});
+
 test("buildAdminHeaderAlerts should return orders and queue alerts only", () => {
   const hooks = loadHooks();
   const alerts = hooks.buildAdminHeaderAlerts({
@@ -54,4 +64,11 @@ test("searchAdminCommands should expose the Serva import command", () => {
   const results = hooks.searchAdminCommands(hooks.buildAdminCommandItems(), "serva", 5);
 
   assert.equal(results[0].id, "serva-catalog");
+});
+
+test("searchAdminCommands should expose the cards catalog command", () => {
+  const hooks = loadHooks();
+  const results = hooks.searchAdminCommands(hooks.buildAdminCommandItems(), "البطاقات", 5);
+
+  assert.equal(results[0].id, "catalog");
 });

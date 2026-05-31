@@ -3,7 +3,7 @@
 (function () {
     'use strict';
 
-    const ADMIN_ASSET_VERSION = '20260530-2';
+    const ADMIN_ASSET_VERSION = '20260531-2';
     const DATA_ENGINE_MODULE_PATH = `/js/admin/data-engine.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_SERVICE_WORKER_PATH = `/admin-sw.js?v=${ADMIN_ASSET_VERSION}`;
     const ADMIN_RUNTIME_ROUTE = '/api/admin/runtime';
@@ -45,6 +45,7 @@
         categories: ['js/admin/categories.js'],
         'main-categories': ['js/admin/categories.js'],
         subcategories: ['js/admin/categories.js'],
+        catalog: ['js/admin/catalog.helpers.js', 'js/admin/catalog.js'],
         customers: ['js/admin/customers.helpers.js', 'js/admin/customers.js'],
         deposits: ['js/admin/deposits.js'],
         'orange-money': ['js/admin/orange-money.js'],
@@ -417,3 +418,4 @@
 
     void bootstrapLegacyAdmin();
 })();
+

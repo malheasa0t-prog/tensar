@@ -6,6 +6,7 @@ import AppIcon from '@/components/AppIcon';
 import ScrollReveal from '@/components/ScrollReveal';
 import { useCart } from '@/components/CartProvider';
 import { useToast } from '@/components/ToastProvider';
+import { buildCatalogServiceCartItem } from '@/lib/catalogServiceCartModel';
 import { formatCurrency } from '@/lib/formatCurrency';
 import { isOptimizableImageSrc } from '@/lib/imageUtils';
 import { getStaggeredRevealDelay } from '@/lib/scrollRevealModel';
@@ -46,30 +47,6 @@ function getDetailsHref(service) {
 }
 
 /**
- * Builds a cart-safe payload for a catalog service.
- *
- * @param {Record<string, unknown>} service - Catalog service row.
- * @returns {Record<string, unknown>} Cart item payload.
- */
-function buildCatalogServiceCartItem(service) {
-  return {
-    id: service.id,
-    name: service.name,
-    originalPrice: Number(service.price || 0),
-    price: Number(service.price || 0),
-    category: service.categoryLabel || service.category || 'خدمة',
-    description: service.description || '',
-    icon: service.icon || 'wrench',
-    images: service.image ? [service.image] : [],
-    quantity: Number(service.max_qty || 9999),
-    status: service.status || 'active',
-    product_type: 'digital',
-    provider_fields: service.metadata?.provider_fields || [],
-    link_required: Boolean(service.metadata?.link_required),
-  };
-}
-
-/**
  * Lists visible repair services that belong to the current category tree.
  *
  * @param {{
@@ -94,7 +71,10 @@ export default function CategoryServicesSection({ services, categoryName, hasSub
    * @returns {void}
    */
   function handleAddCatalogService(service) {
-    const result = addToCart(buildCatalogServiceCartItem(service));
+    const result = addToCart(buildCatalogServiceCartItem({
+      service,
+      categoryLabel: service.categoryLabel || service.category || categoryName,
+    }));
 
     if (!result?.ok) {
       showToast(result?.message || '[CRT-301] تعذر إضافة الخدمة حالياً.', { type: 'error' });

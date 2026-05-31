@@ -1,7 +1,7 @@
 // ===== TechZone Admin Data Engine - Users =====
 // User mapping, role checks, and admin access helpers.
 
-import { ADMIN_SECTIONS, ROLES, db } from './core.js?v=20260530-2';
+import { ADMIN_SECTIONS, ROLES, db } from './core.js?v=20260531-2';
 
 const ALLOWED_ADMIN_SECTIONS = new Set([
     'dashboard',
@@ -14,6 +14,7 @@ const ALLOWED_ADMIN_SECTIONS = new Set([
     'categories',
     'main-categories',
     'subcategories',
+    'catalog',
     'services',
     'repair-services',
     'customers',
@@ -137,3 +138,4 @@ export function canAccessSection(user, sectionId) {
     const section = ADMIN_SECTIONS.find((entry) => entry.id === sectionId);
     return Boolean(role && section && role.level >= section.minLevel);
 }
+

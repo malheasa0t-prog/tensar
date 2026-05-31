@@ -7,11 +7,11 @@ import {
     generateId,
     nowIso,
     supabase
-} from './core.js?v=20260530-2';
-import { loadDataFromSupabaseByScope } from './loaders.js?v=20260530-2';
-import { isRetryableNetworkError, queueOfflineCommit, syncQueuedCommits } from './offline.js?v=20260530-2';
-import { fireDataUpdate } from './realtime.js?v=20260530-2';
-import { fetchExistingProductSnapshot, syncProductRestockAlerts } from './restockAlerts.js?v=20260530-2';
+} from './core.js?v=20260531-2';
+import { loadDataFromSupabaseByScope } from './loaders.js?v=20260531-2';
+import { isRetryableNetworkError, queueOfflineCommit, syncQueuedCommits } from './offline.js?v=20260531-2';
+import { fireDataUpdate } from './realtime.js?v=20260531-2';
+import { fetchExistingProductSnapshot, syncProductRestockAlerts } from './restockAlerts.js?v=20260531-2';
 
 const ERROR_CODE_PATTERN = /\[[A-Z]{2,4}-\d{3}\]/;
 const ERROR_MESSAGES = Object.freeze({
@@ -329,3 +329,4 @@ export async function syncOfflineQueue() {
     assertAdminRuntimeAccess();
     return syncQueuedCommits((queuedCommit) => executeSyncHandler(queuedCommit.resource));
 }
+

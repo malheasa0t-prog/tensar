@@ -1,4 +1,8 @@
 import { slugifyArabic } from '@/lib/categoryPageModel';
+import {
+  buildCategoryChildCountMap,
+  isCategoryPurchaseable,
+} from '@/lib/categoryPurchaseModel';
 import { loadSupabaseClient } from '@/lib/loadSupabaseClient';
 import { subscribeToTableChanges } from '@/lib/realtimeTableSubscription';
 
@@ -37,6 +41,7 @@ function normalizeCategoryLabel(value) {
  *   repairServices: Array<Record<string, unknown>>,
  *   products: Array<Record<string, unknown>>,
  *   subCategoryServiceCounts: Record<string, number>,
+ *   subCategoryChildrenCount: Record<string, number>,
  *   subCategoryProductsCount: Record<string, number>,
  * }}
  */
@@ -49,6 +54,7 @@ function createEmptyCategoryPageSnapshot() {
     repairServices: [],
     products: [],
     subCategoryServiceCounts: {},
+    subCategoryChildrenCount: {},
     subCategoryProductsCount: {},
   };
 }
@@ -103,7 +109,20 @@ async function findCategory(routeValue, supabase) {
     .limit(1)
     .maybeSingle();
 
-  return response.data || null;
+  if (response.error || response.data) {
+    return response.data || null;
+  }
+
+  response = await supabase
+    .from('categories')
+    .select('*')
+    .eq('status', 'active');
+
+  if (response.error) {
+    return null;
+  }
+
+  return (response.data || []).find((category) => slugifyArabic(category.name) === normalizedSlug) || null;
 }
 
 /**
@@ -184,6 +203,16 @@ function buildCategoryLabelMap(categories) {
   }
 
   return labelMap;
+}
+
+/**
+ * Counts the current category tree children by parent id.
+ *
+ * @param {Array<Record<string, unknown>>} categories - Category rows.
+ * @returns {Record<string, number>} Parent id lookup.
+ */
+function buildCategoryChildrenCount(categories) {
+  return buildCategoryChildCountMap(categories);
 }
 
 /**
@@ -294,8 +323,14 @@ function countServicesForSubCategories(input) {
     const catalogCount = input.catalogServices.filter((service) =>
       categoryIds.has(String(service.category_id || ''))
     ).length;
+    const leafCatalogCount = visibleCategories.filter((category) =>
+      isCategoryPurchaseable({
+        category,
+        childCountById: input.subCategoryChildrenCount,
+      })
+    ).length;
 
-    counts[subCategory.id] = repairCount + catalogCount;
+    counts[subCategory.id] = repairCount + catalogCount + leafCatalogCount;
   }
 
   return counts;
@@ -313,6 +348,7 @@ function countServicesForSubCategories(input) {
  *   repairServices: Array<Record<string, unknown>>,
  *   products: Array<Record<string, unknown>>,
  *   subCategoryServiceCounts: Record<string, number>,
+ *   subCategoryChildrenCount: Record<string, number>,
  *   subCategoryProductsCount: Record<string, number>,
  * }>} Category page snapshot.
  */
@@ -414,6 +450,7 @@ async function loadFreshCategoryPageSnapshot(routeValue, now) {
   const activeCategory = allCategories.find((item) => String(item.id) === String(category.id)) || category;
   const categoryById = buildCategoryById(allCategories);
   const subCategories = getDirectSubCategories(allCategories, activeCategory.id);
+  const subCategoryChildrenCount = buildCategoryChildrenCount(allCategories);
   const visibleCategories = [
     activeCategory,
     ...collectDescendantCategories(allCategories, activeCategory.id),
@@ -453,6 +490,7 @@ async function loadFreshCategoryPageSnapshot(routeValue, now) {
     allCategories,
     catalogServices: catalogServicesResponse.data || [],
     repairServices: repairServicesResponse.data || [],
+    subCategoryChildrenCount,
   });
   const visibleServices = [...catalogServices, ...repairServices];
 
@@ -464,6 +502,7 @@ async function loadFreshCategoryPageSnapshot(routeValue, now) {
     repairServices: visibleServices,
     products: [],
     subCategoryServiceCounts,
+    subCategoryChildrenCount,
     subCategoryProductsCount: subCategoryServiceCounts,
   };
 

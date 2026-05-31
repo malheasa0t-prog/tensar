@@ -28,15 +28,16 @@ import {
     supabaseSignIn,
     supabaseSignOut,
     clearSession
-} from './data-engine/core.js?v=20260530-2';
-import { loadDataFromSupabaseByScope } from './data-engine/loaders.js?v=20260530-2';
+} from './data-engine/core.js?v=20260531-2';
+import { loadDataFromSupabaseByScope } from './data-engine/loaders.js?v=20260531-2';
 import {
     OFFLINE_QUEUE_EVENT,
     getQueuedCommits,
     registerOfflineSyncListeners
-} from './data-engine/offline.js?v=20260530-2';
-import { getAdminSessionUser } from './data-engine/adminSession.js?v=20260530-2';
+} from './data-engine/offline.js?v=20260531-2';
+import { getAdminSessionUser } from './data-engine/adminSession.js?v=20260531-2';
 import {
+    getActiveCatalogServices,
     getActiveRepairServices,
     getBrands,
     getCatalogProducts,
@@ -47,16 +48,16 @@ import {
     getLatestProducts,
     getProductById,
     getVisibleCatalogCategories
-} from './data-engine/products.js?v=20260530-2';
-import { fireDataUpdate, setupScopedRealtime, teardownRealtime } from './data-engine/realtime.js?v=20260530-2';
-import { commitDb, refreshData, syncOfflineQueue } from './data-engine/sync.js?v=20260530-2';
+} from './data-engine/products.js?v=20260531-2';
+import { fireDataUpdate, setupScopedRealtime, teardownRealtime } from './data-engine/realtime.js?v=20260531-2';
+import { commitDb, refreshData, syncOfflineQueue } from './data-engine/sync.js?v=20260531-2';
 import {
     canAccessAdmin,
     canAccessSection,
     findUserByAuthUser,
     getUserById,
     isCustomerUser
-} from './data-engine/users.js?v=20260530-2';
+} from './data-engine/users.js?v=20260531-2';
 
 function notifyCartChange() {
     if (typeof window.TZ.onCartChange === 'function') {
@@ -119,7 +120,8 @@ function applyAdminTextOverrides() {
         'service-orders': '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062E\u062F\u0645\u0627\u062A',
         products: '\u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A',
         categories: '\u0627\u0644\u0641\u0626\u0627\u062A',
-        services: '\u0627\u0644\u062E\u062F\u0645\u0627\u062A',
+        catalog: '\u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062A \u0648\u0627\u0644\u0643\u062A\u0627\u0644\u0648\u062C',
+        services: '\u062E\u062F\u0645\u0627\u062A \u0627\u0644\u0635\u064A\u0627\u0646\u0629',
         'serva-catalog': '\u062E\u062F\u0645\u0627\u062A Serva-S',
         deposits: '\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0625\u064A\u062F\u0627\u0639',
         'orange-money': '\u0639\u0645\u0644\u064A\u0627\u062A Orange Money',
@@ -181,6 +183,7 @@ window.TZ = {
     getBrands,
     getVisibleCatalogCategories,
     getCatalogProducts,
+    getActiveCatalogServices,
     getActiveRepairServices,
     ROLES,
     ADMIN_SECTIONS,
@@ -223,3 +226,4 @@ if (!engineStatus.ready) {
             fireDataUpdate('all');
         });
 }
+

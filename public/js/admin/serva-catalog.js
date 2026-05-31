@@ -189,6 +189,20 @@
     }
 
     /**
+     * Collects one de-duplicated set of non-empty provider ids from query rows.
+     *
+     * @param {Array<Record<string, unknown>> | null | undefined} rows
+     * @returns {Set<string>}
+     */
+    function collectExistingProviderIds(rows) {
+        return new Set(
+            (Array.isArray(rows) ? rows : [])
+                .map((row) => String(row?.provider_service_id || '').trim())
+                .filter(Boolean)
+        );
+    }
+
+    /**
      * Loads the local provider-linked service ids already imported into the site.
      *
      * @returns {Promise<Set<string>>}
@@ -196,11 +210,10 @@
     async function fetchExistingProviderIds() {
         const result = await TZ.supabase
             .from(LOCAL_SERVICES_TABLE)
-            .select('provider_service_id')
-            .not('provider_service_id', 'is', null);
+            .select('provider_service_id');
 
         if (result.error) throw result.error;
-        return new Set((result.data || []).map((row) => String(row.provider_service_id || '').trim()).filter(Boolean));
+        return collectExistingProviderIds(result.data);
     }
 
     /**
@@ -255,15 +268,23 @@
     function buildLocalServiceRow(service, categoryId) {
         const name = sanitizeText(service.name_ar || service.name);
         const providerId = String(service.service || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+        const selectedCategory = state.categories.find((category) => category.id === categoryId);
         if (!name || !providerId) {
             throw new Error('بيانات الخدمة غير صالحة لأن الاسم أو المعرّف مفقود.');
         }
+        if (!selectedCategory) {
+            throw new Error('اختر الفئة المحلية التي ستستقبل الخدمات أولًا.');
+        }
+
+        const resolvedCategoryId = selectedCategory.parent_id || selectedCategory.id;
+        const resolvedSubcategoryId = selectedCategory.parent_id ? selectedCategory.id : null;
 
         return {
             id: generateId('srv-'),
             name,
             slug: `${slugify(name)}-${providerId}`.slice(0, 90),
-            category_id: categoryId,
+            category_id: resolvedCategoryId,
+            subcategory_id: resolvedSubcategoryId,
             provider_service_id: providerId,
             price: Math.max(0, parseFloat(service.rate) || 0),
             cost_price: Math.max(0, parseFloat(service.rate) || 0),
@@ -344,7 +365,7 @@
                 </div>
                 <div class="admin-section-actions">
                     <button class="btn btn-outline btn-sm" id="servaRefreshBtn"><i class="fas fa-rotate"></i> تحديث الكتالوج</button>
-                    <button class="btn btn-outline btn-sm" id="servaGoToServicesBtn"><i class="fas fa-table-list"></i> إدارة الخدمات</button>
+                    <button class="btn btn-outline btn-sm" id="servaGoToServicesBtn"><i class="fas fa-table-list"></i> إدارة الكتالوج</button>
                 </div>
             </div>
             <div class="admin-orders-summary">
@@ -475,7 +496,7 @@
             renderCatalog();
         });
         document.getElementById('servaGoToServicesBtn')?.addEventListener('click', function () {
-            A.renderSection?.('services');
+            A.renderSection?.('catalog');
         });
         document.getElementById('servaSelectAll')?.addEventListener('change', function () {
             filtered.forEach((service) => {
@@ -540,12 +561,17 @@
 
     if (window.__ENABLE_SERVA_CATALOG_TEST_HOOKS__) {
         window.__servaCatalogTestHooks = {
+            buildLocalServiceRow,
+            collectExistingProviderIds,
             esc,
             getProviderCategory,
             getProviderServiceId,
             getProviderServiceName,
             getServiceStatusCellId,
             safePositiveInt,
+            setCategoriesForTests(categories) {
+                state.categories = Array.isArray(categories) ? categories : [];
+            },
             sanitizeText,
             slugify
         };

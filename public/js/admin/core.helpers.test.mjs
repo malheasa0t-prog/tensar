@@ -30,6 +30,7 @@ test("normalizeSection should keep allowed sections", () => {
   assert.equal(helpers.normalizeSection("service-orders"), "service-orders");
   assert.equal(helpers.normalizeSection("repair-orders"), "repair-orders");
   assert.equal(helpers.normalizeSection("products"), "products");
+  assert.equal(helpers.normalizeSection("catalog"), "catalog");
   assert.equal(helpers.normalizeSection("serva-catalog"), "serva-catalog");
 });
 

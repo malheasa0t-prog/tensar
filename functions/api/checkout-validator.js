@@ -2,6 +2,11 @@
  * Checkout request validation and catalog loading helpers.
  */
 
+import {
+  buildCategoryChildCountMap,
+  buildCategoryPurchaseService,
+} from "../../lib/categoryPurchaseModel.js";
+
 const BANNED_ACCOUNT_MESSAGE = "حسابك محظور. تواصل مع الإدارة.";
 const DIGITAL_CONTACT_ERROR_MESSAGE =
   "[CHK-112] رقم الواتساب أو وسيلة التواصل مطلوبة للخدمات الرقمية";
@@ -272,8 +277,9 @@ export async function resolveCheckoutUserId({ admin, requestClient }) {
  */
 export async function loadCheckoutCatalog({ admin, items }) {
   const serviceIds = items.filter((item) => item.id.startsWith("srv-")).map((item) => item.id);
-  const physicalIds = items.filter((item) => !item.id.startsWith("srv-")).map((item) => item.id);
-  const [productsResult, servicesResult] = await Promise.all([
+  const categoryIds = items.filter((item) => item.id.startsWith("cat-")).map((item) => item.id);
+  const physicalIds = items.filter((item) => !item.id.startsWith("srv-") && !item.id.startsWith("cat-")).map((item) => item.id);
+  const [productsResult, servicesResult, categoriesResult] = await Promise.all([
     physicalIds.length > 0
       ? admin
           .from("products")
@@ -289,14 +295,35 @@ export async function loadCheckoutCatalog({ admin, items }) {
           .in("id", serviceIds)
           .eq("status", "active")
       : { data: [], error: null },
+    categoryIds.length > 0
+      ? admin
+          .from("categories")
+          .select("id,parent_id,name,slug,image,description,status,metadata,sort_order")
+          .eq("status", "active")
+      : { data: [], error: null },
   ]);
 
-  if (productsResult.error || servicesResult.error) {
+  if (productsResult.error || servicesResult.error || categoriesResult.error) {
     throw new Error("[CHK-105] تعذر تحميل بيانات المنتجات أو الخدمات");
   }
 
   const productMap = new Map((productsResult.data || []).map((product) => [product.id, product]));
-  const serviceProducts = (servicesResult.data || []).map((service) => buildServiceProduct(service));
+  const categoryRows = Array.isArray(categoriesResult.data) ? categoriesResult.data : [];
+  const categoryById = new Map(categoryRows.map((category) => [String(category.id || ""), category]));
+  const childCountById = buildCategoryChildCountMap(categoryRows);
+  const categoryProducts = categoryRows
+    .filter((category) => categoryIds.includes(category.id))
+    .map((category) => buildCategoryPurchaseService({
+      category,
+      categoryLabel: categoryById.get(String(category.parent_id || ""))?.name || category.name,
+      categorySlug: category.slug || category.id,
+      childCountById,
+    }))
+    .filter(Boolean);
+  const serviceProducts = [
+    ...(servicesResult.data || []).map((service) => buildServiceProduct(service)),
+    ...categoryProducts.map((service) => buildServiceProduct(service)),
+  ];
 
   for (const service of serviceProducts) {
     productMap.set(service.id, service);

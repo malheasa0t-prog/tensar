@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cloudflare Pages Function - Admin panel gate page.
  *
  * Intercepts GET /admin.html and serves a lightweight bootstrap page that
@@ -14,7 +14,7 @@ const NO_CACHE_HEADERS = Object.freeze({
   "X-Robots-Tag": "noindex, nofollow, noarchive",
 });
 const ADMIN_SESSION_ROUTE = "/api/admin/session";
-const ADMIN_SHELL_VERSION = "20260530-2";
+const ADMIN_SHELL_VERSION = "20260531-2";
 const PANEL_FETCH_PATH = `/tz-panel.html?v=${ADMIN_SHELL_VERSION}`;
 const ADMIN_GATE_SCRIPT_PATH = `/js/admin-gate.js?v=${ADMIN_SHELL_VERSION}`;
 const SUPABASE_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
@@ -222,3 +222,4 @@ export function onRequestPut() {
 export function onRequestDelete() {
   return buildNotFoundResponse();
 }
+

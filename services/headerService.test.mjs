@@ -4,12 +4,14 @@ import {
   buildHeaderCategoryLinks,
   fetchHeaderAuthSnapshot,
   fetchHeaderSnapshot,
+  invalidateHeaderSnapshotCache,
   resolveHeaderUserLabel,
   subscribeToHeaderAuthChanges,
 } from "./headerService.js";
 
 function createHeaderClient({
   categories = [],
+  catalogServices = [],
   profileFullName = "",
   settings = {},
   unreadNotifications = 0,
@@ -44,6 +46,18 @@ function createHeaderClient({
                     };
                   },
                 };
+              },
+            };
+          },
+        };
+      }
+
+      if (table === "services") {
+        return {
+          select() {
+            return {
+              eq() {
+                return Promise.resolve({ data: catalogServices, error: null });
               },
             };
           },
@@ -152,6 +166,7 @@ test("resolveHeaderUserLabel should prefer profile name over metadata and email"
 });
 
 test("fetchHeaderSnapshot should return normalized settings and mapped category links", async () => {
+  invalidateHeaderSnapshotCache();
   const snapshot = await fetchHeaderSnapshot(
     createHeaderClient({
       categories: [{ id: "gaming", name: "ألعاب", slug: "gaming", status: "active" }],
@@ -171,6 +186,35 @@ test("fetchHeaderSnapshot should return normalized settings and mapped category 
       href: "/category/gaming",
       label: "ألعاب",
       id: "gaming",
+      image: "",
+    },
+  ]);
+});
+
+test("fetchHeaderSnapshot should hide cards-root categories from dynamic links when /cards is the public gateway", async () => {
+  invalidateHeaderSnapshotCache();
+  const snapshot = await fetchHeaderSnapshot(
+    createHeaderClient({
+      categories: [
+        { id: "cards", name: "البطاقات", slug: "cards", status: "active", show_in_navbar: true },
+        { id: "repair", name: "الصيانة", slug: "repair", status: "active", show_in_navbar: true },
+      ],
+      catalogServices: [{ category_id: "cards", subcategory_id: null }],
+      settings: {
+        navigation: {
+          headerBefore: [],
+          headerAfter: [],
+          mobilePrimary: [],
+        },
+      },
+    })
+  );
+
+  assert.deepEqual(snapshot.dynamicLinks, [
+    {
+      href: "/category/repair",
+      label: "الصيانة",
+      id: "repair",
       image: "",
     },
   ]);

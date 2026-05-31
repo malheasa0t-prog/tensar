@@ -2,7 +2,7 @@
  * Shared admin Supabase proxy helpers for secured reads, writes, and RPC calls.
  */
 
-import { executeAdminDbOperation } from "./adminDbRequest.js?v=20260530-2";
+import { executeAdminDbOperation } from "./adminDbRequest.js?v=20260531-2";
 
 const FILTER_METHODS = new Set(["eq", "ilike", "in"]);
 const MUTATION_METHODS = new Set(["delete", "insert", "update", "upsert"]);

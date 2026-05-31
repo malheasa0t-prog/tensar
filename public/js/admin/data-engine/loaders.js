@@ -10,7 +10,7 @@ import {
     nowIso,
     supabase,
     updateHealthStatus
-} from './core.js?v=20260530-2';
+} from './core.js?v=20260531-2';
 import {
     buildItemsByOrder,
     mapAuditLog,
@@ -21,9 +21,9 @@ import {
     mapOrder,
     mapRepairBooking,
     mapServiceOrder
-} from './orders.js?v=20260530-2';
-import { mapCategory, mapProduct, mapRepairService } from './products.js?v=20260530-2';
-import { mergeUsers } from './users.js?v=20260530-2';
+} from './orders.js?v=20260531-2';
+import { mapCatalogService, mapCategory, mapProduct, mapRepairService } from './products.js?v=20260531-2';
+import { mergeUsers } from './users.js?v=20260531-2';
 
 const LEGACY_USER_SAFE_FIELDS = 'id,auth_user_id,full_name,email,phone,role,status,created_at,updated_at';
 const PROFILE_SAFE_FIELDS = [
@@ -49,6 +49,7 @@ const QUERY_BUILDERS = {
     legacyUsers: () => supabase.from('app_users').select(LEGACY_USER_SAFE_FIELDS),
     categories: () => supabase.from('categories').select('*').order('sort_order', { ascending: true }),
     products: () => supabase.from('products').select('*'),
+    catalogServices: () => supabase.from('services').select('*').order('sort_order', { ascending: true }),
     orders: () => supabase.from('orders').select('*').order('created_at', { ascending: false }),
     orderItems: () => supabase.from('order_items').select('*'),
     settings: () => supabase.from('settings').select('*').limit(1),
@@ -85,6 +86,7 @@ function hydrateUsers(results) {
 function hydrateCatalog(results) {
     if (results.categories?.data) db.categories = results.categories.data.map(mapCategory);
     if (results.products?.data) db.products = results.products.data.map(mapProduct);
+    if (results.catalogServices?.data) db.catalogServices = results.catalogServices.data.map(mapCatalogService);
     if (results.repairServices?.data) db.repairServices = results.repairServices.data.map(mapRepairService);
 }
 
@@ -141,3 +143,4 @@ export async function loadDataFromSupabaseByScope() {
 export async function loadDataFromSupabase() {
     await loadDataFromSupabaseByScope();
 }
+

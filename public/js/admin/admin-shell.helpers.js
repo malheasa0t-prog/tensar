@@ -10,6 +10,7 @@
         'accessory-orders': { label: 'طلبات الإكسسوارات', group: 'إدارة الطلبات' },
         'repair-orders': { label: 'حجوزات الصيانة', group: 'إدارة الطلبات' },
         'orange-money': { label: 'عمليات Orange Money', group: 'المالية' },
+        catalog: { label: 'البطاقات والكتالوج', group: 'المتجر' },
         'serva-catalog': { label: 'استيراد خدمات Serva-S', group: 'النظام' },
         'provider-alerts': { label: 'تنبيهات المزود', group: 'النظام' }
     };
@@ -62,6 +63,14 @@
             icon: 'fa-screwdriver-wrench',
             keywords: ['repair orders', 'صيانة', 'حجوزات'],
             action: 'navigate:repair-orders'
+        },
+        {
+            id: 'catalog',
+            title: 'إدارة البطاقات والكتالوج',
+            description: 'فتح كتالوج الخدمات الرقمية والبطاقات القابلة للشراء',
+            icon: 'fa-gift',
+            keywords: ['catalog', 'cards', 'البطاقات', 'الكتالوج'],
+            action: 'navigate:catalog'
         },
         {
             id: 'serva-catalog',

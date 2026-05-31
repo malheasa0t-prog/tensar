@@ -13,6 +13,8 @@ import { routeModuleLoaders } from './routePrefetch';
 /* Lazy-loaded Pages */
 
 const HomePage = lazy(routeModuleLoaders.home);
+const CardsPage = lazy(routeModuleLoaders.cards);
+const CardsCategoryPage = lazy(routeModuleLoaders["cards-category"]);
 const ServicesPage = lazy(routeModuleLoaders.services);
 const ServiceDetailPage = lazy(routeModuleLoaders['service-detail']);
 const CategoryPage = lazy(routeModuleLoaders.category);
@@ -53,6 +55,8 @@ export default function AppRouter() {
         <Route index element={<HomePage />} />
         <Route path="products" element={<Navigate to="/services" replace />} />
         <Route path="products/:id" element={<Navigate to="/services" replace />} />
+        <Route path="cards" element={<CardsPage />} />
+        <Route path="cards/:categoryId" element={<CardsCategoryPage />} />
         <Route path="services" element={<ServicesPage />} />
         <Route path="services/:slug" element={<ServiceDetailPage />} />
         <Route path="category/:id" element={<CategoryPage />} />
