@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ADMIN_SHELL_COOKIE_NAME,
+  ADMIN_SHELL_COOKIE_TTL_SECONDS,
   buildAdminShellSetCookieHeader,
   createAdminShellCookieValue,
   verifyAdminShellCookie,
@@ -35,7 +36,14 @@ test("verifyAdminShellCookie should reject expired or tampered cookies", async (
     headers: { Cookie: `${ADMIN_SHELL_COOKIE_NAME}=${cookieValue.slice(0, -2)}xx` },
   });
 
-  assert.equal(await verifyAdminShellCookie({ env: TEST_ENV, nowMs: 999_999, request: expiredRequest }), false);
+  assert.equal(
+    await verifyAdminShellCookie({
+      env: TEST_ENV,
+      nowMs: 1_000 + (ADMIN_SHELL_COOKIE_TTL_SECONDS * 1_000) + 1,
+      request: expiredRequest,
+    }),
+    false
+  );
   assert.equal(await verifyAdminShellCookie({ env: TEST_ENV, nowMs: 2_000, request: tamperedRequest }), false);
 });
 
@@ -50,4 +58,5 @@ test("buildAdminShellSetCookieHeader should mark HTTPS cookies as secure", async
   assert.match(header, /HttpOnly/);
   assert.match(header, /SameSite=Strict/);
   assert.match(header, /Secure/);
+  assert.match(header, new RegExp(`Max-Age=${ADMIN_SHELL_COOKIE_TTL_SECONDS}`));
 });
