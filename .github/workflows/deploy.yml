@@ -38,6 +38,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=tensar --commit-dirty=true
 
+      - name: Wait for custom domain propagation
+        run: sleep 30
+
       - name: Post-deploy security smoke check
         env:
           TARGET_BASE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
