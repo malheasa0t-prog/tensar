@@ -148,6 +148,10 @@ test("middleware should pass through unrelated routes", async () => {
   const response = await onRequest(context);
 
   assert.equal(response.status, 200);
+  assert.equal(
+    response.headers.get("Strict-Transport-Security"),
+    "max-age=31536000; includeSubDomains"
+  );
   assert.equal(calls.verifier, 0);
   assert.equal(calls.next, 1);
 });

@@ -104,7 +104,8 @@ export async function onRequest(context) {
     return hiddenNotFoundResponse();
   }
 
-  return context.next();
+  const response = await context.next();
+  return withSecurityHeaders(response);
 }
 
 export {
