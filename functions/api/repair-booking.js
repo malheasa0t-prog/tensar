@@ -23,6 +23,7 @@ import {
 
 const REPAIR_BOOKING_METHODS = "POST, OPTIONS";
 const REPAIR_BOOKING_MAX_BODY_BYTES = 8_000;
+const PUBLIC_REPAIR_BOOKING_ERROR_PATTERN = /^\[(RBK-10[1-7]|RBK-301)\]/;
 
 /**
  * Reads the optional authenticated user id from the request.
@@ -67,10 +68,10 @@ function buildBookingId() {
  * @param {Error} error - Thrown error.
  * @returns {Response} Public-safe error response.
  */
-function mapRepairBookingError(error) {
+export function mapRepairBookingError(error) {
   const message = String(error?.message || "").trim();
-  if (/^\[RBK-10[1-7]\]/.test(message)) {
-    return errorResponse(message, 400);
+  if (PUBLIC_REPAIR_BOOKING_ERROR_PATTERN.test(message)) {
+    return errorResponse(message, message.startsWith("[RBK-301]") ? 500 : 400);
   }
   console.error("[RBK-500] Repair booking failed.", error);
   return errorResponse("[RBK-500] تعذر إرسال طلب الصيانة حاليا. حاول مرة أخرى.", 500);

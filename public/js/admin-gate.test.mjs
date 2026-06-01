@@ -14,7 +14,30 @@ const ADMIN_GATE_SCRIPT = path.join(PROJECT_ROOT, "public/js/admin-gate.js");
  * @returns {Promise<void>}
  */
 function flushGatePromises() {
-  return new Promise((resolve) => setTimeout(resolve, 20));
+  return new Promise((resolve) => setTimeout(resolve, 30));
+}
+
+/**
+ * Builds a lightweight DOM node stub for the gate script tests.
+ *
+ * @param {Record<string, unknown>} [overrides={}]
+ * @returns {Record<string, unknown>}
+ */
+function createNode(overrides = {}) {
+  return {
+    disabled: false,
+    listeners: {},
+    style: {},
+    textContent: "",
+    value: "",
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
+    focus() {
+      this.focusCalled = true;
+    },
+    ...overrides,
+  };
 }
 
 /**
@@ -24,10 +47,17 @@ function flushGatePromises() {
  */
 function createDocumentStub() {
   const nodes = {
-    gateDenied: { style: {} },
-    gateDeniedMsg: { textContent: "" },
-    gateLoading: { style: {} },
-    gateStatus: { textContent: "" },
+    gateAuth: createNode(),
+    gateAuthError: createNode(),
+    gateAuthForm: createNode(),
+    gateAuthMsg: createNode(),
+    gateDenied: createNode(),
+    gateDeniedMsg: createNode(),
+    gateEmail: createNode(),
+    gateLoading: createNode(),
+    gatePassword: createNode(),
+    gateStatus: createNode(),
+    gateSubmit: createNode(),
   };
 
   return {
@@ -48,13 +78,27 @@ function createDocumentStub() {
 /**
  * Runs the admin gate script with mocked browser dependencies.
  *
- * @param {{ fetchImpl: typeof fetch, locationHref?: string }} input - Browser mock inputs.
- * @returns {{ fetchCalls: Array<{ headers: Record<string, string>, url: string }>, nodes: Record<string, unknown> }}
+ * @param {{
+ *   fetchImpl: typeof fetch,
+ *   locationHref?: string,
+ *   supabaseClient?: { auth: Record<string, Function> }
+ * }} input
+ * @returns {Promise<{ fetchCalls: Array<{ headers: Record<string, string>, url: string }>, nodes: Record<string, unknown>, supabaseClient: { auth: Record<string, Function> } }>}
  */
 async function runAdminGateScript(input) {
   const scriptSource = fs.readFileSync(ADMIN_GATE_SCRIPT, "utf8");
   const { document, nodes } = createDocumentStub();
   const fetchCalls = [];
+  const supabaseClient = input.supabaseClient || {
+    auth: {
+      getSession() {
+        return Promise.resolve({ data: { session: { access_token: "admin-token" } } });
+      },
+      signInWithPassword() {
+        return Promise.resolve({ data: { session: { access_token: "admin-token" } }, error: null });
+      },
+    },
+  };
   const window = {
     __tzAdminGate: {
       panelPath: "/tz-panel.html?v=20260525-1",
@@ -63,15 +107,10 @@ async function runAdminGateScript(input) {
       supabaseUrl: "https://example.supabase.co",
     },
     location: new URL(input.locationHref || "https://tensr.systems/admin.html"),
+    setTimeout,
     supabase: {
       createClient() {
-        return {
-          auth: {
-            getSession() {
-              return Promise.resolve({ data: { session: { access_token: "admin-token" } } });
-            },
-          },
-        };
+        return supabaseClient;
       },
     },
   };
@@ -79,6 +118,7 @@ async function runAdminGateScript(input) {
     Date,
     Error,
     Promise,
+    Response,
     URL,
     console,
     document,
@@ -93,7 +133,7 @@ async function runAdminGateScript(input) {
 
   vm.runInContext(scriptSource, context);
   await flushGatePromises();
-  return { fetchCalls, nodes };
+  return { fetchCalls, nodes, supabaseClient };
 }
 
 test("admin gate should preserve panel version while appending current query params", async () => {
@@ -131,4 +171,64 @@ test("admin gate should retry panel loading with the signed cookie when bearer l
   assert.equal(result.fetchCalls[1].headers.Authorization, "Bearer admin-token");
   assert.equal(result.fetchCalls[2].headers.Authorization, undefined);
   assert.equal(result.nodes.writtenHtml, "<html>cookie ok</html>");
+});
+
+test("admin gate should show the email/password form when no session exists", async () => {
+  const result = await runAdminGateScript({
+    fetchImpl() {
+      return Promise.reject(new Error("fetch should not run without a session"));
+    },
+    supabaseClient: {
+      auth: {
+        getSession() {
+          return Promise.resolve({ data: { session: null } });
+        },
+        signInWithPassword() {
+          return Promise.resolve({ data: { session: null }, error: null });
+        },
+      },
+    },
+  });
+
+  assert.equal(result.fetchCalls.length, 0);
+  assert.equal(result.nodes.gateLoading.style.display, "none");
+  assert.equal(result.nodes.gateAuth.style.display, "block");
+  assert.match(result.nodes.gateAuthMsg.textContent, /لوحة التحكم/);
+});
+
+test("admin gate should sign in with email/password and load the shell for admins", async () => {
+  let receivedCredentials = null;
+  const result = await runAdminGateScript({
+    fetchImpl(url) {
+      if (url === "/api/admin/session") {
+        return Promise.resolve(Response.json({ success: true, user: { id: "admin-1" } }));
+      }
+
+      return Promise.resolve(new Response("<html>admin shell</html>", { status: 200 }));
+    },
+    supabaseClient: {
+      auth: {
+        getSession() {
+          return Promise.resolve({ data: { session: null } });
+        },
+        signInWithPassword(credentials) {
+          receivedCredentials = credentials;
+          return Promise.resolve({ data: { session: { access_token: "fresh-admin-token" } }, error: null });
+        },
+      },
+    },
+  });
+
+  result.nodes.gateEmail.value = "ADMIN@EXAMPLE.COM";
+  result.nodes.gatePassword.value = "Secret123!";
+  await result.nodes.gateAuthForm.listeners.submit({ preventDefault() {} });
+  await flushGatePromises();
+  await flushGatePromises();
+
+  assert.equal(receivedCredentials.email, "admin@example.com");
+  assert.equal(receivedCredentials.password, "Secret123!");
+  assert.equal(result.fetchCalls[0].url, "/api/admin/session");
+  assert.equal(result.fetchCalls[0].headers.Authorization, "Bearer fresh-admin-token");
+  assert.equal(result.fetchCalls[1].url, "/tz-panel.html?v=20260525-1");
+  assert.equal(result.nodes.writtenHtml, "<html>admin shell</html>");
 });

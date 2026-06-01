@@ -15,8 +15,9 @@ const NO_CACHE_HEADERS = Object.freeze({
 });
 const ADMIN_SESSION_ROUTE = "/api/admin/session";
 const ADMIN_SHELL_VERSION = "20260531-2";
+const ADMIN_GATE_VERSION = "20260601-1";
 const PANEL_FETCH_PATH = `/tz-panel.html?v=${ADMIN_SHELL_VERSION}`;
-const ADMIN_GATE_SCRIPT_PATH = `/js/admin-gate.js?v=${ADMIN_SHELL_VERSION}`;
+const ADMIN_GATE_SCRIPT_PATH = `/js/admin-gate.js?v=${ADMIN_GATE_VERSION}`;
 const SUPABASE_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
 /**
@@ -130,22 +131,56 @@ export function buildAdminGateHtml({ nonce, supabaseAnonKey, supabaseUrl }) {
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>TechZone</title>
 <style>
-body{margin:0;padding:0;font-family:system-ui,sans-serif;background:#0f172a;color:#94a3b8;display:flex;align-items:center;justify-content:center;min-height:100vh}
-.g-l{text-align:center;max-width:400px;padding:20px}
+body{margin:0;padding:24px;font-family:system-ui,sans-serif;background:radial-gradient(circle at top,#172554 0%,#0f172a 45%,#020617 100%);color:#cbd5e1;display:flex;align-items:center;justify-content:center;min-height:100vh;box-sizing:border-box}
+.g-l{text-align:center;width:min(100%,420px)}
+.g-c{background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.2);border-radius:20px;padding:28px;box-shadow:0 24px 80px rgba(15,23,42,.45);backdrop-filter:blur(14px)}
 .g-s{width:36px;height:36px;border:3px solid #1e293b;border-top-color:#6366f1;border-radius:50%;animation:r .8s linear infinite;margin:0 auto 16px}
 @keyframes r{to{transform:rotate(360deg)}}
-.g-t{font-size:14px;opacity:.8}
+.g-t{font-size:14px;line-height:1.8;opacity:.88}
 .g-d{display:none}
 .g-i{font-size:48px;margin-bottom:16px}
-.g-b{display:inline-block;margin-top:16px;padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;text-decoration:none;transition:background .2s}
-.g-b:hover{background:#4f46e5}
+.g-h{font-size:26px;font-weight:700;color:#f8fafc;margin-bottom:8px}
+.g-f{display:grid;gap:14px;margin-top:20px;text-align:right}
+.g-fl{display:block;font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:8px}
+.g-in{width:100%;box-sizing:border-box;border:1px solid rgba(148,163,184,.25);border-radius:12px;background:#0f172a;color:#f8fafc;padding:13px 14px;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.g-in:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.2)}
+.g-in::placeholder{color:#64748b}
+.g-r{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:4px}
+.g-k{font-size:12px;color:#93c5fd;text-decoration:none}
+.g-k:hover{text-decoration:underline}
+.g-b{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:12px 20px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:background .2s,transform .2s;width:100%}
+.g-b:hover{background:#1d4ed8;transform:translateY(-1px)}
+.g-b:disabled{opacity:.7;cursor:wait;transform:none}
+.g-b2{background:transparent;border:1px solid rgba(148,163,184,.22);color:#e2e8f0}
+.g-b2:hover{background:rgba(148,163,184,.08)}
+.g-ae{margin-top:16px;padding:12px 14px;border-radius:12px;background:rgba(127,29,29,.18);border:1px solid rgba(248,113,113,.28);color:#fecaca;font-size:13px;line-height:1.8;text-align:right}
 .g-e{color:#f87171}
 </style>
 </head>
 <body>
 <div class="g-l">
-<div id="gateLoading"><div class="g-s"></div><div class="g-t" id="gateStatus">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642...</div></div>
-<div id="gateDenied" class="g-d"><div class="g-i">\u26D4</div><div class="g-t g-e" id="gateDeniedMsg"></div><a href="/" class="g-b">\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0631\u0626\u064A\u0633\u064A\u0629</a></div>
+<div id="gateLoading" class="g-c"><div class="g-s"></div><div class="g-t" id="gateStatus">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0642\u0642...</div></div>
+<div id="gateAuth" class="g-d g-c">
+<div class="g-h">\u062F\u062E\u0648\u0644 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645</div>
+<div class="g-t" id="gateAuthMsg">\u0633\u062C\u0651\u0644 \u062F\u062E\u0648\u0644\u0643 \u0628\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0644\u0648\u062D\u0629.</div>
+<div id="gateAuthError" class="g-ae g-d" role="alert"></div>
+<form id="gateAuthForm" class="g-f" novalidate>
+<div>
+<label class="g-fl" for="gateEmail">\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A</label>
+<input id="gateEmail" class="g-in" name="email" type="email" dir="ltr" inputmode="email" autocomplete="username email" placeholder="admin@example.com" required>
+</div>
+<div>
+<label class="g-fl" for="gatePassword">\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631</label>
+<input id="gatePassword" class="g-in" name="password" type="password" dir="ltr" autocomplete="current-password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" required>
+</div>
+<div class="g-r">
+<a href="/auth/recover" class="g-k">\u0646\u0633\u064A\u062A \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061F</a>
+<a href="/auth/register" class="g-k">\u0625\u0646\u0634\u0627\u0621 \u062D\u0633\u0627\u0628 \u062C\u062F\u064A\u062F</a>
+</div>
+<button id="gateSubmit" class="g-b" type="submit">\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0644\u0648\u062D\u0629</button>
+</form>
+</div>
+<div id="gateDenied" class="g-d g-c"><div class="g-i">\u26D4</div><div class="g-t g-e" id="gateDeniedMsg"></div><a href="/" class="g-b g-b2">\u0627\u0644\u0639\u0648\u062F\u0629 \u0644\u0644\u0631\u0626\u064A\u0633\u064A\u0629</a></div>
 </div>
 <script id="tzAdminGateConfig" type="application/json" nonce="${safeNonce}">${configJson}</script>
 <script nonce="${safeNonce}">
