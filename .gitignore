@@ -11,6 +11,8 @@ dist
 .env.*
 !.env.example
 !.env.production.example
+.dev.vars
+.dev.vars.*
 
 # Admin config (contains credentials)
 admin-config.js
