@@ -57,14 +57,19 @@ scripts/gradio_chat.py
 scripts/setup_chat_table.py
 
 # IDE
-.vscode
+.vscode/
 .edge-headless
 .sixth
 .open-next
 .wrangler
 
-# Claude Code personal settings (machine-specific permissions)
-.claude/settings.local.json
+# Personal AI-assistant / editor config (not part of the project)
+.claude/
+.gemini/
+.cursor/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
 
 # Supabase CLI local temp
 supabase/.temp/
